@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YA Mayorista | Ofertas y Precios al por Mayor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,600;0,800;0,900;1,800;1,900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .product-card {
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(255, 102, 0, 0.15);
+            border-color: #FF6600;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .cat-active {
+            background-color: #c24100 !important;
+            color: white !important;
+            font-weight: 900;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-animate {
+            animation: fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* Ocultar flechas del input numérico */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="alertaVivo"
+        class="fixed top-5 left-1/2 -translate-x-1/2 bg-zinc-900 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform -translate-y-[150%] z-[99999] flex items-center gap-4 font-bold border-b-4 border-[#FF6600]">
+        <div class="bg-[#FF6600] w-10 h-10 rounded-full flex items-center justify-center text-xl animate-bounce">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div>
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">Actualización de tu pedido</p>
+            <span id="alertaVivoMsg" class="text-sm"></span>
+        </div>
+    </div>
+
+    <div id="toastExito"
+        class="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-[99999] flex items-center gap-3 font-bold border-2 border-green-400">
+        <i class="fas fa-check-circle text-2xl"></i>
+        <span id="toastMsg">¡Operación exitosa!</span>
+    </div>
+
+    <a id="floatingWa" href="#" target="_blank"
+        class="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <div id="promoModal"
+        class="hidden fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-3xl p-8 max-w-sm text-center shadow-2xl modal-animate relative">
+            <button onclick="cerrarPromo()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-black text-3xl leading-none">&times;</button>
+            <i class="fas fa-gift text-6xl text-[#FF6600] mb-4"></i>
+            <h2 class="text-3xl font-black text-zinc-900 leading-tight mb-2">¡$1.000 OFF!</h2>
+            <p class="text-gray-600 font-medium mb-6">Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra
+                superior a $80.000.</p>
+            <button onclick="cerrarPromo(); abrirAuth(); switchAuthTab('register');"
+                class="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg">Crear
+                Mi Cuenta</button>
+            <button onclick="cerrarPromo()" class="mt-4 text-sm font-bold text-gray-400 hover:text-gray-600">No,
+                gracias.</button>
+        </div>
+    </div>
+
+    <header class="bg-white sticky top-0 z-40 shadow-sm border-b-4 border-[#FF6600]">
+        <a href="./admin.html" id="btnIrAdmin"
+            class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold transition text-sm">
+            <i class="fas fa-tools"></i> Panel Admin
+        </a>
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex flex-wrap md:flex-nowrap items-center gap-4 md:gap-6">
+
+                <div onclick="filtrarCategoria('Todas')" class="flex items-center gap-3 cursor-pointer shrink-0">
+                    <div
+                        class="w-14 h-14 bg-[#FF6600] rounded-xl flex items-center justify-center text-white text-4xl font-black italic shadow-md">
+                        YA</div>
+                    <div class="leading-none hidden sm:block">
+                        <h1 class="text-3xl font-black text-zinc-900 tracking-tight">MAYORISTA</h1>
+                        <span class="text-xs font-black text-[#FF6600] tracking-widest uppercase">ONLINE</span>
+                    </div>
+                </div>
+
+                <div class="w-full basis-full md:basis-auto md:flex-1 order-3 md:order-2 mt-4 md:mt-0 relative">
+                    <input type="text" id="searchInput" onkeyup="aplicarFiltros()" placeholder="Buscar productos..."
+                        class="w-full border-2 border-gray-200 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:border-[#FF6600] text-sm font-medium transition shadow-inner placeholder:text-transparent sm:placeholder:text-gray-400">
+                    <button class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF6600]">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-3 order-2 md:order-3 shrink-0 ml-auto md:ml-0">
+
+                    <button onclick="abrirAuth()" id="btnIngresarMain"
+                        class="flex items-center gap-2 bg-orange-100 border border-orange-200 text-[#FF6600] hover:bg-orange-200 px-4 py-2 sm:px-5 sm:py-3 rounded-full font-bold transition">
+                        <i class="fas fa-user-circle text-xl"></i> <span
+                            class="hidden sm:inline text-sm">Ingresar</span>
+                    </button>
+                    <button onclick="abrirMisPedidos()"
+                        class="flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-[#FF6600] hover:text-[#FF6600] px-4 py-2 sm:px-5 sm:py-3 rounded-full font-bold transition shadow-sm">
+                        <i class="fas fa-box-open text-lg"></i>
+                        <span class="hidden sm:inline text-sm">Mis Pedidos</span>
+                    </button>
+
+
+                    <button onclick="abrirPerfil()" id="userLoggedMain"
+                        class="hidden items-center gap-2 bg-zinc-100 border border-gray-200 text-zinc-800 hover:bg-gray-200 px-4 py-2 sm:px-5 sm:py-3 rounded-full font-bold transition shadow-sm">
+                        <i class="fas fa-user text-[#FF6600] text-lg"></i>
+                        <span id="userNameDisplay" class="hidden sm:inline text-sm"></span>
+                    </button>
+
+                    <button onclick="toggleCart()"
+                        class="flex items-center gap-3 bg-zinc-900 hover:bg-black text-white px-5 py-3 rounded-full font-bold transition shadow-md hover:shadow-lg">
+                        <div class="relative">
+                            <i class="fas fa-shopping-cart text-xl text-[#FF6600]"></i>
+                            <span id="cartCountBadge"
+                                class="absolute -top-3 -right-3 bg-red-600 text-white text-[11px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-zinc-900">0</span>
+                        </div>
+                        <span class="hidden sm:inline ml-1 text-lg" id="cartTotalHeader">$0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex flex-col mx-auto py-8">
+
+        <div id="heroCarousel" class="relative w-full overflow-hidden shadow-xl mb-8 h-48 md:h-[230px]">
+            <div id="carouselInner" class="flex transition-transform duration-700 ease-in-out h-full w-full">
+
+                <div
+                    class="w-full flex-none h-full bg-gradient-to-r from-blue-700 to-blue-900 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+                    <div class="z-10 w-full">
+                        <span
+                            class="bg-yellow-400 text-black text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">Especial</span>
+                        <h2 class="text-3xl md:text-6xl font-black italic mt-2 leading-none">SEMANA DE <br><span
+                                class="text-blue-300">BEBIDAS</span></h2>
+                        <p class="mt-2 text-blue-100 text-xs md:text-xl font-medium line-clamp-2">Hasta 20% OFF llevando
+                            por bulto cerrado.</p>
+                    </div>
+                    <i
+                        class="fas fa-wine-bottle text-7xl md:text-[220px] text-white/10 absolute right-[-10px] md:right-16 bottom-[-10px] md:bottom-auto"></i>
+                </div>
+
+                <div
+                    class="w-full flex-none h-full bg-gradient-to-r from-green-600 to-emerald-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+                    <div class="z-10 w-full">
+                        <span
+                            class="bg-white text-green-700 text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">Logística</span>
+                        <h2 class="text-3xl md:text-6xl font-black italic mt-2 leading-none">ENVÍO <br><span
+                                class="text-green-300">10% OFF</span></h2>
+                        <p class="mt-2 text-green-100 text-xs md:text-xl font-medium line-clamp-2">10% en todos los
+                            envios por WEB.</p>
+                    </div>
+                    <i
+                        class="fas fa-truck-fast text-7xl md:text-[220px] text-white/10 absolute right-[-10px] md:right-16 bottom-[-10px] md:bottom-auto"></i>
+                </div>
+
+                <div
+                    class="w-full flex-none h-full bg-gradient-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+                    <div class="z-10 w-full">
+                        <span
+                            class="bg-black text-white text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">Catálogo</span>
+                        <h2 class="text-3xl md:text-6xl font-black italic mt-2 leading-none">TODO PARA <br><span
+                                class="text-yellow-300">TU LOCAL</span></h2>
+                        <p class="mt-2 text-orange-100 text-xs md:text-xl font-medium line-clamp-2">Surtido completo,
+                            los mejores precios.</p>
+                    </div>
+                    <i
+                        class="fas fa-boxes-stacked text-7xl md:text-[220px] text-white/10 absolute right-[-10px] md:right-16 bottom-[-10px] md:bottom-auto"></i>
+                </div>
+
+            </div>
+
+            <button onclick="prevSlide()"
+                class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70 text-white w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"><i
+                    class="fas fa-chevron-left text-sm md:text-xl"></i></button>
+            <button onclick="nextSlide()"
+                class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70 text-white w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"><i
+                    class="fas fa-chevron-right text-sm md:text-xl"></i></button>
+
+            <div class="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-20">
+                <button onclick="goToSlide(0)"
+                    class="dot w-2 h-2 md:w-3 md:h-3 rounded-full bg-white transition"></button>
+                <button onclick="goToSlide(1)"
+                    class="dot w-2 h-2 md:w-3 md:h-3 rounded-full bg-white/50 transition"></button>
+                <button onclick="goToSlide(2)"
+                    class="dot w-2 h-2 md:w-3 md:h-3 rounded-full bg-white/50 transition"></button>
+            </div>
+        </div>
+
+
+        <div
+            class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-gray-100 shadow-sm">
+            <span class="text-sm font-black text-[#FF6600] bg-orange-100 px-4 py-1.5 rounded-full uppercase"
+                id="resultsCount"></span>
+            <h2 class="text-3xl md:text-4xl font-black text-zinc-800 tracking-tight" id="tituloSeccion"></h2>
+
+            <div
+                class="flex items-center gap-3 bg-gray-50 border border-gray-200 p-2.5 rounded-xl min-w-[280px] hover:border-orange-300 transition">
+                <div
+                    class="bg-[#FF6600] text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 shadow-sm">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="flex-1 relative">
+                    <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-0.5">Retiro por sucursal
+                    </p>
+
+                    <select id="sucursalSelect" onchange="cambiarSucursal()"
+                        class="w-full bg-transparent font-black text-gray-800 text-sm outline-none cursor-pointer appearance-none relative z-10 pb-1">
+                        <option value="santafe">Santa Fe Central</option>
+                        <option value="santotome">Santo Tomé</option>
+                    </select>
+
+                    <p id="headerBranchAddress" class="text-[11px] text-gray-500 font-medium"><i
+                            class="fas fa-map-marker-alt text-[#FF6600] mr-1"></i> Pedro de Vega 3220</p>
+
+                    <div class="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        </div>
+
+        <div id="statusMessage" class="text-center py-4 text-xl font-bold text-gray-400"></div>
+
+        <div id="ofertasSection" class="mb-14 hidden">
+            <h3 class="text-3xl font-black text-red-600 mb-6 flex items-center gap-3"><i
+                    class="fas fa-fire animate-pulse"></i> Ofertas Únicas</h3>
+            <div id="ofertasGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"></div>
+        </div>
+
+        <div id="catalogoSection">
+            <h3 class="text-2xl font-black text-zinc-800 mb-6 hidden" id="catalogoTitle"> Aprovecha YA!</h3>
+            <div id="categoriasGrid" class="grid grid-cols-2 md:grid-cols-4 m-4 gap-4 mb-8"></div>
+
+            <div id="productsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 hidden"></div>
+        </div>
+    </main>
+
+    <div id="cartModal" class="hidden fixed inset-0 bg-black/60 z-[9000] flex justify-end transition-opacity">
+        <div class="bg-white w-full max-w-md h-full flex flex-col shadow-2xl">
+            <div class="px-6 py-5 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="text-2xl font-black flex items-center gap-3"><i
+                        class="fas fa-shopping-cart text-[#FF6600]"></i> Mi Pedido</h3>
+                <button onclick="toggleCart()"
+                    class="text-4xl text-gray-400 hover:text-red-500 leading-none">&times;</button>
+            </div>
+            <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-5 bg-white"></div>
+            <div class="p-6 border-t bg-gray-50 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
+                <div class="flex justify-between text-2xl font-black mb-4"><span>Subtotal:</span><span
+                        id="cartTotalDisplay" class="text-[#FF6600]">$0</span></div>
+                <button onclick="abrirCheckout()"
+                    class="w-full py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                    Completar Compra <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkoutModal"
+        class="hidden fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-3xl w-full max-w-xl max-h-[95vh] flex flex-col modal-animate shadow-2xl overflow-hidden">
+            <div class="px-8 py-5 border-b bg-zinc-900 text-white flex justify-between items-center">
+                <h2 class="text-2xl font-black">Finalizar Pedido</h2>
+                <button onclick="cerrarCheckout()"
+                    class="text-3xl text-gray-400 hover:text-white leading-none">&times;</button>
+            </div>
+
+            <div id="checkoutStep1" class="flex flex-col h-full overflow-y-auto">
+                <div class="p-8 flex-1 bg-gray-50">
+                    <div id="authCheckoutMsg"
+                        class="mb-4 text-sm font-bold text-green-700 hidden bg-green-100 p-3 rounded-lg border border-green-200">
+                        <i class="fas fa-check-circle"></i> Sesión iniciada. Autocompletando tus datos.
+                    </div>
+
+                    <h3 class="text-lg font-black text-gray-800 mb-3"><i class="fas fa-user text-[#FF6600] mr-2"></i>
+                        Mis Datos Básicos</h3>
+                    <div class="space-y-4 mb-8">
+                        <input type="text" id="chkNombre" placeholder="Nombre y Apellido"
+                            class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none transition">
+                        <input type="tel" id="chkTelefono" placeholder="Teléfono de contacto"
+                            class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none transition">
+                    </div>
+
+                    <h3 class="text-lg font-black text-gray-800 mb-3"><i class="fas fa-truck text-[#FF6600] mr-2"></i>
+                        Método de Entrega</h3>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <label
+                            class="border-2 border-gray-300 rounded-xl p-4 cursor-pointer flex flex-col items-center hover:bg-orange-50 transition has-[:checked]:border-[#FF6600] has-[:checked]:bg-orange-50 has-[:checked]:text-[#FF6600]">
+                            <input type="radio" name="entrega" value="retiro" class="hidden" checked
+                                onchange="actualizarInterfazEnvio()">
+                            <i class="fas fa-store text-2xl mb-2"></i><span
+                                class="font-bold text-center leading-tight">Retiro en<br>Sucursal</span>
+                        </label>
+                        <label
+                            class="border-2 border-gray-300 rounded-xl p-4 cursor-pointer flex flex-col items-center hover:bg-orange-50 transition has-[:checked]:border-[#FF6600] has-[:checked]:bg-orange-50 has-[:checked]:text-[#FF6600]">
+                            <input type="radio" name="entrega" value="envio" class="hidden"
+                                onchange="actualizarInterfazEnvio()">
+                            <i class="fas fa-motorcycle text-2xl mb-2"></i><span
+                                class="font-bold text-center leading-tight">Envío a<br>Domicilio</span>
+                        </label>
+                    </div>
+
+                    <div id="direccionBox" class="hidden mb-4 space-y-4 animate-fadeInScale">
+                        <input type="text" id="chkDireccion" placeholder="Dirección de envío completa"
+                            class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none transition">
+                        <select id="chkHorario"
+                            class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none transition text-gray-700">
+                            <option value="">Selecciona horario de preferencia...</option>
+                            <option value="Lo antes posible">Lo antes posible</option>
+                            <option value="Mañana (8hs a 12hs)">Mañana (8hs a 12hs)</option>
+                            <option value="Tarde (12hs a 16hs)">Tarde (12hs a 16hs)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 font-medium"><i class="fas fa-info-circle"></i> Costo de envío
+                            $7.200. <span class="text-green-600 font-bold">!10% Menos en la WEB!</span></p>
+                    </div>
+                </div>
+                <div class="p-6 bg-white border-t">
+                    <button onclick="irAPaso2()"
+                        class="w-full py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                        Continuar al Pago <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="checkoutStep2" class="hidden flex-col h-full overflow-y-auto">
+                <div class="p-8 flex-1 bg-gray-50">
+                    <h3 class="text-lg font-black text-gray-800 mb-3"><i class="fas fa-receipt text-[#FF6600] mr-2"></i>
+                        Resumen de tu compra</h3>
+                    <div class="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
+                        <div class="flex justify-between text-gray-600 font-bold mb-2"><span>Subtotal:</span><span
+                                id="chkSubtotalVal">$0</span></div>
+
+                        <div id="chkDescuentoRow" class="hidden justify-between text-orange-600 font-bold mb-2">
+                            <span>Descuento 1ra compra:</span><span>-$1.000</span>
+                        </div>
+
+                        <div class="flex justify-between text-gray-600 font-bold mb-4 pb-4 border-b">
+                            <span>Envío:</span><span id="chkEnvioVal" class="text-green-600">$0</span></div>
+                        <div class="flex justify-between text-3xl font-black text-gray-900"><span>TOTAL:</span><span
+                                id="chkTotalVal" class="text-[#FF6600]">$0</span></div>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-white border-t space-y-3">
+                    <button onclick="volverAPaso1()"
+                        class="text-sm font-bold text-gray-500 hover:text-gray-800 mb-2 flex items-center gap-2">
+                        <i class="fas fa-arrow-left"></i> Volver a mis datos
+                    </button>
+                    <p id="retiroAviso" class="text-xs text-center font-bold text-gray-500 mb-2">El pedido pasará a
+                        revisión para confirmar stock.</p>
+
+                    <button id="btnEnviarPedido" onclick="enviarPedidoPendiente(event)"
+                        class="w-full py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fas fa-paper-plane"></i> Enviar Pedido
+                    </button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="authModal"
+        class="hidden fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-3xl w-full max-w-md flex flex-col modal-animate shadow-2xl overflow-hidden relative">
+            <button onclick="cerrarAuth()"
+                class="absolute top-4 right-5 text-3xl text-gray-400 hover:text-black leading-none z-10">&times;</button>
+
+            <div class="flex border-b">
+                <button onclick="switchAuthTab('login')" id="tabLogin"
+                    class="flex-1 py-4 font-black text-gray-800 border-b-4 border-[#FF6600]">Iniciar Sesión</button>
+                <button onclick="switchAuthTab('register')" id="tabRegister"
+                    class="flex-1 py-4 font-bold text-gray-400 border-b-4 border-transparent hover:text-gray-800">Crear
+                    Cuenta</button>
+            </div>
+
+            <div class="p-8 bg-gray-50 max-h-[80vh] overflow-y-auto">
+                <div id="authError"
+                    class="hidden mb-4 p-3 bg-red-100 text-red-700 text-sm font-bold rounded-lg border border-red-200">
+                </div>
+
+                <div id="formLogin" class="space-y-4">
+                    <input type="email" id="logEmail" placeholder="Tu Email"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+                    <input type="password" id="logPass" placeholder="Contraseña"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+                    <button onclick="iniciarSesion(event)"
+                        class="w-full mt-2 py-4 bg-zinc-900 hover:bg-black text-white text-lg font-black rounded-xl transition shadow-lg">Ingresar</button>
+                </div>
+
+                <div id="formRegister" class="hidden space-y-4">
+                    <input type="text" id="regNombre" placeholder="Nombre completo o Local"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+                    <input type="email" id="regEmail" placeholder="Correo electrónico"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+                    <input type="tel" id="regTelefono" placeholder="Teléfono"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+                    <input type="text" id="regDireccion" placeholder="Dirección para envíos (Opcional)"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+                    <input type="password" id="regPass" placeholder="Crear Contraseña (Mínimo 6 caracteres)"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none">
+
+                    <select id="regTipo"
+                        class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none text-gray-700">
+                        <option value="Personal">Compra Personal</option>
+                        <option value="Kiosco">Kiosco</option>
+                        <option value="Almacén">Almacén / Despensa</option>
+                        <option value="Empresa">Empresa / Oficina</option>
+                    </select>
+
+                    <button onclick="registrarUsuario(event)"
+                        class="w-full mt-2 py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg">Crear
+                        Mi Cuenta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profileModal"
+        class="hidden fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl modal-animate relative">
+            <button onclick="cerrarPerfil()"
+                class="absolute top-4 right-5 text-3xl text-gray-400 hover:text-black leading-none">&times;</button>
+            <h2 class="text-2xl font-black mb-6 text-zinc-900 border-b pb-3"><i
+                    class="fas fa-id-badge text-[#FF6600] mr-2"></i> Mi Perfil</h2>
+
+            <div class="space-y-3 text-gray-700 font-medium">
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-black mb-1">Datos Guardados</p>
+                <p><i class="fas fa-user w-5 text-gray-400"></i> <span id="profNombre"></span></p>
+                <p><i class="fas fa-envelope w-5 text-gray-400"></i> <span id="profEmail"></span></p>
+                <p><i class="fas fa-phone w-5 text-gray-400"></i> <span id="profTelefono"></span></p>
+                <p><i class="fas fa-map-marker-alt w-5 text-gray-400"></i> <span id="profDireccion"></span></p>
+                <p><i class="fas fa-store w-5 text-gray-400"></i> <span id="profTipo"></span></p>
+            </div>
+
+            <button onclick="cerrarSesion(); cerrarPerfil();"
+                class="mt-3 w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition border border-red-200">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </button>
+        </div>
+    </div>
+
+    <div id="misPedidosModal"
+        class="hidden fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div
+            class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
+
+            <div class="px-6 py-5 border-b bg-zinc-900 text-white flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-black"><i class="fas fa-box-open text-[#FF6600] mr-2"></i> Mis Pedidos</h2>
+                <button onclick="cerrarMisPedidos()"
+                    class="text-3xl text-gray-400 hover:text-white leading-none">&times;</button>
+            </div>
+
+            <div id="misPedidosContainer" class="p-6 overflow-y-auto flex-1 bg-gray-50 space-y-4">
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="bg-gray-900 text-white pt-12 pb-8 mt-20">
+        <div class="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
+
+
+            <div>
+                <h4 class="text-white font-black mb-4 uppercase tracking-wider text-sm">Ayuda y Soporte</h4>
+                <ul class="space-y-3 text-gray-400 text-sm">
+                    <li><a href="#" class="hover:text-white transition">Preguntas Frecuentes</a></li>
+                    <li><a href="#" class="hover:text-white transition">Plazos de Entrega</a></li>
+                    <li><a href="#" class="hover:text-white transition">Términos y Condiciones</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black mb-4 uppercase tracking-wider text-sm">Nuestras Redes</h4>
+                <div class="mt-4 flex flex-col gap-4 text-2xl text-gray-500">
+                    <i class="flex fab fa-instagram hover:text-[#FF6600] cursor-pointer">
+                        <p class="font-serif text-lg">&nbsp;Instagram</p>
+                    </i>
+                    <i class="flex fab fa-facebook hover:text-[#FF6600] cursor-pointer">
+                        <p class="font-serif text-lg">&nbsp;Facebook</p>
+                    </i>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black mb-4 uppercase tracking-wider text-sm">Contacto Directo</h4>
+                <ul class="space-y-3 text-gray-400 text-sm">
+                    <li><p>hola@gmail.com</p></li>
+                    <li><p>34259590000</p></li>
+                    <li><p>boulevard 1900</p></li>
+                </ul>
+            </div>
+        </div>
+        <div
+            class="border-t border-gray-800 mt-12 pt-8 text-center text-gray-600 text-[10px] uppercase tracking-widest font-bold">
+            © 2026 - Sistema de Gestión Retail - Todos los derechos reservados
+        </div>
+    </footer>
+
+    <script>
+
+        // ==================== VARIABLES GLOBALES LIMPIAS ====================
+        const supabaseUrl = 'https://vcbqhwxlwmhwdbcplgbj.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYnFod3hsd21od2RiY3BsZ2JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDI4MzAsImV4cCI6MjA5MDAxODgzMH0.8gB7gNCVHOhQTuk2qWFgGvdpxZXHAc9LsIRST3fcMiA';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        const sucursalesData = {
+            santafe: { nombre: "Santa Fe Central", direccion: "Pedro de Vega 3220", whatsapp: "543425084197" },
+            santotome: { nombre: "Santo Tomé", direccion: "Pje. San Luis 2535", whatsapp: "543425967418" }
+        };
+        // ==================== LÓGICA PARA EL FOOTER ====================
+        function cargarDatosFooter(claveSucursal) {
+            // 1. Obtenemos los datos de la sucursal elegida
+            const datos = sucursalesData[claveSucursal];
+
+            // Si la sucursal existe en nuestro objeto, actualizamos el DOM
+            if (datos) {
+                // 2. Seleccionamos los 'span' que están dentro de los 'p' con sus respectivos IDs
+                const spanDireccion = document.querySelector('#footerDireccion span');
+                const spanTelefono = document.querySelector('#footerTelefono span');
+
+                // 3. Inyectamos el texto
+                if (spanDireccion) spanDireccion.textContent = datos.direccion;
+                if (spanTelefono) spanTelefono.textContent = datos.whatsapp;
+            } else {
+                console.error("La sucursal no existe en sucursalesData");
+            }
+        }
+
+        // Ejecutamos la función indicando qué sucursal queremos mostrar (ej. 'santafe')
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarDatosFooter('santafe');
+        });
+
+        const UMBRAL_ENVIO_GRATIS = 0;
+        const COSTO_ENVIO_FIJO = 7200;
+
+        let currentSucursal = 'santafe';
+        let allProducts = [];
+        let categoriaActual = 'Todas';
+        let currentUser = null;
+        let esPrimeraCompra = true;
+        let userProfile = null;
+        let cart = [];
+
+        try {
+            const savedCart = localStorage.getItem('yaCart');
+            if (savedCart) cart = JSON.parse(savedCart);
+        } catch (e) {
+            localStorage.removeItem('yaCart');
+            cart = [];
+        }
+
+        // ==================== LÓGICA DEL CARRUSEL ====================
+        let currentSlide = 0;
+        const totalSlides = 3;
+        let slideInterval;
+
+        function updateCarousel() {
+            const inner = document.getElementById('carouselInner');
+            inner.style.transform = `translateX(-${currentSlide * 100}%)`;
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, index) => {
+                if (index === currentSlide) {
+                    dot.classList.remove('bg-white/50');
+                    dot.classList.add('bg-white');
+                } else {
+                    dot.classList.remove('bg-white');
+                    dot.classList.add('bg-white/50');
+                }
+            });
+        }
+        function nextSlide() { currentSlide = (currentSlide + 1) % totalSlides; updateCarousel(); resetInterval(); }
+        function prevSlide() { currentSlide = (currentSlide - 1 + totalSlides) % totalSlides; updateCarousel(); resetInterval(); }
+        function goToSlide(index) { currentSlide = index; updateCarousel(); resetInterval(); }
+        function resetInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 5000); }
+        slideInterval = setInterval(nextSlide, 5000);
+
+        // ==================== POPUPS Y NOTIFICACIONES ====================
+        function cerrarPromo() {
+            document.getElementById('promoModal').classList.add('hidden');
+        }
+
+        function mostrarToast(mensaje) {
+            const toast = document.getElementById('toastExito');
+            document.getElementById('toastMsg').innerText = mensaje;
+            toast.classList.remove('translate-x-[150%]');
+            setTimeout(() => { toast.classList.add('translate-x-[150%]'); }, 4000);
+        }
+
+        // ==================== SISTEMA DE AUTENTICACIÓN ====================
+        async function checkSession() {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    currentUser = session.user;
+                    await fetchProfile(currentUser.id);
+                    cerrarPromo();
+
+                    // --- EL RADAR EN TIEMPO REAL ---
+                    supabaseClient.channel('mis-pedidos-updates')
+                        .on('postgres_changes', {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'pedidos',
+                            filter: `user_id=eq.${currentUser.id}`
+                        }, (payload) => {
+                            // Cuando Supabase detecta que cambiaste algo en admin.html, dispara esto:
+                            const nuevoEstado = payload.new.estado;
+                            const idPedido = payload.new.id;
+
+                            // Reproducir sonidito
+                            const audio = document.getElementById('sonidoNotif');
+                            audio.play().catch(e => console.log("Navegador bloqueó el autoplay del sonido"));
+
+                            // Mostrar cartel
+                            let mensaje = '';
+                            if (nuevoEstado === 'aprobado') mensaje = `¡Tu pedido #${idPedido} fue APROBADO! Podés proceder al pago.`;
+                            if (nuevoEstado === 'rechazado') mensaje = `Tu pedido #${idPedido} fue cancelado por falta de stock.`;
+                            if (nuevoEstado === 'modificado') mensaje = `Modificamos tu pedido #${idPedido}. Revisalo en 'Mis Pedidos'.`;
+
+                            const alerta = document.getElementById('alertaVivo');
+                            document.getElementById('alertaVivoMsg').innerText = mensaje;
+                            alerta.classList.remove('-translate-y-[150%]');
+
+                            // Lo esconde a los 6 segundos
+                            setTimeout(() => { alerta.classList.add('-translate-y-[150%]'); }, 6000);
+                        })
+                        .subscribe();
+                    // -------------------------------
+
+                } else {
+                    setTimeout(() => {
+                        if (!currentUser) document.getElementById('promoModal').classList.remove('hidden');
+                    }, 2000);
+                }
+            } catch (err) { console.error("Error sesión:", err); }
+        }
+        async function fetchProfile(userId) {
+            const { data, error } = await supabaseClient.from('perfiles').select('*').eq('id', userId).single();
+            if (!error && data) {
+                userProfile = data;
+                // 👉 LO NUEVO: Contamos cuántos pedidos tiene en la base de datos
+                const { count } = await supabaseClient
+                    .from('pedidos')
+                    .select('*', { count: 'exact', head: true }) // head: true hace que sea súper rápido porque solo cuenta, no descarga los datos
+                    .eq('user_id', userId);
+
+                // Si el contador da 0, significa que es su primera compra real
+                esPrimeraCompra = (count === 0);
+
+                // Ocultar botón Ingresar definitivamente
+                document.getElementById('btnIngresarMain').classList.add('hidden');
+                document.getElementById('btnIngresarMain').classList.remove('flex', 'sm:flex');
+
+                // Mostrar botón Perfil
+                document.getElementById('userLoggedMain').classList.remove('hidden');
+                document.getElementById('userLoggedMain').classList.add('flex');
+                document.getElementById('userNameDisplay').innerText = `Hola, ${userProfile.nombre.split(' ')[0]}`;
+
+                // Llenar datos Perfil
+                document.getElementById('profNombre').innerText = userProfile.nombre;
+                document.getElementById('profEmail').innerText = currentUser.email;
+                document.getElementById('profTelefono').innerText = userProfile.telefono;
+                document.getElementById('profDireccion').innerText = userProfile.direccion || 'No especificada';
+                document.getElementById('profTipo').innerText = userProfile.tipo_cliente;
+            }
+        }
+
+        function abrirAuth() { if (!currentUser) document.getElementById('authModal').classList.remove('hidden'); }
+        function cerrarAuth() { document.getElementById('authModal').classList.add('hidden'); }
+
+        function abrirPerfil() { document.getElementById('profileModal').classList.remove('hidden'); }
+        function cerrarPerfil() { document.getElementById('profileModal').classList.add('hidden'); }
+
+        function switchAuthTab(tab) {
+            document.getElementById('authError').classList.add('hidden');
+            if (tab === 'login') {
+                document.getElementById('formLogin').classList.remove('hidden');
+                document.getElementById('formRegister').classList.add('hidden');
+                document.getElementById('tabLogin').classList.replace('text-gray-400', 'text-gray-800');
+                document.getElementById('tabLogin').classList.replace('border-transparent', 'border-[#FF6600]');
+                document.getElementById('tabRegister').classList.replace('text-gray-800', 'text-gray-400');
+                document.getElementById('tabRegister').classList.replace('border-[#FF6600]', 'border-transparent');
+            } else {
+                document.getElementById('formRegister').classList.remove('hidden');
+                document.getElementById('formLogin').classList.add('hidden');
+                document.getElementById('tabRegister').classList.replace('text-gray-400', 'text-gray-800');
+                document.getElementById('tabRegister').classList.replace('border-transparent', 'border-[#FF6600]');
+                document.getElementById('tabLogin').classList.replace('text-gray-800', 'text-gray-400');
+                document.getElementById('tabLogin').classList.replace('border-[#FF6600]', 'border-transparent');
+            }
+        }
+
+        function showAuthError(msg) {
+            const box = document.getElementById('authError');
+            box.innerText = msg;
+            box.classList.remove('hidden');
+        }
+
+        async function registrarUsuario(event) {
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...'; btn.disabled = true;
+
+            const email = document.getElementById('regEmail').value;
+            const pass = document.getElementById('regPass').value;
+            const nombre = document.getElementById('regNombre').value;
+            const tel = document.getElementById('regTelefono').value;
+            const dir = document.getElementById('regDireccion').value;
+            const tipo = document.getElementById('regTipo').value;
+
+            try {
+                if (!email || !pass || !nombre || !tel) throw new Error("Completa todos los campos obligatorios.");
+                if (pass.length < 6) throw new Error("La contraseña debe tener 6 caracteres mínimo.");
+
+                const { data, error } = await supabaseClient.auth.signUp({ email, password: pass });
+                if (error) {
+                    if (error.message.includes('rate limit')) throw new Error("Límite de registros alcanzado. Intenta de nuevo más tarde.");
+                    throw new Error(error.message);
+                }
+
+                if (data.user) {
+                    const { error: profileErr } = await supabaseClient.from('perfiles').insert([{
+                        id: data.user.id, nombre: nombre, telefono: tel, tipo_cliente: tipo, direccion: dir
+                    }]);
+                    if (profileErr) console.error("Error al guardar perfil:", profileErr);
+                    if (!data.session) throw new Error("Cuenta creada, pero Supabase exige confirmar tu correo.");
+
+                    cerrarAuth(); cerrarPromo(); mostrarToast("¡Cuenta creada exitosamente!");
+                    await checkSession();
+                }
+            } catch (err) { showAuthError(err.message); }
+            finally { btn.innerHTML = 'Crear Mi Cuenta'; btn.disabled = false; }
+        }
+
+        async function iniciarSesion(event) {
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...'; btn.disabled = true;
+            const email = document.getElementById('logEmail').value;
+            const pass = document.getElementById('logPass').value;
+
+            try {
+                // CAMBIO 1: Agregamos "data" aquí para poder leer el ID del usuario
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+
+                if (error) {
+                    if (error.message === "Invalid login credentials") throw new Error("Correo o contraseña incorrectos.");
+                    if (error.message === "Email not confirmed") throw new Error("Tu cuenta está bloqueada porque falta confirmar el correo.");
+                    throw new Error(error.message);
+                }
+
+                cerrarAuth(); cerrarPromo(); mostrarToast("¡Sesión iniciada!");
+
+                // --- CAMBIO 2: PEGAMOS LA VERIFICACIÓN DE ADMIN AQUÍ ---
+                const { data: perfil } = await supabaseClient
+                    .from('perfiles')
+                    .select('rol')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (perfil && perfil.rol === 'admin') {
+                    document.getElementById('btnIrAdmin').classList.remove('hidden');
+                }
+                // -------------------------------------------------------
+
+                await checkSession();
+            } catch (err) {
+                showAuthError(err.message);
+            } finally {
+                btn.innerHTML = 'Ingresar'; btn.disabled = false;
+            }
+        }
+        async function cerrarSesion() {
+            await supabaseClient.auth.signOut();
+            currentUser = null; userProfile = null;
+            document.getElementById('userLoggedMain').classList.add('hidden');
+            document.getElementById('userLoggedMain').classList.remove('flex');
+
+            document.getElementById('btnIngresarMain').classList.remove('hidden');
+            document.getElementById('btnIngresarMain').classList.add('sm:flex'); // Volver a mostrarlo
+
+            mostrarToast("Sesión cerrada.");
+        }
+
+        // ==================== CARGA DE CATÁLOGO ====================
+        async function loadProducts() {
+            const status = document.getElementById('statusMessage');
+            status.innerHTML = '<i class="fas fa-spinner fa-spin text-[#FF6600] text-4xl mb-3"></i><br>Cargando catálogo...';
+            try {
+                const { data, error } = await supabaseClient.from('productos').select('*');
+                if (error) throw error;
+                allProducts = data || [];
+                if (allProducts.length === 0) status.innerHTML = '📦 No hay productos.'; else { status.innerHTML = ''; aplicarFiltros(); }
+            } catch (e) {
+                status.innerHTML = '❌ Error al cargar los productos.';
+            }
+        }
+        function renderCategoriasInicio() {
+            const gridCat = document.getElementById('categoriasGrid');
+
+            // Definimos las tarjetas principales con IMÁGENES
+            const tarjetas = [
+                { id: 'SoloOfertas', nombre: ' Ofertas Exclusivas', imagen: './carpetafotos/ofertas.jpg' },
+                { id: 'Todas_Filtro', nombre: ' Todos Los Productos', imagen: './carpetafotos/todocatalogo.jpg' },
+                { id: 'ALIMENTO', nombre: ' Alimentos', imagen: './carpetafotos/alimentos.jpg' },
+                { id: 'BEBIDAS', nombre: ' Bebidas', imagen: './carpetafotos/bebidas.jpg' },
+                { id: 'LACTEOS', nombre: ' Lácteos', imagen: './carpetafotos/lacteos.jpg' },
+                { id: 'HARINA', nombre: ' Harinas', imagen: './carpetafotos/harinas.jpg' },
+                { id: 'ACEITE', nombre: ' Aceites', imagen: './carpetafotos/aceites.jpg' },
+                { id: 'VINOS', nombre: ' Vinos', imagen: './carpetafotos/vinos.jpg' },
+                { id: 'CERVEZAS', nombre: ' Cervezas', imagen: './carpetafotos/cervezas.jpg' },
+                { id: 'YERBA', nombre: ' Yerbas', imagen: './carpetafotos/yerbas.jpg' },
+                { id: 'APERITIVOS', nombre: ' Aperitivos', imagen: './carpetafotos/aperitivos.jpg' }
+            ];
+
+            gridCat.innerHTML = '';
+            tarjetas.forEach(t => {
+                gridCat.innerHTML += `
+                    <div onclick="filtrarCategoria('${t.id}')" 
+                         class="rounded-2xl cursor-pointer transform transition hover:-translate-y-2 hover:shadow-xl flex flex-col items-center justify-center text-center h-40 relative overflow-hidden group bg-gray-200">
+                        
+                        <img src="${t.imagen}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="${t.nombre}">
+                        
+                        <div class="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition"></div>
+                        
+                        <h3 class="relative z-10 text-white font-black text-lg md:text-xl tracking-wide leading-tight px-3 drop-shadow-lg">${t.nombre}</h3>
+                    </div>
+                `;
+            });
+        }
+
+        function filtrarCategoria(categoria) {
+            categoriaActual = categoria;
+            // Detalle pro: Limpiamos la lupa si hace clic en una categoría
+            document.getElementById('searchInput').value = '';
+            aplicarFiltros();
+        }
+
+        function aplicarFiltros() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const estaBuscando = term.trim() !== '';
+            const carousel = document.getElementById('heroCarousel');
+
+            const categoriasGrid = document.getElementById('categoriasGrid');
+            const productsGrid = document.getElementById('productsGrid');
+            const tituloSeccion = document.getElementById('tituloSeccion');
+
+            // 1. Mostrar/Ocultar el Carrusel de arriba
+            if (estaBuscando) carousel.classList.add('hidden');
+            else if (categoriaActual === 'Todas' || categoriaActual === 'inicio') carousel.classList.remove('hidden');
+
+            // 2. Lógica de PANTALLA PRINCIPAL (Sin búsqueda y sin categoría)
+            if (!estaBuscando && (categoriaActual === 'Todas' || categoriaActual === 'inicio')) {
+                categoriasGrid.classList.remove('hidden'); // Mostramos tarjetas gigantes
+                productsGrid.classList.add('hidden');      // Escondemos productos
+                tituloSeccion.innerText = '¿Qué estás buscando hoy?';
+                document.getElementById('resultsCount').innerText = 'Categorías';
+
+                renderCategoriasInicio(); // Dibujamos las tarjetas
+                return; // Cortamos acá, no renderizamos productos
+            }
+
+            // 3. Lógica de PANTALLA DE PRODUCTOS (Hizo clic o buscó algo)
+            categoriasGrid.classList.add('hidden');    // Escondemos tarjetas
+            productsGrid.classList.remove('hidden');   // Mostramos grilla
+
+            // Filtramos la base de datos
+            const filtrados = allProducts.filter(p => {
+                const coincideTexto = (p.nombre || '').toLowerCase().includes(term);
+
+                // Si está buscando por texto, forzamos la búsqueda en todo el catálogo
+                if (estaBuscando) return coincideTexto;
+
+                // Si hizo clic en la tarjeta de "Ofertas"
+                if (categoriaActual === 'SoloOfertas') {
+                    return coincideTexto && (p.Oferta !== null && p.Oferta !== "");
+                }
+
+                // Si hizo clic en "Todo el Catálogo"
+                if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') {
+                    return coincideTexto;
+                }
+
+                // Categoría normal (Ej: Bebidas)
+                const coincideCat = (p.Categoria && p.Categoria.toLowerCase() === categoriaActual.toLowerCase());
+                return coincideTexto && coincideCat;
+            });
+
+            // Ponemos el título correcto
+            if (estaBuscando) tituloSeccion.innerText = `Resultados para "${term}"`;
+            else if (categoriaActual === 'SoloOfertas') tituloSeccion.innerText = '🔥 Ofertas Exclusivas';
+            else if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') tituloSeccion.innerText = 'Todo el Catálogo';
+            else tituloSeccion.innerText = categoriaActual;
+
+            // Dibujamos los productos
+            renderProducts(filtrados);
+        }
+        function renderProducts(products) {
+            // 1. Usamos solo tu grilla principal
+            const gridNormales = document.getElementById('productsGrid');
+            document.getElementById('resultsCount').innerText = `${products.length} productos`;
+
+            // 2. Limpiamos la grilla
+            gridNormales.innerHTML = '';
+
+            // 3. Ocultamos la sección vieja de ofertas (para que no quede el hueco en la página)
+            const ofertasSection = document.getElementById('ofertasSection');
+            if (ofertasSection) ofertasSection.classList.add('hidden');
+
+            // 4. Si no hay resultados
+            if (products.length === 0) {
+                gridNormales.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400 font-bold">No se encontraron productos.</div>`;
+                return;
+            }
+
+            // 5. ¡MAGIA! Mandamos TODOS los productos mezclados a la misma grilla
+            products.forEach(p => {
+                gridNormales.appendChild(crearTarjetaProducto(p));
+            });
+        }
+
+        function crearTarjetaProducto(p) {
+            const card = document.createElement('div');
+            card.className = 'product-card bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col relative';
+            const imgSrc = p.Imagen || 'https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Sin+Foto';
+            const unidadVenta = p.categoria ? p.categoria.toUpperCase() : 'UNIDAD';
+            const nombreSeguro = p.nombre ? p.nombre.replace(/"/g, '&quot;').replace(/'/g, '&#39;').trim() : 'Producto';
+            const precioNumero = Number(p.precio) || 0;
+
+            // FORMATEO DE OFERTA SOLUCIONADO
+            let ofertaBadge = p.Oferta ? `<div class="absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase animate-pulse"><i class="fas fa-fire"></i> OFERTA</div>` : '';
+            const tipoBadge = `<div class="absolute top-3 left-3 bg-yellow-400 text-black text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase">${unidadVenta}</div>`;
+
+            let precioTextHtml = p.Oferta
+                ? `<p class="text-xs text-red-600 font-bold mb-1">OFERTA: -$${Number(p.Oferta).toLocaleString('es-AR')}</p>`
+                : `<span class="text-xs text-gray-500 font-semibold">Precio x ${unidadVenta.toLowerCase()}</span>`;
+
+            card.innerHTML = `
+                ${tipoBadge} ${ofertaBadge}
+                <div class="relative pt-[100%] bg-white p-4"><img src="${imgSrc}" class="absolute inset-0 w-full h-full object-contain p-5 mix-blend-multiply"></div>
+                <div class="p-5 flex flex-col flex-1 border-t border-gray-100 bg-gray-50/50">
+                    <h3 class="text-sm text-gray-800 font-bold leading-snug mb-3 line-clamp-2 h-10">${nombreSeguro}</h3>
+                    <div class="mt-auto">
+                        ${precioTextHtml}
+                        <p class="text-3xl font-black text-zinc-900 tracking-tight">$${precioNumero.toLocaleString('es-AR')}</p>
+                        <button data-nombre="${nombreSeguro}" data-precio="${precioNumero}" data-imagen="${imgSrc}" onclick="addToCart(this)" 
+                                class="mt-4 w-full bg-white border-2 border-[#FF6600] text-[#FF6600] hover:bg-[#FF6600] hover:text-white py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fas fa-cart-plus"></i> AGREGAR
+                        </button>
+                    </div>
+                </div>`;
+            return card;
+            // 1. Detectamos si el producto es una oferta (igual que hacías antes)
+            const esOferta = p.Oferta !== null && p.Oferta !== "";
+
+            // 2. En el HTML de la imagen de tu tarjeta, agregale este código para que flote el cartel rojo:
+            `
+            <div class="relative"> ${esOferta ? `<span class="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full z-10 shadow-md animate-pulse">OFERTA 🔥</span>` : ''}
+                <img src="${p.imagen}" ... >
+            </div>
+            `
+        }
+
+        // ==================== CARRITO LOGICA ====================
+        function addToCart(btn) {
+            const nombre = btn.getAttribute('data-nombre'), precio = Number(btn.getAttribute('data-precio')), imagen = btn.getAttribute('data-imagen');
+            const exist = cart.find(i => i.nombre === nombre);
+            if (exist) exist.cantidad++; else cart.push({ nombre, precio, imagen, cantidad: 1 });
+            localStorage.setItem('yaCart', JSON.stringify(cart)); updateCartCount();
+
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> AGREGADO';
+            btn.classList.add('bg-[#FF6600]', 'text-white');
+            setTimeout(() => { btn.innerHTML = originalText; btn.classList.remove('bg-[#FF6600]', 'text-white'); }, 1000);
+        }
+
+        function updateCartCount() {
+            document.getElementById('cartCountBadge').textContent = cart.reduce((a, b) => a + b.cantidad, 0);
+            document.getElementById('cartTotalHeader').textContent = `$${cart.reduce((a, b) => a + (b.precio * b.cantidad), 0).toLocaleString('es-AR')}`;
+        }
+        function toggleCart() { document.getElementById('cartModal').classList.toggle('hidden'); renderCart(); }
+        function renderCart() {
+            const container = document.getElementById('cartItemsContainer');
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-400 py-12"><i class="fas fa-shopping-basket text-6xl mb-4 text-gray-300"></i><p class="text-lg font-bold">Tu carrito está vacío</p></div>`;
+                document.getElementById('cartTotalDisplay').innerHTML = '$0';
+                return;
+            }
+            container.innerHTML = '';
+            cart.forEach((item, i) => {
+                container.innerHTML += `<div class="flex gap-4 mb-5 pb-5 border-b relative">
+                    <img src="${item.imagen}" class="w-20 h-20 object-contain rounded-xl border p-1 bg-white">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm pr-6">${item.nombre}</h4>
+                        <div class="font-black text-[#FF6600]">$${item.precio.toLocaleString('es-AR')}</div>
+                        <div class="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden mt-2 w-max relative">
+                            <button onclick="changeQty(${i},-1)" class="w-8 h-8 font-bold bg-gray-50 hover:bg-gray-200">-</button>
+
+                            <input type="number" 
+                                   min="1" 
+                                   value="${item.cantidad}" 
+                                   onchange="setQty(${i}, this.value)" 
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                   class="w-12 h-8 text-center font-black focus:outline-none focus:bg-blue-50 text-gray-700"
+                                   style="-moz-appearance: textfield;">
+                        
+                            <button onclick="changeQty(${i},1)" class="w-8 h-8 font-bold bg-gray-50 hover:bg-gray-200">+</button>
+                        </div>
+                    </div>
+                    <button onclick="removeItem(${i})" class="absolute top-0 right-0 text-gray-300 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
+                </div>`;
+            });
+            document.getElementById('cartTotalDisplay').innerHTML = `$${cart.reduce((a, b) => a + (b.precio * b.cantidad), 0).toLocaleString('es-AR')}`;
+        }
+        function changeQty(i, delta) { cart[i].cantidad += delta; if (cart[i].cantidad < 1) cart[i].cantidad = 1; localStorage.setItem('yaCart', JSON.stringify(cart)); renderCart(); updateCartCount(); }
+        function setQty(index, valorIngresado) {
+            // Convertimos lo que escribió a un número entero
+            let nuevaCantidad = parseInt(valorIngresado);
+
+            // Si borró todo o puso un 0, le clavamos 1 como mínimo
+            if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
+                nuevaCantidad = 1;
+            }
+
+            // Actualizamos la cantidad en tu array del carrito
+            cart[index].cantidad = nuevaCantidad;
+
+            // Volvemos a dibujar el carrito y actualizar el precio total
+            renderCart();
+
+            // IMPORTANTE: Si tenías alguna función que guardaba el carrito en LocalStorage, agregala acá abajo:
+            // guardarCarrito(); 
+        }
+        function removeItem(i) { cart.splice(i, 1); localStorage.setItem('yaCart', JSON.stringify(cart)); renderCart(); updateCartCount(); }
+
+        // ==================== CHECKOUT EN 2 PASOS ====================
+        function abrirCheckout() {
+            if (cart.length === 0) return alert('El carrito está vacío');
+            toggleCart();
+
+            if (userProfile) {
+                document.getElementById('authCheckoutMsg').classList.remove('hidden');
+                document.getElementById('chkNombre').value = userProfile.nombre || '';
+                document.getElementById('chkTelefono').value = userProfile.telefono || '';
+                if (userProfile.direccion) document.getElementById('chkDireccion').value = userProfile.direccion;
+            } else {
+                document.getElementById('authCheckoutMsg').classList.add('hidden');
+            }
+
+            // Asegurar que siempre se abra en el Paso 1
+            document.getElementById('checkoutStep1').classList.remove('hidden');
+            document.getElementById('checkoutStep2').classList.add('hidden');
+            document.getElementById('checkoutStep2').classList.remove('flex');
+
+            document.getElementById('checkoutModal').classList.remove('hidden');
+            actualizarInterfazEnvio();
+        }
+
+        function cerrarCheckout() { document.getElementById('checkoutModal').classList.add('hidden'); }
+
+        function actualizarInterfazEnvio() {
+            const metodo = document.querySelector('input[name="entrega"]:checked').value;
+            if (metodo === 'envio') {
+                document.getElementById('direccionBox').classList.remove('hidden');
+            } else {
+                document.getElementById('direccionBox').classList.add('hidden');
+            }
+        }
+
+        function validarFormulario() {
+            const nombre = document.getElementById('chkNombre').value.trim();
+            const tel = document.getElementById('chkTelefono').value.trim();
+            const metodo = document.querySelector('input[name="entrega"]:checked').value;
+            const dir = document.getElementById('chkDireccion').value.trim();
+            const horario = document.getElementById('chkHorario').value;
+
+            if (!nombre || !tel) { alert("Completa Nombre y Teléfono."); return false; }
+            if (metodo === 'envio' && (!dir || !horario)) { alert("Completa Dirección y Horario de envío."); return false; }
+            return { nombre, tel, metodo, dir, horario };
+        }
+
+        function irAPaso2() {
+            if (!validarFormulario()) return; // Frena si faltan datos
+
+            // Calcular totales
+            const metodo = document.querySelector('input[name="entrega"]:checked').value;
+            const subtotal = cart.reduce((a, b) => a + (b.precio * b.cantidad), 0);
+
+            let costoEnvio = 7200;
+            if (metodo === 'envio' && subtotal < UMBRAL_ENVIO_GRATIS) costoEnvio = COSTO_ENVIO_FIJO;
+
+            let descuento = 0;
+            if (userProfile && subtotal >= 80000 && esPrimeraCompra) descuento = 1000;
+
+            let total = subtotal + costoEnvio - descuento;
+            if (metodo != 'envio') {
+                total = subtotal - descuento;
+                costoEnvio = 0;
+            }
+
+            // Actualizar vista del Paso 2
+            document.getElementById('chkSubtotalVal').innerText = `$${subtotal.toLocaleString('es-AR')}`;
+
+            if (descuento > 0) {
+                document.getElementById('chkDescuentoRow').classList.remove('hidden');
+                document.getElementById('chkDescuentoRow').classList.add('flex');
+            } else {
+                document.getElementById('chkDescuentoRow').classList.add('hidden');
+                document.getElementById('chkDescuentoRow').classList.remove('flex');
+            }
+
+            document.getElementById('chkTotalVal').innerText = `$${total.toLocaleString('es-AR')}`;
+
+            // Actualizamos el texto del costo de envío sin tocar botones que ya no existen
+            if (metodo === 'envio') {
+                document.getElementById('chkEnvioVal').innerText = costoEnvio === 0 ? 'GRATIS' : `$${costoEnvio.toLocaleString('es-AR')}`;
+            } else {
+                document.getElementById('chkEnvioVal').innerText = "Sin cargo";
+            }
+
+            // Cambiar de pantalla al Paso 2
+            document.getElementById('checkoutStep1').classList.add('hidden');
+            document.getElementById('checkoutStep2').classList.remove('hidden');
+            document.getElementById('checkoutStep2').classList.add('flex');
+        }
+
+        function volverAPaso1() {
+            document.getElementById('checkoutStep2').classList.add('hidden');
+            document.getElementById('checkoutStep2').classList.remove('flex');
+            document.getElementById('checkoutStep1').classList.remove('hidden');
+        }
+
+        // ==================== PAGOS Y BASE DE DATOS ====================
+        async function enviarPedidoPendiente(event) {
+            if (!currentUser) {
+                alert("Debes iniciar sesión para enviar un pedido.");
+                cerrarCheckout(); abrirAuth(); return;
+            }
+
+            const form = validarFormulario();
+            if (!form) return;
+
+            const subtotal = cart.reduce((a, b) => a + b.precio * b.cantidad, 0);
+
+            let costoEnvio = 7200;
+            if (form.metodo === 'envio' && subtotal < UMBRAL_ENVIO_GRATIS) costoEnvio = COSTO_ENVIO_FIJO;
+            if (form.metodo !== 'envio') costoEnvio = 0;
+
+            let descuento = 0;
+            if (userProfile && subtotal >= 80000) descuento = 1000;
+
+            const totalFinal = subtotal + costoEnvio - descuento;
+
+            const btn = event.currentTarget;
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            btn.disabled = true;
+
+            try {
+                // Hacemos el insert directamente acá para atrapar el error
+                const { error } = await supabaseClient.from('pedidos').insert([{
+                    nombre_cliente: form.nombre,
+                    telefono: form.tel,
+                    metodo: form.metodo,
+                    direccion: form.dir || null,
+                    horario: form.horario || null,
+                    total: totalFinal,
+                    carrito: cart,
+                    user_id: currentUser.id,
+                    estado: 'pendiente'
+                }]);
+
+                if (error) throw error;
+
+                // Si todo sale bien:
+                cart = [];
+                localStorage.removeItem('yaCart');
+                updateCartCount();
+                renderCart();
+
+                cerrarCheckout();
+                mostrarToast("¡Pedido enviado! Lo revisaremos a la brevedad.");
+
+            } catch (error) {
+                let detalleError = error.message || JSON.stringify(error) || "Error desconocido";
+                alert("🚨 ATENCIÓN - ERROR DE SUPABASE:\n\n" + detalleError);
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+
+        // ==================== SECCIÓN MIS PEDIDOS ====================
+
+        // Variable global (ÚNICA DECLARACIÓN)
+        let misPedidosGlobales = [];
+
+        function cerrarMisPedidos() {
+            document.getElementById('misPedidosModal').classList.add('hidden');
+        }
+
+        async function abrirMisPedidos() {
+            cerrarPerfil(); // Cerramos el perfil
+            const modal = document.getElementById('misPedidosModal');
+            const container = document.getElementById('misPedidosContainer');
+
+            modal.classList.remove('hidden');
+            container.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-3"></i><br><span class="font-bold text-gray-500">Buscando tus pedidos...</span></div>';
+
+            try {
+                // Buscamos los pedidos de este usuario
+                const { data: pedidos, error } = await supabaseClient
+                    .from('pedidos')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('id', { ascending: false });
+
+                if (error) throw error;
+
+                // GUARDAMOS LOS DATOS EN LA VARIABLE GLOBAL ANTES DE DIBUJARLOS
+                misPedidosGlobales = pedidos;
+                renderMisPedidos(pedidos);
+
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = '<div class="text-center py-10 text-red-500 font-bold"><i class="fas fa-exclamation-triangle text-3xl mb-2"></i><br>PARA VER PEDIDOS INICIA SESION.</div>';
+            }
+        }
+
+        function renderMisPedidos(pedidos) {
+            const container = document.getElementById('misPedidosContainer');
+
+            if (!pedidos || pedidos.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-12">
+                        <i class="fas fa-receipt text-6xl mb-4 text-gray-300"></i>
+                        <p class="text-lg font-bold">Aún no tenés pedidos registrados.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+
+            pedidos.forEach(p => {
+                let statusClass = "bg-yellow-100 text-yellow-800";
+                let statusText = "Pendiente";
+                let bloquePago = '';
+
+                if (p.estado === 'aprobado') {
+                    statusClass = "bg-green-100 text-green-800";
+                    statusText = "Confirmado - Esperando pago";
+
+                    // 1. Calculamos a qué hora exacta vence (Fecha de creación + 10 minutos)
+                    // NOTA: Asegurate de que la columna se llame 'created_at' en tu base de datos
+                    const fechaCreacionMs = new Date(p.created_at).getTime();
+                    const fechaExpiracionMs = fechaCreacionMs + (10 * 60 * 1000); // 10 min en milisegundos
+                    const ahora = new Date().getTime();
+
+                    // 2. Si todavía le queda tiempo, mostramos el botón y el reloj
+                    if (fechaExpiracionMs > ahora) {
+                        bloquePago = `
+                            <div class="mt-4 pt-4 border-t border-gray-100">
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-center">
+                                    <p class="text-xs font-bold text-red-600 uppercase tracking-wide">¡Tu pedido está reservado!</p>
+                                    <p class="text-lg font-black text-red-700 mt-1 animate-pulse">
+                                        <i class="fas fa-stopwatch"></i> Tenés <span id="timer-${p.id}">--m --s</span> para abonar
+                                    </p>
+                                    <p class="text-[10px] text-red-500 mt-1">Si no se abona en este tiempo, el pedido se cancelará automáticamente.</p>
+                                </div>
+                                <button onclick="pagarPedidoConfirmado('${p.id}')" class="w-full bg-[#009EE3] hover:bg-blue-600 text-white font-black py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                                    <i class="fas fa-handshake"></i> Pagar con Mercado Pago
+                                </button>
+                            </div>
+                        `;
+
+                        // 3. Le decimos al navegador: "Apenas termines de dibujar este HTML, encendé el reloj"
+                        setTimeout(() => iniciarCronometro(p.id, fechaExpiracionMs), 50);
+
+                    } else {
+                        // Si por algún milagro el Cron de la base de datos tardó 1 segundo más, 
+                        // le escondemos el botón de pago igual para que no pague algo vencido.
+                        bloquePago = `
+                            <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                                <p class="text-sm font-bold text-gray-500"><i class="fas fa-times-circle"></i> El tiempo para pagar ha expirado.</p>
+                            </div>
+                        `;
+                    }
+                } else if (p.estado === 'pagado') {
+                    // Fíjate que cerramos la llave de 'aprobado' y abrimos una nueva con 'else if'
+                    statusClass = "bg-blue-100 text-blue-800";
+                    statusText = "Abonado - Preparando entrega";
+                    bloquePago = ''; // Borramos el botón de pago porque ya pagó
+                }
+                if (p.estado === 'rechazado') { statusClass = "bg-red-100 text-red-800"; statusText = "Cancelado"; }
+                if (p.estado === 'modificado') { statusClass = "bg-orange-100 text-orange-800"; statusText = "Ajustado por Admin"; }
+
+                let bloqueAprobacion = '';
+                if (p.estado === 'modificado') {
+                    bloqueAprobacion = `
+                        <div class="mt-4 bg-orange-50 border-2 border-orange-200 p-4 rounded-xl animate-pulse">
+                            <p class="text-sm font-black text-orange-900 mb-3">
+                                <i class="fas fa-exclamation-triangle"></i> ¡ATENCIÓN! Hemos modificado tu pedido (posible falta de stock). 
+                                <br>Nuevo total: <span class="text-xl">$${Number(p.total).toLocaleString('es-AR')}</span>
+                            </p>
+                            <button onclick="abrirDetalleCliente('${p.id}')" class="w-full mb-3 bg-zinc-800 hover:bg-black text-white font-bold py-2 rounded-lg transition text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-search"></i> Ver detalles
+                            </button>                           
+                            <div class="flex gap-2">
+                                <button onclick="responderModificacion('${p.id}', 'aprobado')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black py-2 rounded-lg transition shadow-sm">
+                                    <i class="fas fa-check"></i> Aceptar y Confirmar
+                                </button>
+                                <button onclick="responderModificacion('${p.id}', 'rechazado')" class="flex-1 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-black py-2 rounded-lg transition">
+                                    <i class="fas fa-times"></i> Cancelar Pedido
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="text-xs font-black text-gray-400 uppercase tracking-widest">Pedido #${p.id}</span>
+                                <h4 class="font-black text-gray-800">$${Number(p.total).toLocaleString('es-AR')}</h4>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${statusClass}">${statusText}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2 italic">Método: ${p.metodo}</p>
+                        ${bloqueAprobacion} 
+                        ${bloquePago} 
+                    </div>
+                `;
+            });
+        }
+
+        async function pagarPedidoConfirmado(idPedido) {
+            const pedido = misPedidosGlobales.find(p => String(p.id) === String(idPedido));
+            if (!pedido) return alert("Error al cargar el pedido.");
+
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+            btn.disabled = true;
+
+            let payloadCart = typeof pedido.carrito === 'string' ? JSON.parse(pedido.carrito) : pedido.carrito;
+
+            const totalCarrito = payloadCart.reduce((a, b) => a + (b.precio * b.cantidad), 0);
+            const diferencia = Number(pedido.total) - totalCarrito;
+            if (diferencia !== 0) {
+                payloadCart.push({ nombre: "Ajustes / Envío", imagen: "", precio: diferencia, cantidad: 1 });
+            }
+
+            try {
+                const response = await fetch(supabaseUrl + '/functions/v1/crear-pago', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + supabaseAnonKey,
+                        'apikey': supabaseAnonKey
+                    },
+                    // ACÁ ESTÁ EL CAMBIO 👇
+                    body: JSON.stringify({ cart: payloadCart, idPedido: pedido.id })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+                const data = await response.json();
+
+                if (data && data.link_pago) window.location.href = data.link_pago;
+            } catch (err) {
+                alert('Hubo un error al conectar con Mercado Pago. Intenta nuevamente.');
+                btn.innerHTML = '<i class="fas fa-handshake"></i> Pagar con Mercado Pago';
+                btn.disabled = false;
+            }
+        }
+
+        async function responderModificacion(idPedido, respuesta) {
+            if (!confirm(`¿Estás seguro de que quieres ${respuesta === 'aprobado' ? 'confirmar' : 'cancelar'} este pedido?`)) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('pedidos')
+                    .update({ estado: respuesta })
+                    .eq('id', idPedido);
+
+                if (error) throw error;
+
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast(respuesta === 'aprobado' ? "¡Pedido confirmado con éxito!" : "Pedido cancelado.");
+                } else {
+                    alert(respuesta === 'aprobado' ? "¡Pedido confirmado con éxito!" : "Pedido cancelado.");
+                }
+
+                location.reload();
+
+            } catch (err) {
+                alert("Error al procesar la respuesta: " + err.message);
+            }
+        }
+
+        function abrirDetalleCliente(idPedido) {
+            // 👉 EL ARREGLO ESTÁ ACÁ: String() fuerza a que ambos sean texto
+            const pedido = misPedidosGlobales.find(p => String(p.id) === String(idPedido));
+
+            if (!pedido) {
+                alert("No se pudo cargar el detalle de este pedido.");
+                return;
+            }
+
+            const carrito = typeof pedido.carrito === 'string' ? JSON.parse(pedido.carrito) : pedido.carrito;
+
+            const contenedor = document.getElementById('listaDetalleCliente');
+            contenedor.innerHTML = '';
+
+            carrito.forEach(item => {
+                let badgeCambio = '';
+                let claseFondo = 'bg-white';
+                let estiloNombre = '';
+
+                if (item.cantidad_original !== undefined && item.cantidad < item.cantidad_original) {
+                    if (item.cantidad === 0) {
+                        badgeCambio = `<span class="text-[10px] bg-red-100 text-red-700 font-black px-2 py-1 rounded uppercase">Eliminado por falta de stock</span>`;
+                        claseFondo = 'bg-red-50 opacity-75';
+                        estiloNombre = 'line-through text-red-400';
+                    } else {
+                        badgeCambio = `<span class="text-[10px] bg-orange-100 text-orange-800 font-black px-2 py-1 rounded uppercase">Bajó de ${item.cantidad_original} a ${item.cantidad}</span>`;
+                        claseFondo = 'bg-orange-50';
+                    }
+                }
+
+                contenedor.innerHTML += `
+                    <div class="${claseFondo} p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex justify-between items-start mb-1">
+                            <h4 class="font-bold text-gray-800 text-sm ${estiloNombre}">${item.nombre}</h4>
+                            <span class="font-black text-gray-600">$${(item.precio * item.cantidad).toLocaleString('es-AR')}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-xs font-medium text-gray-500">${item.cantidad} unidades x $${item.precio}</span>
+                            ${badgeCambio}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('totalDetalleCliente').innerText = `$${Number(pedido.total).toLocaleString('es-AR')}`;
+
+            // Ocultamos "Mis Pedidos"
+            document.getElementById('misPedidosModal').classList.add('hidden');
+            // Mostramos "Detalle del Pedido"
+            document.getElementById('modalDetalleCliente').classList.remove('hidden');
+        }
+        function cerrarModalDetalleCliente() {
+            // Cerramos el detalle
+            document.getElementById('modalDetalleCliente').classList.add('hidden');
+
+            // 👉 Y VOLVEMOS A MOSTRAR "Mis Pedidos" que estaba escondido
+            document.getElementById('misPedidosModal').classList.remove('hidden');
+        }
+
+        // ==================== SECCIÓN PASARELA DE PAGOS Y ARRANQUE ====================
+
+        async function procesarPagoWhatsApp(event) {
+            const form = validarFormulario();
+            const subtotal = cart.reduce((a, b) => a + b.precio * b.cantidad, 0);
+
+            let costoEnvio = 0;
+            if (form.metodo === 'envio' && subtotal < UMBRAL_ENVIO_GRATIS) costoEnvio = COSTO_ENVIO_FIJO;
+
+            let descuento = 0;
+            if (userProfile && subtotal >= 80000) descuento = 1000;
+
+            const totalFinal = subtotal + costoEnvio - descuento;
+
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...'; btn.disabled = true;
+
+            await guardarPedidoEnDB(form, totalFinal);
+
+            const s = sucursalesData[currentSucursal];
+            let msg = `🛒 *NUEVO PEDIDO | YA Mayorista*\n👤 *Cliente:* ${form.nombre}\n📞 *Teléfono:* ${form.tel}\n🚚 *Entrega:* ${form.metodo === 'envio' ? 'Envío a Domicilio' : 'Retiro por Sucursal'}\n`;
+            if (form.metodo === 'envio') msg += `📍 *Dir:* ${form.dir}\n⏰ *Horario:* ${form.horario}\n`;
+            msg += `───────────────\n`;
+            cart.forEach(item => { msg += `▪ ${item.cantidad}x ${item.nombre} ($${item.precio})\n`; });
+            msg += `───────────────\n*Subtotal:* $${subtotal.toLocaleString('es-AR')}\n`;
+            if (form.metodo === 'envio') msg += `*Envío:* ${costoEnvio === 0 ? 'GRATIS' : '$' + costoEnvio.toLocaleString('es-AR')}\n`;
+            if (descuento > 0) msg += `*Descuento Promo:* -$1.000\n`;
+            msg += `*TOTAL A PAGAR: $${totalFinal.toLocaleString('es-AR')}* (Abono a convenir)`;
+
+            window.open(`https://wa.me/${s.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+            btn.innerHTML = '<i class="fab fa-whatsapp text-2xl"></i> Confirmar por WhatsApp'; btn.disabled = false;
+            cerrarCheckout();
+        }
+
+        async function procesarPago(event) {
+            const form = validarFormulario();
+            const subtotal = cart.reduce((a, b) => a + b.precio * b.cantidad, 0);
+
+            let costoEnvio = 7200;
+            if (form.metodo === 'envio' && subtotal < UMBRAL_ENVIO_GRATIS) costoEnvio = COSTO_ENVIO_FIJO;
+
+            let descuento = 0;
+            if (userProfile && subtotal >= 80000) descuento = 1000;
+
+            const totalFinal = subtotal + costoEnvio - descuento;
+
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...'; btn.disabled = true;
+
+            await guardarPedidoEnDB(form, totalFinal);
+
+            const payloadCart = [...cart];
+            if (costoEnvio > 0) payloadCart.push({ nombre: "Costo de Envío", imagen: "", precio: costoEnvio, cantidad: 1 });
+            if (descuento > 0) payloadCart.push({ nombre: "Descuento 1ra Compra", imagen: "", precio: -descuento, cantidad: 1 });
+
+            try {
+                const response = await fetch(`${supabaseUrl}/functions/v1/crear-pago`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnonKey}`, 'apikey': supabaseAnonKey },
+                    body: JSON.stringify({ cart: payloadCart })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+                const data = await response.json();
+
+                if (data && data.link_sandbox) window.location.href = data.link_sandbox;
+                else if (data && data.link_pago) window.location.href = data.link_pago;
+            } catch (err) {
+                alert('Hubo un error con MP. Usa el botón de WhatsApp por favor.');
+                btn.innerHTML = '<i class="fas fa-credit-card"></i> Pagar con Mercado Pago'; btn.disabled = false;
+            }
+        }
+
+        function cambiarSucursal() {
+            // 1. Leemos qué sucursal eligió el usuario
+            currentSucursal = document.getElementById('sucursalSelect').value;
+
+            // 2. Buscamos los datos de esa sucursal en tu diccionario
+            const s = sucursalesData[currentSucursal];
+
+            // 3. Actualizamos el número del botón flotante de WhatsApp
+            document.getElementById('floatingWa').href = `https://wa.me/${s.whatsapp}`;
+
+            // 4. ¡MAGIA! Actualizamos la dirección en pantalla al instante
+            const addressText = document.getElementById('headerBranchAddress');
+            if (addressText) {
+                // Le agregamos una pequeña animación para que se note el cambio
+                addressText.style.opacity = '0';
+                setTimeout(() => {
+                    addressText.innerHTML = `<i class="fas fa-map-marker-alt text-[#FF6600] mr-1"></i> ${s.direccion}`;
+                    addressText.style.opacity = '1';
+                }, 150);
+            }
+        }
+
+        // Arranque seguro de la aplicación
+        window.onload = async () => {
+            try {
+                updateCartCount();
+                cambiarSucursal();
+
+                await checkSession();
+
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    const { data: perfil } = await supabaseClient
+                        .from('perfiles')
+                        .select('rol')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if (perfil && perfil.rol === 'admin') {
+                        document.getElementById('btnIrAdmin').classList.remove('hidden');
+                    }
+                }
+
+                await loadProducts();
+            } catch (e) {
+                console.error("Error al iniciar la web:", e);
+            }
+        };
+
+        // Objeto para guardar los relojes y que no se vuelvan locos si la página se actualiza
+        window.relojesPago = window.relojesPago || {};
+
+        function iniciarCronometro(idPedido, fechaExpiracionMs) {
+            // Si ya había un reloj corriendo para este pedido, lo frenamos para reiniciarlo limpio
+            if (window.relojesPago[idPedido]) clearInterval(window.relojesPago[idPedido]);
+
+            window.relojesPago[idPedido] = setInterval(() => {
+                const elementoTimer = document.getElementById(`timer-${idPedido}`);
+
+                // Si el cliente cambió de pestaña o se borró el pedido de la pantalla, apagamos el reloj
+                if (!elementoTimer) {
+                    clearInterval(window.relojesPago[idPedido]);
+                    return;
+                }
+
+                const ahora = new Date().getTime();
+                const distancia = fechaExpiracionMs - ahora;
+
+                // Si el tiempo llegó a cero
+                if (distancia <= 0) {
+                    clearInterval(window.relojesPago[idPedido]);
+                    elementoTimer.innerHTML = "0m 0s";
+                    elementoTimer.parentElement.innerHTML = "¡El tiempo expiró! Actualizando estado...";
+
+                    // Recargamos la página después de 2 segundos para que Supabase le muestre que está rechazado
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    // Calculamos minutos y segundos
+                    const minutos = Math.floor((distancia % (1000 * 60 * 60)) / (1000 * 60));
+                    const segundos = Math.floor((distancia % (1000 * 60)) / 1000);
+
+                    // Los mostramos en la pantalla
+                    elementoTimer.innerHTML = `${minutos}m ${segundos}s`;
+                }
+            }, 1000); // 1000 milisegundos = 1 segundo
+        }
+
+
+    </script>
+
+    <div id="modalDetalleCliente"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-zinc-900 text-white p-4 flex justify-between items-center">
+                <h3 class="text-lg font-black"><i class="fas fa-search text-[#FF6600]"></i> Detalle de tu Pedido</h3>
+                <button onclick="cerrarModalDetalleCliente()" class="text-gray-400 hover:text-white transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div id="listaDetalleCliente" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50">
+            </div>
+
+            <div class="p-4 border-t bg-white flex justify-between items-center">
+                <span class="font-bold text-gray-600">Total a Pagar:</span>
+                <span id="totalDetalleCliente" class="text-2xl font-black text-[#FF6600]">$0</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
