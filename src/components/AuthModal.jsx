@@ -1,0 +1,267 @@
+import { useAuth } from '../contexts/AuthContext';
+import { supabaseClient } from '../db/supabeClient';
+
+export default function AuthModal() {
+  const { showAuthModal, closeAuthModal, activeTab, switchTab, authError, showError } = useAuth();
+
+  const mostrarToast = (mensaje) => {
+    const toast = document.getElementById('toastExito');
+    if (toast) {
+      document.getElementById('toastMsg').innerText = mensaje;
+      toast.classList.remove('translate-x-[150%]');
+      setTimeout(() => { 
+        toast.classList.add('translate-x-[150%]'); 
+      }, 4000);
+    }
+  };
+
+  const cerrarPromo = () => {
+    const promoModal = document.getElementById('promoModal');
+    if (promoModal) {
+      promoModal.classList.add('hidden');
+    }
+  };
+
+  const checkSession = async () => {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      return session;
+    } catch (err) {
+      console.error("Error sesión:", err);
+      return null;
+    }
+  };
+
+  async function iniciarSesion(event) {
+    const btn = event.currentTarget;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...';
+    btn.disabled = true;
+    const email = document.getElementById("logEmail").value;
+    const pass = document.getElementById("logPass").value;
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password: pass,
+      });
+
+      if (error) {
+        if (error.message === "Invalid login credentials")
+          throw new Error("Correo o contraseña incorrectos.");
+        if (error.message === "Email not confirmed")
+          throw new Error(
+            "Tu cuenta está bloqueada porque falta confirmar el correo.",
+          );
+        throw new Error(error.message);
+      }
+
+      closeAuthModal();
+      cerrarPromo();
+      mostrarToast("¡Sesión iniciada!");
+
+      // Check for admin role
+      const { data: perfil } = await supabaseClient
+        .from("perfiles")
+        .select("rol")
+        .eq("id", data.user.id)
+        .single();
+
+      if (perfil && perfil.rol === "admin") {
+        const adminBtn = document.getElementById("btnIrAdmin");
+        if (adminBtn) adminBtn.classList.remove("hidden");
+      }
+
+      await checkSession();
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      btn.innerHTML = "Ingresar";
+      btn.disabled = false;
+    }
+  }
+
+  async function registrarUsuario(event) {
+    const btn = event.currentTarget;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+    btn.disabled = true;
+
+    const email = document.getElementById("regEmail").value;
+    const pass = document.getElementById("regPass").value;
+    const nombre = document.getElementById("regNombre").value;
+    const tel = document.getElementById("regTelefono").value;
+    const dir = document.getElementById("regDireccion").value;
+    const tipo = document.getElementById("regTipo").value;
+
+    try {
+      if (!email || !pass || !nombre || !tel)
+        throw new Error("Completa todos los campos obligatorios.");
+      if (pass.length < 6)
+        throw new Error("La contraseña debe tener 6 caracteres mínimo.");
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password: pass,
+      });
+      
+      if (error) {
+        if (error.message.includes("rate limit"))
+          throw new Error(
+            "Límite de registros alcanzado. Intenta de nuevo más tarde.",
+          );
+        throw new Error(error.message);
+      }
+
+      if (data.user) {
+        const { error: profileErr } = await supabaseClient
+          .from("perfiles")
+          .insert([
+            {
+              id: data.user.id,
+              nombre: nombre,
+              telefono: tel,
+              tipo_cliente: tipo,
+              direccion: dir,
+            },
+          ]);
+        if (profileErr) console.error("Error al guardar perfil:", profileErr);
+        if (!data.session)
+          throw new Error(
+            "Cuenta creada, pero Supabase exige confirmar tu correo.",
+          );
+
+        closeAuthModal();
+        cerrarPromo();
+        mostrarToast("¡Cuenta creada exitosamente!");
+        await checkSession();
+      }
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      btn.innerHTML = "Crear Mi Cuenta";
+      btn.disabled = false;
+    }
+  }
+
+  if (!showAuthModal) return null;
+
+  return (
+    <div
+      id="authModal"
+      className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
+    >
+      <div className="bg-white rounded-3xl w-full max-w-md flex flex-col modal-animate shadow-2xl overflow-hidden relative">
+        <button
+          onClick={closeAuthModal}
+          className="absolute top-4 right-5 text-3xl text-gray-400 hover:text-black leading-none z-10"
+        >
+          &times;
+        </button>
+
+        <div className="flex border-b">
+          <button
+            onClick={() => switchTab("login")}
+            id="tabLogin"
+            className={`flex-1 py-4 font-black border-b-4 ${
+              activeTab === 'login' 
+                ? 'text-gray-800 border-[#FF6600]' 
+                : 'text-gray-400 border-transparent hover:text-gray-800'
+            }`}
+          >
+            Iniciar Sesión
+          </button>
+          <button
+            onClick={() => switchTab("register")}
+            id="tabRegister"
+            className={`flex-1 py-4 font-bold border-b-4 ${
+              activeTab === 'register' 
+                ? 'text-gray-800 border-[#FF6600]' 
+                : 'text-gray-400 border-transparent hover:text-gray-800'
+            }`}
+          >
+            Crear Cuenta
+          </button>
+        </div>
+
+        <div className="p-8 bg-gray-50 max-h-[80vh] overflow-y-auto">
+          <div
+            id="authError"
+            className={`${authError ? '' : 'hidden'} mb-4 p-3 bg-red-100 text-red-700 text-sm font-bold rounded-lg border border-red-200`}
+          >
+            {authError}
+          </div>
+
+          <div id="formLogin" className={`${activeTab === 'login' ? '' : 'hidden'} space-y-4`}>
+            <input
+              type="email"
+              id="logEmail"
+              placeholder="Tu Email"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+            <input
+              type="password"
+              id="logPass"
+              placeholder="Contraseña"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+            <button
+              onClick={(e) => iniciarSesion(e)}
+              className="w-full mt-2 py-4 bg-zinc-900 hover:bg-black text-white text-lg font-black rounded-xl transition shadow-lg"
+            >
+              Ingresar
+            </button>
+          </div>
+
+          <div id="formRegister" className={`${activeTab === 'register' ? '' : 'hidden'} space-y-4`}>
+            <input
+              type="text"
+              id="regNombre"
+              placeholder="Nombre completo o Local"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+            <input
+              type="email"
+              id="regEmail"
+              placeholder="Correo electrónico"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+            <input
+              type="tel"
+              id="regTelefono"
+              placeholder="Teléfono"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+            <input
+              type="text"
+              id="regDireccion"
+              placeholder="Dirección para envíos (Opcional)"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+            <input
+              type="password"
+              id="regPass"
+              placeholder="Crear Contraseña (Mínimo 6 caracteres)"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
+            />
+
+            <select
+              id="regTipo"
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none text-gray-700"
+            >
+              <option value="Personal">Compra Personal</option>
+              <option value="Kiosco">Kiosco</option>
+              <option value="Almacén">Almacén / Despensa</option>
+              <option value="Empresa">Empresa / Oficina</option>
+            </select>
+
+            <button
+              onClick={(e) => registrarUsuario(e)}
+              className="w-full mt-2 py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg"
+            >
+              Crear Mi Cuenta
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

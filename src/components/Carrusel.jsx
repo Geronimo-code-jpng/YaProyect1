@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export default function Carrusel() {
   // 1. Use React State to track the current slide instead of a global let
@@ -29,7 +30,7 @@ export default function Carrusel() {
   };
 
   return (
-    <div>
+    <div className="py-2">
       <div
         id="heroCarousel"
         className="relative w-full overflow-hidden shadow-xl mb-8 h-48 md:h-[230px]"
@@ -41,7 +42,7 @@ export default function Carrusel() {
           style={{ transform: `translateX(-${currentSlide * 100}%)` }}
         >
           {/* Slide 1 */}
-          <div className="w-full flex-none h-full bg-gradient-to-r from-blue-700 to-blue-900 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+          <div className="w-full flex-none h-full bg-linear-to-r from-blue-700 to-blue-900 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
             <div className="z-10 w-full">
               <span className="bg-yellow-400 text-black text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
                 Especial
@@ -76,7 +77,7 @@ export default function Carrusel() {
           </div>
 
           {/* Slide 3 */}
-          <div className="w-full flex-none h-full bg-gradient-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+          <div className="w-full flex-none h-full bg-linear-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
             <div className="z-10 w-full">
               <span className="bg-black text-white text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
                 Catálogo
@@ -98,13 +99,13 @@ export default function Carrusel() {
           onClick={prevSlide}
           className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70 text-white w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"
         >
-          <i className="fas fa-chevron-left text-sm md:text-xl"></i>
+          <ChevronLeft className="text-sm md:text-xl" />
         </button>
         <button
           onClick={nextSlide}
           className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70 text-white w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"
         >
-          <i className="fas fa-chevron-right text-sm md:text-xl"></i>
+          <ChevronRight className="text-sm md:text-xl" />
         </button>
 
         <div className="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-20">

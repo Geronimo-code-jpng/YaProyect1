@@ -412,7 +412,7 @@
     </div>
 
     <div id="authModal"
-        class="hidden fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        class="hidden fixed inset-0 bg-black/80 z-9999 flex items-center justify-center p-4 backdrop-blur-sm">
         <div
             class="bg-white rounded-3xl w-full max-w-md flex flex-col modal-animate shadow-2xl overflow-hidden relative">
             <button onclick="cerrarAuth()"
@@ -723,7 +723,7 @@
         function cerrarAuth() { document.getElementById('authModal').classList.add('hidden'); }
 
         function abrirPerfil() { document.getElementById('profileModal').classList.remove('hidden'); }
-        function cerrarPerfil() { document.getElementById('profileModal').classList.add('hidden'); }
+        function cerrarPerfil() { document.getElementById('profileModal').cliniciarSesionassList.add('hidden'); }
 
         function switchAuthTab(tab) {
             document.getElementById('authError').classList.add('hidden');
