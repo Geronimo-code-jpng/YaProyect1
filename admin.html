@@ -124,27 +124,48 @@
 
         // --- ACTUALIZAMOS CARGAR PEDIDOS ---
         async function cargarPedidosAdmin() {
-            const { data: pedidos, error } = await supabaseClient
+            // Cargar pedidos de Supabase (tabla pedidos)
+            const { data: pedidosAntiguos, error: errorAntiguo } = await supabaseClient
                 .from('pedidos')
                 .select('*')
                 .order('id', { ascending: false });
 
-            if (error) return alert("Error cargando pedidos");
+            // Cargar pedidos web de la nueva tabla
+            const { data: pedidosWeb, error: errorWeb } = await supabaseClient
+                .from('pedidos_web')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (errorAntiguo) console.error("Error cargando pedidos antiguos:", errorAntiguo);
+            if (errorWeb) console.error("Error cargando pedidos web:", errorWeb);
             
-            pedidosGlobales = pedidos; // Guardamos los pedidos en memoria
+            // Combinar ambos arrays
+            const todosLosPedidos = [
+                ...(pedidosAntiguos || []),
+                ...(pedidosWeb || []).map(p => ({
+                    ...p,
+                    fuente: 'web',
+                    nombre_cliente: p.nombre_cliente,
+                    carrito: p.items
+                }))
+            ];
+            
+            pedidosGlobales = todosLosPedidos;
             const tbody = document.getElementById('listaPedidosAdmin');
             tbody.innerHTML = '';
 
-            pedidos.forEach(p => {
+            todosLosPedidos.forEach(p => {
                 let badge = `<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Pendiente</span>`;
                 if(p.estado === 'aprobado') badge = `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Aprobado</span>`;
+                if(p.estado === 'configurado') badge = `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Configurado</span>`;
                 if(p.estado === 'modificado') badge = `<span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Modificado</span>`;
                 if(p.estado === 'rechazado') badge = `<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Rechazado</span>`;
-                if(p.estado === 'pagado') badge = `<span class="bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Pagado</span>`;
-       
+                if(p.estado === 'pagado') badge = `<span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Pagado</span>`;
+                if(p.estado === 'vencido') badge = `<span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Vencido</span>`;
+        
                 // Validamos si es con envío y si hay una dirección guardada
                 let textoDireccion = "";
-                if (p.metodo === 'envio') {
+                if (p.metodo === 'envio' || p.metodo_entrega === 'envio') {
                     textoDireccion = `<p class="text-sm font-bold text-blue-700 mt-2">
                                         <i class="fas fa-map-marker-alt"></i> Dirección: ${p.direccion || 'No especificó'}
                                     </p>`;
@@ -154,24 +175,58 @@
                                     </p>`;
                 }
 
+                // Mostrar fuente del pedido y timer si está configurado
+                let fuenteBadge = '';
+                let timerInfo = '';
+                
+                if (p.fuente === 'web') {
+                    fuenteBadge = '<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full font-bold text-xs ml-2">Web</span>';
+                    
+                    if (p.estado === 'configurado' && p.fecha_vencimiento_pago) {
+                        const tiempoRestante = calcularTiempoRestante(p.fecha_vencimiento_pago);
+                        if (tiempoRestante > 0) {
+                            timerInfo = `<div class="text-xs font-bold text-red-600 mt-1">
+                                <i class="fas fa-clock"></i> ${Math.floor(tiempoRestante / 60)}:${(tiempoRestante % 60).toString().padStart(2, '0')} para pagar
+                            </div>`;
+                        } else {
+                            timerInfo = `<div class="text-xs font-bold text-gray-500 mt-1">
+                                <i class="fas fa-clock"></i> Tiempo vencido
+                            </div>`;
+                        }
+                    }
+                }
+
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 transition border-b border-gray-100">
-                        <td class="p-4 font-black text-gray-500">#${p.id}</td>
+                        <td class="p-4 font-black text-gray-500">#${p.id} ${fuenteBadge}</td>
                         <td class="p-4">
                             <div class="font-bold text-gray-900">${p.nombre_cliente}</div>
                             <div class="text-xs text-gray-500"><i class="fas fa-phone"></i> ${p.telefono}</div>
                             <div> ${textoDireccion}</div>
+                            ${timerInfo}
                         </td>
                         <td class="p-4">
                             <div class="font-black text-[#FF6600]">$${Number(p.total).toLocaleString('es-AR')}</div>
-                            <div class="text-xs font-bold text-gray-500 uppercase">${p.metodo}</div>
+                            <div class="text-xs font-bold text-gray-500 uppercase">${p.metodo || p.metodo_entrega || 'envio'}</div>
                         </td>
                         <td class="p-4">${badge}</td>
                         <td class="p-4 text-right space-x-2 whitespace-nowrap">
-                            <button onclick="cambiarEstado(${p.id}, 'aprobado')" class="bg-green-500 hover:bg-green-600 text-white w-8 h-8 rounded-full shadow" title="Aprobar"><i class="fas fa-check"></i></button>
-                            <button onclick="cambiarEstado(${p.id}, 'rechazado')" class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full shadow" title="Rechazar"><i class="fas fa-times"></i></button>
+                            ${p.fuente === 'web' && p.estado === 'pendiente' ? 
+                                `<button onclick="configurarPedido(${p.id})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 h-8 rounded-full shadow text-xs font-black transition">
+                                    <i class="fas fa-cog"></i> Configurar
+                                </button>` : ''
+                            }
+                            ${p.fuente === 'web' && p.estado === 'configurado' ? 
+                                `<button onclick="marcarPagado(${p.id})" class="bg-green-500 hover:bg-green-600 text-white px-3 h-8 rounded-full shadow text-xs font-black transition">
+                                    <i class="fas fa-check"></i> Pagado
+                                </button>` : ''
+                            }
+                            ${p.fuente !== 'web' ? 
+                                `<button onclick="cambiarEstado(${p.id}, 'aprobado')" class="bg-green-500 hover:bg-green-600 text-white w-8 h-8 rounded-full shadow" title="Aprobar"><i class="fas fa-check"></i></button>
+                                <button onclick="cambiarEstado(${p.id}, 'rechazado')" class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full shadow" title="Rechazar"><i class="fas fa-times"></i></button>` : ''
+                            }
                             
-                            <button onclick="abrirModalModificar(${p.id})" class="bg-zinc-800 hover:bg-black text-white px-4 h-8 rounded-full shadow text-xs font-bold transition">
+                            <button onclick="abrirModalModificar('${p.id}')" class="bg-zinc-800 hover:bg-black text-white px-4 h-8 rounded-full shadow text-xs font-bold transition">
                                 <i class="fas fa-eye mr-1"></i> Ver / Editar
                             </button>
                         </td>
@@ -179,6 +234,105 @@
                 `;
             });
         }
+
+        // --- FUNCIÓN PARA CONFIGURAR PEDIDO WEB ---
+        async function configurarPedido(idPedido) {
+            if(!confirm(`¿Configurar pedido #${idPedido}? Se iniciarán los 10 minutos para pagar.`)) return;
+            
+            try {
+                const fechaVencimiento = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos desde ahora
+                
+                const { error } = await supabaseClient
+                    .from('pedidos_web')
+                    .update({ 
+                        estado: 'configurado',
+                        fecha_configuracion: new Date().toISOString(),
+                        fecha_vencimiento_pago: fechaVencimiento.toISOString()
+                    })
+                    .eq('id', idPedido);
+                
+                if(error) throw error;
+                
+                alert(`✅ Pedido #${idPedido} configurado. Tiempo para pagar: 10 minutos`);
+                cargarPedidosAdmin(); // Recarga la tabla
+                
+                // Iniciar timer para actualizar cada minuto
+                iniciarTimerGlobal();
+            } catch (err) {
+                alert("Error al configurar el pedido: " + err.message);
+                console.error(err);
+            }
+        }
+
+        // --- FUNCIÓN PARA MARCAR COMO PAGADO ---
+        async function marcarPagado(idPedido) {
+            if(!confirm(`¿Confirmar pago del pedido #${idPedido}?`)) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('pedidos_web')
+                    .update({ 
+                        estado: 'pagado'
+                    })
+                    .eq('id', idPedido);
+                
+                if(error) throw error;
+                
+                alert(`✅ Pedido #${idPedido} marcado como pagado`);
+                cargarPedidosAdmin();
+            } catch (err) {
+                alert("Error al marcar como pagado: " + err.message);
+                console.error(err);
+            }
+        }
+
+        // --- FUNCIÓN PARA CALCULAR TIEMPO RESTANTE ---
+        function calcularTiempoRestante(fechaVencimiento) {
+            const ahora = new Date();
+            const vencimiento = new Date(fechaVencimiento);
+            const diferencia = vencimiento - ahora;
+            return Math.max(0, Math.floor(diferencia / 1000)); // Segundos restantes
+        }
+
+        // --- TIMER GLOBAL PARA ACTUALIZAR CADA MINUTO ---
+        let timerInterval = null;
+        
+        function iniciarTimerGlobal() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                cargarPedidosAdmin(); // Recarga la tabla para actualizar timers
+            }, 30000); // Actualiza cada 30 segundos
+        }
+
+        // --- VERIFICAR PEDIDOS VENCIDOS ---
+        async function verificarPedidosVencidos() {
+            try {
+                const { data: pedidosConfigurados, error } = await supabaseClient
+                    .from('pedidos_web')
+                    .select('id, fecha_vencimiento_pago')
+                    .eq('estado', 'configurado');
+
+                if (error) throw error;
+
+                const ahora = new Date();
+                for (const pedido of pedidosConfigurados) {
+                    if (new Date(pedido.fecha_vencimiento_pago) < ahora) {
+                        await supabaseClient
+                            .from('pedidos_web')
+                            .update({ estado: 'vencido' })
+                            .eq('id', pedido.id);
+                    }
+                }
+                
+                cargarPedidosAdmin();
+            } catch (err) {
+                console.error('Error verificando pedidos vencidos:', err);
+            }
+        }
+
+        // Iniciar verificación cada minuto
+        setInterval(verificarPedidosVencidos, 60000);
 
         // --- FUNCIÓN PARA APROBAR O RECHAZAR DESDE LA TABLA ---
         async function cambiarEstado(idPedido, nuevoEstado) {
@@ -204,6 +358,11 @@
         function abrirModalModificar(id) {
             // Buscamos el pedido completo en nuestra variable global
             pedidoEditando = JSON.parse(JSON.stringify(pedidosGlobales.find(p => p.id === id))); // Copia profunda
+            
+            if (!pedidoEditando) {
+                alert('Pedido no encontrado');
+                return;
+            }
             
             // Nos aseguramos de que el carrito sea un objeto (array)
             if (typeof pedidoEditando.carrito === 'string') {
@@ -282,23 +441,46 @@
         }
 
         async function guardarModificacionPedido() {
-            // Actualizamos Supabase con el nuevo carrito, el nuevo total, y lo marcamos como "modificado"
-            const { error } = await supabaseClient
-                .from('pedidos')
-                .update({ 
-                    carrito: pedidoEditando.carrito, 
-                    total: pedidoEditando.total,
-                    estado: 'modificado' // Esto le avisa al cliente que hubo un cambio
-                })
-                .eq('id', pedidoEditando.id);
+            if (pedidoEditando.fuente === 'web') {
+                // Para pedidos web, actualizamos la tabla pedidos_web
+                try {
+                    const { error } = await supabaseClient
+                        .from('pedidos_web')
+                        .update({ 
+                            items: pedidoEditando.carrito, 
+                            total: pedidoEditando.total,
+                            estado: 'modificado'
+                        })
+                        .eq('id', pedidoEditando.id);
 
-            if (error) {
-                alert("Error guardando los cambios del pedido.");
-                console.error(error);
+                    if (error) throw error;
+                    
+                    alert("Pedido web modificado correctamente.");
+                    cerrarModalPedido();
+                    cargarPedidosAdmin();
+                } catch (err) {
+                    alert("Error guardando los cambios del pedido web.");
+                    console.error(err);
+                }
             } else {
-                alert("Pedido modificado y enviado a revisión del cliente.");
-                cerrarModalPedido();
-                cargarPedidosAdmin(); // Recargamos la tabla
+                // Para pedidos antiguos de Supabase, actualizamos la base de datos
+                const { error } = await supabaseClient
+                    .from('pedidos')
+                    .update({ 
+                        carrito: pedidoEditando.carrito, 
+                        total: pedidoEditando.total,
+                        estado: 'modificado'
+                    })
+                    .eq('id', pedidoEditando.id);
+
+                if (error) {
+                    alert("Error guardando los cambios del pedido.");
+                    console.error(error);
+                } else {
+                    alert("Pedido modificado y enviado a revisión del cliente.");
+                    cerrarModalPedido();
+                    cargarPedidosAdmin();
+                }
             }
         }
 
@@ -309,7 +491,7 @@
 
       
     </script>
-    <div id="modalPedido" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="modalPedido" class=" fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             
             <div class="bg-zinc-900 text-white p-4 flex justify-between items-center">

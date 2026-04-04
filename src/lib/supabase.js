@@ -1,8 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { BsDatabaseExclamation } from "react-icons/bs";
 import 'dotenv/config';
 
-const supabaseUrl = "https://vcbqhwxlwmhwdbcplgbj.supabase.co";
+const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPBASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

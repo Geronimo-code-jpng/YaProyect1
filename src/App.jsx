@@ -1,27 +1,33 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import "./Global.css";
 import Footer from "./components/Footer";
-import Carrusel from "./components/Carrusel";
-import ProductCatalog from "./components/ProductCatalog";
 import CartModal from "./components/CartModal";
 import { AuthProvider } from "./contexts/AuthContext";
-import { CartProvider } from "./context/CartContext";
-import { Store } from "lucide-react";
+import { CartProvider } from "./contexts/CartContext";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
+import ProductsPage from "./pages/ProductsPage";
+import CategoriesPage from "./pages/CategoriesPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import HomePage from "./pages/HomePage";
+import AdminPanel from "./components/AdminPanel";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [showPromoModal, setShowPromoModal] = useState(true);
 
   useEffect(() => {
     // Initialize app
     const initializeApp = async () => {
       try {
         // Load cart from localStorage
-        const savedCart = localStorage.getItem('yaCart');
+        const savedCart = localStorage.getItem("yaCart");
         if (savedCart) {
           // Cart logic will be handled by custom hook
         }
-        
+
         // Initialize other app logic
         setIsLoading(false);
       } catch (error) {
@@ -47,101 +53,91 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <div className="bg-gray-50 text-gray-800 min-h-screen">
-        {/* Alert notifications */}
-        <div id="alertaVivo"
-          className="fixed top-5 left-1/2 -translate-x-1/2 bg-zinc-900 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform -translate-y-[150%] z-[99999] flex items-center gap-4 font-bold border-b-4 border-[#FF6600]">
-          <div className="bg-[#FF6600] w-10 h-10 rounded-full flex items-center justify-center text-xl animate-bounce">
-            <i className="fas fa-bell"></i>
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">Actualización de tu pedido</p>
-            <span id="alertaVivoMsg" className="text-sm"></span>
-          </div>
-        </div>
-
-        {/* Toast notifications */}
-        <div id="toastExito"
-          className="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-[99999] flex items-center gap-3 font-bold border-2 border-green-400">
-          <i className="fas fa-check-circle text-2xl"></i>
-          <span id="toastMsg">¡Operación exitosa!</span>
-        </div>
-
-        {/* WhatsApp floating button */}
-        <a id="floatingWa" href="#" target="_blank"
-          className="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110">
-          <i className="fab fa-whatsapp"></i>
-        </a>
-
-        {/* Promo modal */}
-        <div id="promoModal"
-          className="hidden fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-          <div className="bg-white rounded-3xl p-8 max-w-sm text-center shadow-2xl modal-animate relative">
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-black text-3xl leading-none">&times;</button>
-            <i className="fas fa-gift text-6xl text-[#FF6600] mb-4"></i>
-            <h2 className="text-3xl font-black text-zinc-900 leading-tight mb-2">¡$1.000 OFF!</h2>
-            <p className="text-gray-600 font-medium mb-6">Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra
-              superior a $80.000.</p>
-            <button className="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg">Crear
-              Mi Cuenta</button>
-            <button className="mt-4 text-sm font-bold text-gray-400 hover:text-gray-600">No,
-              gracias.</button>
-          </div>
-        </div>
-
-        <NavBar />
-        
-        <main className="flex flex-col mx-auto py-8">
-          <Carrusel />
-          
-          {/* Results section */}
-          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-gray-100 shadow-sm">
-            <span className="text-sm font-black text-[#FF6600] bg-orange-100 px-4 py-1.5 rounded-full uppercase" id="resultsCount"></span>
-            <h2 className="text-3xl md:text-4xl font-black text-zinc-800 tracking-tight" id="tituloSeccion"></h2>
-
-            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-2.5 rounded-xl min-w-[280px] hover:border-orange-300 transition">
-              <div className="bg-[#FF6600] text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 shadow-sm">
-                <Store />
+        <Router>
+          <div className="bg-gray-50 text-gray-800 min-h-screen">
+            {/* Alert notifications */}
+            <div
+              id="alertaVivo"
+              className="fixed top-5 left-1/2 -translate-x-1/2 bg-zinc-900 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform -translate-y-[150%] z-99999 flex items-center gap-4 font-bold border-b-4 border-[#FF6600]"
+            >
+              <div className="bg-[#FF6600] w-10 h-10 rounded-full flex items-center justify-center text-xl animate-bounce">
+                <i className="fas fa-bell"></i>
               </div>
-              <div className="flex-1 relative">
-                <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-0.5">Retiro por sucursal</p>
-                <select id="sucursalSelect" className="w-full bg-transparent font-black text-gray-800 text-sm outline-none cursor-pointer appearance-none relative z-10 pb-1">
-                  <option value="santafe">Santa Fe Central</option>
-                  <option value="santotome">Santo Tomé</option>
-                </select>
-                <p id="headerBranchAddress" className="text-[11px] text-gray-500 font-medium">
-                  <i className="fas fa-map-marker-alt text-[#FF6600] mr-1"></i> Pedro de Vega 3220
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">
+                  Actualización de tu pedido
                 </p>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                  <i className="fas fa-chevron-down text-xs"></i>
-                </div>
+                <span id="alertaVivoMsg" className="text-sm"></span>
               </div>
             </div>
+
+            {/* Toast notifications */}
+            <div
+              id="toastExito"
+              className="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-[99999] flex items-center gap-3 font-bold border-2 border-green-400"
+            >
+              <i className="fas fa-check-circle text-2xl"></i>
+              <span id="toastMsg">¡Operación exitosa!</span>
+            </div>
+
+            {/* WhatsApp floating button */}
+            <a
+              id="floatingWa"
+              href="#"
+              target="_blank"
+              class="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110"
+            >
+              <FontAwesomeIcon icon={faWhatsapp} />
+            </a>
+
+            {/* Promo modal */}
+            {showPromoModal && (
+              <div
+                id="promoModal"
+                className="fixed inset-0 bg-black/60 z-99999 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity"
+              >
+                <div className="bg-white rounded-3xl p-8 max-w-sm text-center shadow-2xl modal-animate relative">
+                  <button 
+                    onClick={() => setShowPromoModal(false)}
+                    className="absolute cursor-pointer top-4 right-4 text-gray-400 hover:text-black text-3xl leading-none"
+                  >
+                    &times;
+                  </button>
+                  <i className="fas fa-gift text-6xl text-[#FF6600] mb-4"></i>
+                  <h2 className="text-3xl font-black text-zinc-900 leading-tight mb-2">
+                    ¡$1.000 OFF!
+                  </h2>
+                  <p className="text-gray-600 font-medium mb-6">
+                    Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra
+                    superior a $80.000.
+                  </p>
+                  <button className="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg">
+                    Crear Mi Cuenta
+                  </button>
+                  <button 
+                    onClick={() => setShowPromoModal(false)}
+                    className="mt-4 text-sm font-bold text-gray-400 hover:text-gray-600"
+                  >
+                    No, gracias.
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <NavBar />
+
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/productos" element={<ProductsPage />} />
+              <Route path="/categorias" element={<CategoriesPage />} />
+              <Route path="/producto/:id" element={<ProductDetailPage />} />
+              <Route path="/admin" element={<AdminPanel />} />
+            </Routes>
+
+            <Footer />
+            <CartModal />
           </div>
-
-          <div id="statusMessage" className="text-center py-4 text-xl font-bold text-gray-400"></div>
-
-          {/* Offers section */}
-          <div id="ofertasSection" className="mb-14 hidden">
-            <h3 className="text-3xl font-black text-red-600 mb-6 flex items-center gap-3">
-              <i className="fas fa-fire animate-pulse"></i> Ofertas Únicas
-            </h3>
-            <div id="ofertasGrid" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"></div>
-          </div>
-
-          {/* Catalog section */}
-          <div id="catalogoSection">
-            <h3 className="text-2xl font-black text-zinc-800 mb-6 hidden" id="catalogoTitle"> Aprovecha YA!</h3>
-            <div id="categoriasGrid" className="grid grid-cols-2 md:grid-cols-4 m-4 gap-4 mb-8"></div>
-            <div id="productsGrid" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 hidden"></div>
-          </div>
-
-          <ProductCatalog />
-        </main>
-
-        <Footer />
-        <CartModal />
-        </div>
+        </Router>
       </CartProvider>
     </AuthProvider>
   );

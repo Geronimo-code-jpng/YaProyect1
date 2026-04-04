@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useCart } from "../context/CartContext";
+import { useCart } from "../contexts/CartContext";
 
 // Categories data
 const CATEGORIAS = [
@@ -179,6 +179,7 @@ export default function ProductCatalog() {
     if (button) {
       button.addEventListener('click', () => {
         addToCart({
+          id: p.id,
           nombre: nombreSeguro,
           precio: precioNumero,
           imagen: imgSrc,
