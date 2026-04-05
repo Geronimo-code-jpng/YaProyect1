@@ -1,11 +1,11 @@
 import Carrusel from '../components/Carrusel';
-import CatalogMain from '../components/CatalogMain';
+import CategoriesSection from '../components/CategoriesSection';
 
 export default function HomePage() {
   return (
-    <main className="flex flex-col mx-auto py-8">
+    <main className="flex flex-col mx-auto">
       <Carrusel />
-      <CatalogMain />
+      <CategoriesSection />
     </main>
   );
 }

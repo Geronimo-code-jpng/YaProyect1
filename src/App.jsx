@@ -10,7 +10,6 @@ import { AlertProvider } from "./contexts/AlertContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import ProductsPage from "./pages/ProductsPage";
-import CategoriesPage from "./pages/CategoriesPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import HomePage from "./pages/HomePage";
 import AdminPanel from "./components/AdminPanel";
@@ -72,7 +71,7 @@ function AppContent() {
         {/* WhatsApp floating button */}
         <a
           id="floatingWa"
-          href="#"
+          href="https://wa.me/whatsappaca"
           target="_blank"
           className="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110"
         >
@@ -121,7 +120,6 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/productos" element={<ProductsPage />} />
-          <Route path="/categorias" element={<CategoriesPage />} />
           <Route path="/producto/:id" element={<ProductDetailPage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>

@@ -18,18 +18,18 @@ export default function NavBar() {
   // Get user display name
   const getDisplayName = () => {
     if (userProfile?.nombre) {
-      return userProfile.nombre.split(' ')[0]; // First name only
+      return userProfile.nombre.split(" ")[0]; // First name only
     }
     if (user?.email) {
-      return user.email.split('@')[0]; // Username part of email
+      return user.email.split("@")[0]; // Username part of email
     }
-    return '';
+    return "";
   };
 
   const displayName = getDisplayName();
 
   // Check if user is admin
-  const isAdmin = userProfile?.rol === 'admin';
+  const isAdmin = userProfile?.rol === "admin";
 
   return (
     <div>
@@ -44,8 +44,8 @@ export default function NavBar() {
             </Link>
           </div>
         )}
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-wrap md:flex-nowrap items-center gap-4 md:gap-6">
+        <div className="max-w-7xl mx-auto py-4">
+          <div className="flex flex-wrap md:flex-nowrap items-center md:gap-6">
             <Link
               to="/"
               className="flex items-center gap-3 cursor-pointer shrink-0 hover:opacity-80 transition"
@@ -64,18 +64,12 @@ export default function NavBar() {
             </Link>
 
             {/* Navigation Menu */}
-            <nav className="hidden md:flex items-center gap-6 text-sm font-bold">
+            <nav className="hidden md:flex items-center text-sm font-bold">
               <Link
                 to="/productos"
-                className={`transition ${location.pathname === '/productos' ? 'text-[#FF6600]' : 'text-gray-600 hover:text-[#FF6600]'}`}
+                className={`transition ${location.pathname === "/productos" ? "text-[#FF6600]" : "text-gray-600 hover:text-[#FF6600]"}`}
               >
                 Productos
-              </Link>
-              <Link
-                to="/categorias"
-                className={`transition ${location.pathname === '/categorias' ? 'text-[#FF6600]' : 'text-gray-600 hover:text-[#FF6600]'}`}
-              >
-                Categorías
               </Link>
             </nav>
 
@@ -84,13 +78,13 @@ export default function NavBar() {
                 type="text"
                 id="searchInput"
                 placeholder="Buscar productos..."
-                className="w-full border-2 border-gray-200 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:border-[#FF6600] text-sm font-medium transition shadow-inner placeholder:text-transparent sm:placeholder:text-gray-400"
+                className={`${location.pathname.startsWith("/productos") && "invisible"} w-full border-2 border-gray-200 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:border-[#FF6600] text-sm font-medium transition shadow-inner placeholder:text-transparent sm:placeholder:text-gray-400`}
               />
               <button className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF6600]">
                 <i className="fas fa-search text-xl"></i>
               </button>
             </div>
-            
+
             <div className="flex items-center gap-3 order-2 md:order-3 shrink-0 ml-auto md:ml-0">
               {/* Show login button when not logged in */}
               {!user ? (
@@ -100,9 +94,7 @@ export default function NavBar() {
                   className="flex items-center gap-2 bg-orange-100 border border-orange-200 text-[#FF6600] hover:bg-orange-200 px-4 py-2 sm:px-5 sm:py-3 rounded-full font-bold transition"
                 >
                   <CircleUserRound />
-                  <span className="hidden sm:inline text-sm">
-                    Ingresar
-                  </span>
+                  <span className="hidden sm:inline text-sm">Ingresar</span>
                 </button>
               ) : (
                 /* Show user info when logged in */
@@ -111,8 +103,10 @@ export default function NavBar() {
                     onClick={openPedidos}
                     className="cursor-pointer flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-[#FF6600] hover:text-[#FF6600] px-4 py-2 sm:px-5 sm:py-3 rounded-full font-bold transition shadow-sm"
                   >
-                    <PackageOpen stroke="#FF6600"/>
-                    <span className="hidden sm:inline text-sm">Mis Pedidos</span>
+                    <PackageOpen stroke="#FF6600" />
+                    <span className="hidden sm:inline text-sm">
+                      Mis Pedidos
+                    </span>
                   </button>
 
                   <button
@@ -120,7 +114,7 @@ export default function NavBar() {
                     id="userLoggedMain"
                     className="cursor-pointer flex items-center gap-2 bg-zinc-100 border border-gray-200 text-zinc-800 hover:bg-gray-200 px-4 py-2 sm:px-5 sm:py-3 rounded-full font-bold transition shadow-sm"
                   >
-                    <User fill="#FF6600" stroke="#FF6600"/>
+                    <User fill="#FF6600" stroke="#FF6600" />
                     <span className="hidden sm:inline text-sm">
                       Hola, {displayName}
                     </span>
@@ -145,7 +139,7 @@ export default function NavBar() {
                   className="hidden sm:inline ml-1 text-lg"
                   id="cartTotalHeader"
                 >
-                  ${cartTotal.toLocaleString('es-AR')}
+                  ${cartTotal.toLocaleString("es-AR")}
                 </span>
               </button>
             </div>

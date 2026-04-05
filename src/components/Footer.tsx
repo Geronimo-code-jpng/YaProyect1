@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
+import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
@@ -34,20 +35,20 @@ export default function Footer() {
               Nuestras Redes
             </h4>
             <div className="mt-4 justify-center flex flex-col gap-4 text-2xl text-gray-500">
-              <div className="flex items-center">
-                <FontAwesomeIcon
-                  icon={faInstagram}
-                  className="flex hover:text-[#FF6600] cursor-pointer"
-                />
+              <Link
+                to={"google.com"}
+                className="flex cursor-pointer items-center hover:text-[#FF6600]"
+              >
+                <FontAwesomeIcon icon={faInstagram} className="flex" />
                 <p className="font-serif text-lg">&nbsp;Instagram</p>
-              </div>
-              <div className="flex">
-                <FontAwesomeIcon
-                  icon={faFacebook}
-                  className="flex hover:text-[#FF6600] cursor-pointer"
-                />
+              </Link>
+              <Link
+                to={"google.com"}
+                className="flex cursor-pointer items-center hover:text-[#FF6600]"
+              >
+                <FontAwesomeIcon icon={faFacebook} className="flex" />
                 <p className="font-serif text-lg">&nbsp;Facebook</p>
-              </div>
+              </Link>
             </div>
           </div>
 

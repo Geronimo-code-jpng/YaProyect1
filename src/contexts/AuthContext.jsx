@@ -88,9 +88,16 @@ export function AuthProvider({ children }) {
           );
           setUser(userWithProfile);
           setUserProfile(profile);
+          console.log("Sesión restaurada exitosamente para:", userWithProfile.email);
         }
       } catch (err) {
         console.error("Error inicializando auth:", err);
+        // Limpiar sesión corrupta si existe
+        try {
+          await supabaseClient.auth.signOut();
+        } catch (signOutErr) {
+          console.error("Error limpiando sesión:", signOutErr);
+        }
       }
     };
 
@@ -100,6 +107,8 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change:", event, session?.user?.email);
+      
       if (session?.user) {
         const { userWithProfile, profile } = await getProfileData(session.user);
         setUser(userWithProfile);
@@ -110,8 +119,30 @@ export function AuthProvider({ children }) {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [getProfileData]);
+    // Configurar listener para extender sesión con actividad del usuario
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    let lastActivity = Date.now();
+    
+    const handleActivity = () => {
+      const now = Date.now();
+      // Extender sesión cada 30 minutos de actividad
+      if (now - lastActivity > 30 * 60 * 1000) {
+        extendSession();
+        lastActivity = now;
+      }
+    };
+
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity, true);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity, true);
+      });
+    };
+  }, [getProfileData, extendSession]);
 
   const openAuthModal = () => {
     setShowAuthModal(true);
@@ -148,6 +179,20 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Extender sesión cuando el usuario está activo
+  const extendSession = async () => {
+    try {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (session && !error) {
+        // Refrescar el token para extender la sesión
+        await supabaseClient.auth.refreshSession();
+        console.log("Sesión extendida exitosamente");
+      }
+    } catch (err) {
+      console.error("Error extendiendo sesión:", err);
+    }
+  };
+
   const value = {
     showAuthModal,
     activeTab,
@@ -160,6 +205,7 @@ export function AuthProvider({ children }) {
     showError,
     logout,
     refreshProfile,
+    extendSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
