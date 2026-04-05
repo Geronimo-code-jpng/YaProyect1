@@ -44,7 +44,7 @@ export default function NavBar() {
             </Link>
           </div>
         )}
-        <div className="max-w-7xl mx-auto py-4">
+        <div className="max-w-7xl mx-auto py-4 px-4">
           <div className="flex flex-wrap md:flex-nowrap items-center md:gap-6">
             <Link
               to="/"

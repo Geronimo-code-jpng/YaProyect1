@@ -43,6 +43,7 @@ export default function Carrusel() {
         >
           {/* Slide 1 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-blue-700 to-blue-900 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+            <img src="./Carrusel1.png" alt="CarruselSlide1" className="absolute inset-0 w-full h-full object-cover" />            
             <div className="z-10 w-full">
               <span className="bg-yellow-400 text-black text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
                 Especial
@@ -61,6 +62,7 @@ export default function Carrusel() {
 
           {/* Slide 2 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-green-600 to-emerald-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+            <img src="./Carrusel2.png" alt="CarruselSlide2" className="absolute inset-0 w-full h-full object-cover" />
             <div className="z-10 w-full">
               <span className="bg-white text-green-700 text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
                 Logística
@@ -78,6 +80,7 @@ export default function Carrusel() {
 
           {/* Slide 3 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+            <img src="./Carrusel3.png" alt="CarruselSlide3" className="absolute inset-0 w-full h-full object-cover" />
             <div className="z-10 w-full">
               <span className="bg-black text-white text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
                 Catálogo

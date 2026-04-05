@@ -2,3 +2,6 @@ arreglar input en navbar
 arreglar categorias redireccion a Porductos
 Agregar imagenes de categorias y carrousel
 cambiar title por pagina
+Opcion Envio o Retiro ( envio = $7200 , retira = $0)
+agregar aviso de "No puedes enviar el pedido , crea un cuenta o inicia sesion" 
+agregar rechazar pedido
