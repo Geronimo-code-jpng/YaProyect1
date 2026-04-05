@@ -74,6 +74,20 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Extender sesión cuando el usuario está activo
+  const extendSession = useCallback(async () => {
+    try {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (session && !error) {
+        // Refrescar el token para extender la sesión
+        await supabaseClient.auth.refreshSession();
+        console.log("Sesión extendida exitosamente");
+      }
+    } catch (err) {
+      console.error("Error extendiendo sesión:", err);
+    }
+  }, []);
+
   useEffect(() => {
     // Revisar sesión inicial
     const initializeAuth = async () => {
@@ -176,20 +190,6 @@ export function AuthProvider({ children }) {
       const { userWithProfile, profile } = await getProfileData(session.user);
       setUser(userWithProfile);
       setUserProfile(profile);
-    }
-  };
-
-  // Extender sesión cuando el usuario está activo
-  const extendSession = async () => {
-    try {
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
-      if (session && !error) {
-        // Refrescar el token para extender la sesión
-        await supabaseClient.auth.refreshSession();
-        console.log("Sesión extendida exitosamente");
-      }
-    } catch (err) {
-      console.error("Error extendiendo sesión:", err);
     }
   };
 
