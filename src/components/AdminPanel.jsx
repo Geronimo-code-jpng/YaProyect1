@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 // Componente de confirmación inline (reemplaza alert/confirm nativos)
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 z-9999 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
         <p className="text-gray-800 font-bold text-center mb-6">{message}</p>
         <div className="flex gap-3">
@@ -67,6 +67,7 @@ const AdminPanel = () => {
   const [confirm, setConfirm] = useState(null); // { message, onConfirm }
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const timerRef = useRef(null);
+  const [tiempoActual, setTiempoActual] = useState(Date.now());
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -168,6 +169,15 @@ const AdminPanel = () => {
     verificarAdmin();
   }, [navigate, cargarPedidosAdmin]);
 
+  // Timer para actualizar tiempo restante en tiempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTiempoActual(Date.now());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Timer de refresco cada 30 segundos — usando ref para evitar re-renders
   useEffect(() => {
     if (loading) return;
@@ -213,16 +223,33 @@ const AdminPanel = () => {
   }, [cargarPedidosAdmin]);
 
   const calcularTiempoRestante = (fechaVencimiento) => {
-    const diferencia = new Date(fechaVencimiento) - new Date();
+    const diferencia = new Date(fechaVencimiento) - new Date(tiempoActual);
     return Math.max(0, Math.floor(diferencia / 1000));
   };
 
   const configurarPedido = (idPedido) => {
     showConfirm(
-      `¿Configurar pedido #${idPedido}? Se iniciarán 10 minutos para pagar.`,
+      `¿Configurar pedido #${idPedido}? Se iniciarán 10 minutos para pagar.\n\n⚠️ Esta acción enviará una notificación al cliente.`,
       async () => {
         setConfirm(null);
         try {
+          // Verificar que el pedido exista y esté en estado pendiente
+          const { data: pedido, error: fetchError } = await supabaseClient
+            .from("pedidos")
+            .select("*")
+            .eq("id", idPedido)
+            .single();
+
+          if (fetchError || !pedido) {
+            showToast("❌ Pedido no encontrado", "error");
+            return;
+          }
+
+          if (pedido.estado !== "pendiente") {
+            showToast(`❌ El pedido ya está configurado o tiene otro estado: ${pedido.estado}`, "error");
+            return;
+          }
+
           const fechaVencimiento = new Date(Date.now() + 10 * 60 * 1000);
           const { error } = await supabaseClient
             .from("pedidos")
@@ -233,11 +260,17 @@ const AdminPanel = () => {
             .eq("id", idPedido);
 
           if (error) throw error;
+          
           showToast(
             `✅ Pedido #${idPedido} configurado. 10 minutos para pagar.`,
           );
           cargarPedidosAdmin();
+          
+          // Enviar notificación WhatsApp al cliente
+          await enviarWhatsAppConfiguracion(pedido);
+          
         } catch (err) {
+          console.error("Error configurando pedido:", err);
           showToast("Error al configurar el pedido: " + err.message, "error");
         }
       },
@@ -245,51 +278,116 @@ const AdminPanel = () => {
   };
 
   const marcarPagado = (idPedido) => {
-    showConfirm(`¿Confirmar pago del pedido #${idPedido}?`, async () => {
-      setConfirm(null);
-      try {
-        // Obtener datos del pedido antes de actualizar
-        const { data: pedido, error: fetchError } = await supabaseClient
-          .from("pedidos")
-          .select("*")
-          .eq("id", idPedido)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const { error } = await supabaseClient
-          .from("pedidos")
-          .update({ estado: "pagado" })
-          .eq("id", idPedido);
-
-        if (error) throw error;
-        
-        // Enviar WhatsApp de confirmación
-        await enviarWhatsAppConfirmacion(pedido);
-        
-        showToast(`✅ Pedido #${idPedido} marcado como pagado y notificado.`);
-        cargarPedidosAdmin();
-      } catch (err) {
-        showToast("Error al marcar como pagado: " + err.message, "error");
-      }
-    });
-  };
-
-  const cambiarEstado = (idPedido, nuevoEstado) => {
     showConfirm(
-      `¿Marcar pedido #${idPedido} como ${nuevoEstado.toUpperCase()}?`,
+      `¿Confirmar pago manual del pedido #${idPedido}?\n\n⚠️ Esta acción marcará el pedido como pagado y enviará notificación al cliente.`,
       async () => {
         setConfirm(null);
         try {
+          // Obtener datos del pedido antes de actualizar
+          const { data: pedido, error: fetchError } = await supabaseClient
+            .from("pedidos")
+            .select("*")
+            .eq("id", idPedido)
+            .single();
+
+          if (fetchError || !pedido) {
+            showToast("❌ Pedido no encontrado", "error");
+            return;
+          }
+
+          if (pedido.estado === "pagado") {
+            showToast("❌ El pedido ya está marcado como pagado", "error");
+            return;
+          }
+
           const { error } = await supabaseClient
             .from("pedidos")
-            .update({ estado: nuevoEstado })
+            .update({ 
+              estado: "pagado",
+              pagado_manualmente: true,
+              fecha_pago: new Date().toISOString(),
+              pagado_por: currentUser?.email
+            })
             .eq("id", idPedido);
 
           if (error) throw error;
-          showToast(`¡Pedido ${nuevoEstado} con éxito!`);
+
+          // Enviar WhatsApp de confirmación
+          await enviarWhatsAppConfirmacion(pedido);
+
+          showToast(`✅ Pedido #${idPedido} marcado como pagado y notificado.`);
           cargarPedidosAdmin();
         } catch (err) {
+          console.error("Error marcando como pagado:", err);
+          showToast("Error al marcar como pagado: " + err.message, "error");
+        }
+      },
+    );
+  };
+
+  const cambiarEstado = (idPedido, nuevoEstado) => {
+    const mensajesEstado = {
+      aprobado: "¿Aprobar este pedido? Se enviará confirmación al cliente.",
+      rechazado: "¿Rechazar este pedido? Se notificará al cliente.",
+      cancelado: "¿Cancelar este pedido? Se notificará al cliente."
+    };
+
+    showConfirm(
+      `${mensajesEstado[nuevoEstado] || `¿Marcar pedido #${idPedido} como ${nuevoEstado.toUpperCase()}?`}`,
+      async () => {
+        setConfirm(null);
+        try {
+          // Verificar que el pedido exista
+          const { data: pedido, error: fetchError } = await supabaseClient
+            .from("pedidos")
+            .select("*")
+            .eq("id", idPedido)
+            .single();
+
+          if (fetchError || !pedido) {
+            showToast("❌ Pedido no encontrado", "error");
+            return;
+          }
+
+          // Validar transiciones de estado
+          if (nuevoEstado === "aprobado" && pedido.estado !== "pendiente") {
+            showToast("❌ Solo se pueden aprobar pedidos pendientes", "error");
+            return;
+          }
+
+          const updateData = {
+            estado: nuevoEstado,
+            modificado_por: currentUser?.email,
+            fecha_modificacion: new Date().toISOString()
+          };
+
+          // Si se aprueba, iniciar temporizador de pago
+          if (nuevoEstado === "aprobado") {
+            const fechaVencimiento = new Date(Date.now() + 10 * 60 * 1000);
+            updateData.expira_en = fechaVencimiento.toISOString();
+            updateData.estado = "configurado";
+          }
+
+          const { error } = await supabaseClient
+            .from("pedidos")
+            .update(updateData)
+            .eq("id", idPedido);
+
+          if (error) throw error;
+          
+          const estadoFinal = nuevoEstado === "aprobado" ? "configurado" : nuevoEstado;
+          showToast(`✅ Pedido ${estadoFinal} con éxito!`);
+          cargarPedidosAdmin();
+          
+          // Enviar notificación si es necesario
+          if (nuevoEstado === "aprobado") {
+            await enviarWhatsAppConfiguracion(pedido);
+          } else if (nuevoEstado === "rechazado" || nuevoEstado === "cancelado") {
+            await enviarWhatsAppRechazo(pedido, nuevoEstado);
+          }
+          
+        } catch (err) {
+          console.error(`Error cambiando estado a ${nuevoEstado}:`, err);
           showToast("Error al cambiar el estado: " + err.message, "error");
         }
       },
@@ -395,11 +493,49 @@ const AdminPanel = () => {
     }
   };
 
+  const enviarWhatsAppConfiguracion = async (pedido) => {
+    try {
+      const message =
+        `⏰ *TU PEDIDO ESTÁ LISTO PARA PAGAR*\n\n` +
+        `📦 *Pedido #${pedido.id}*\n` +
+        `👤 *Cliente:* ${pedido.nombre_cliente}\n\n` +
+        `💰 *Total:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
+        `⚡ *¡Tu pedido ha sido aceptado!*\n` +
+        `⏰ Tenés 10 minutos para completar el pago\n` +
+        `💳 Puedes pagar con Mercado Pago o transferencia\n\n` +
+        `📦 Te enviaremos actualizaciones por este medio`;
+
+      const telefonoFormateado = pedido.telefono
+        .replace(/\D/g, "")
+        .replace(/^0/, "");
+      const whatsappUrl = `https://wa.me/549${telefonoFormateado}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, "_blank");
+    } catch (error) {
+      console.error("Error enviando WhatsApp de configuración:", error);
+    }
+  };
+
+  const enviarWhatsAppRechazo = async (pedido, tipo) => {
+    try {
+      const mensaje = tipo === 'rechazado' 
+        ? `❌ *TU PEDIDO HA SIDO RECHAZADO*\n\n📦 *Pedido #${pedido.id}*\n👤 *Cliente:* ${pedido.nombre_cliente}\n\n⚠️ *Lamentamos informarte que tu pedido no ha sido aprobado. Si tienes dudas, contáctanos.`
+        : `❌ *TU PEDIDO HA SIDO CANCELADO*\n\n📦 *Pedido #${pedido.id}*\n👤 *Cliente:* ${pedido.nombre_cliente}\n\n⚠️ *Tu pedido ha sido cancelado. Si tienes dudas, contáctanos.`;
+
+      const telefonoFormateado = pedido.telefono
+        .replace(/\D/g, "")
+        .replace(/^0/, "");
+      const whatsappUrl = `https://wa.me/549${telefonoFormateado}?text=${encodeURIComponent(mensaje)}`;
+      window.open(whatsappUrl, "_blank");
+    } catch (error) {
+      console.error("Error enviando WhatsApp de rechazo:", error);
+    }
+  };
+
   const enviarWhatsAppConfirmacion = async (pedido) => {
     try {
       // Obtener lista de productos del carrito
       let productos = [];
-      if (typeof pedido.carrito === 'string') {
+      if (typeof pedido.carrito === "string") {
         try {
           productos = JSON.parse(pedido.carrito);
         } catch (e) {
@@ -410,16 +546,19 @@ const AdminPanel = () => {
       }
 
       // Crear lista de productos para el mensaje
-      const listaProductos = productos.map(p => 
-        `• ${p.nombre} x${p.cantidad} = $${(p.precio * p.cantidad).toLocaleString('es-AR')}`
-      ).join('\n');
+      const listaProductos = productos
+        .map(
+          (p) =>
+            `• ${p.nombre} x${p.cantidad} = $${(p.precio * p.cantidad).toLocaleString("es-AR")}`,
+        )
+        .join("\n");
 
       const message =
         `✅ *TU PEDIDO HA SIDO CONFIRMADO*\n\n` +
         `📦 *Pedido #${pedido.id}*\n` +
         `👤 *Cliente:* ${pedido.nombre_cliente}\n\n` +
         `🛒 *Tus productos:*\n${listaProductos}\n\n` +
-        `💰 *Total:* $${Number(pedido.total).toLocaleString('es-AR')}\n\n` +
+        `💰 *Total:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
         `🎉 *¡Gracias por tu compra!*\n` +
         `📦 Te actualizaremos por este medio el estado de tu pedido\n` +
         `🚀 Tu pedido está siendo preparado para envío`;
@@ -780,7 +919,7 @@ const AdminPanel = () => {
                                 onClick={() => configurarPedido(p.id)}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg shadow text-xs font-black transition flex items-center gap-1"
                               >
-                                <i className="fas fa-cog"></i> Configurar
+                                <i className="fas fa-cog"></i> Aceptar
                               </button>
                             )}
                             {p.fuente === "web" &&
@@ -836,6 +975,7 @@ const AdminPanel = () => {
       {modalOpen && pedidoEditando && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center gap-2"></div>
             <div className="bg-zinc-900 text-white p-4 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-black flex items-center gap-2">
@@ -848,9 +988,9 @@ const AdminPanel = () => {
               </div>
               <button
                 onClick={cerrarModalPedido}
-                className="text-gray-400 hover:text-white transition p-2 rounded-lg hover:bg-white/10"
+                className="text-4xl text-white hover:text-gray-400 cursor-pointer leading-none"
               >
-                <i className="fas fa-times text-xl"></i>
+                &times;
               </button>
             </div>
 
