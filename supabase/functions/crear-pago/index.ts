@@ -96,7 +96,7 @@ serve(async (req) => {
         }
       },
       external_reference: idPedido.toString(),
-      notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
+      notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-mp`,
       back_urls: {
         success: `${Deno.env.get('PUBLIC_URL')}/pedidos?status=success&pedido=${idPedido}`,
         failure: `${Deno.env.get('PUBLIC_URL')}/pedidos?status=failure&pedido=${idPedido}`,

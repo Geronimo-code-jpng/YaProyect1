@@ -1,0 +1,4 @@
+arreglar input en navbar
+arreglar categorias redireccion a Porductos
+Agregar imagenes de categorias y carrousel
+cambiar title por pagina

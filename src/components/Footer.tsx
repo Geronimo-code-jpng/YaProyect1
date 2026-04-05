@@ -36,14 +36,14 @@ export default function Footer() {
             </h4>
             <div className="mt-4 justify-center flex flex-col gap-4 text-2xl text-gray-500">
               <Link
-                to={"google.com"}
+                to={"https://www.instagram.com/ya.mayorista/"}
                 className="flex cursor-pointer items-center hover:text-[#FF6600]"
               >
                 <FontAwesomeIcon icon={faInstagram} className="flex" />
                 <p className="font-serif text-lg">&nbsp;Instagram</p>
               </Link>
               <Link
-                to={"google.com"}
+                to={"https://www.facebook.com/ya.mayoristasf/"}
                 className="flex cursor-pointer items-center hover:text-[#FF6600]"
               >
                 <FontAwesomeIcon icon={faFacebook} className="flex" />
@@ -58,13 +58,13 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3 text-gray-400 text-sm">
               <li>
-                <p>hola@gmail.com</p>
+                <p>distribuidorayasf@gmail.com</p>
               </li>
               <li>
-                <p>34259590000</p>
+                <p>3425084197</p>
               </li>
               <li>
-                <p>boulevard 1900</p>
+                <p>Pedro de Vega 3220, S3000 Santa Fe de la Vera Cruz, Santa Fe</p>
               </li>
             </ul>
           </div>

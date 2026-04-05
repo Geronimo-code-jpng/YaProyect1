@@ -105,6 +105,50 @@ export default function PedidosModal() {
     return new Date(expira_en) <= new Date();
   };
 
+  const verificarEstadoPago = async (pedidoId) => {
+    try {
+      console.log("🔍 Verificando estado del pago para pedido:", pedidoId);
+
+      const { data: pedido, error } = await supabaseClient
+        .from("pedidos")
+        .select("*")
+        .eq("id", pedidoId)
+        .single();
+
+      if (error) {
+        console.error("❌ Error obteniendo pedido:", error);
+        return;
+      }
+
+      if (pedido.estado === "pagado") {
+        showSuccess("✅ ¡Pago confirmado! Tu pedido está siendo procesado.");
+        await cargarPedidos();
+      } else {
+        showWarning("⏳ El pago está siendo procesado. Por favor, espera un momento...");
+        // Reintentar después de 5 segundos
+        setTimeout(() => verificarEstadoPago(pedidoId), 5000);
+      }
+    } catch (error) {
+      console.error("❌ Error verificando estado del pago:", error);
+      showError("Error verificando el estado del pago");
+    }
+  };
+
+  // Verificar estado del pago al cargar el modal si viene de Mercado Pago
+  useEffect(() => {
+    if (showModal) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get("status");
+      const pedidoId = urlParams.get("pedido");
+
+      if (status === "success" && pedidoId) {
+        verificarEstadoPago(parseInt(pedidoId));
+        // Limpiar URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [showModal]);
+
   const generarLinkPagoCliente = async (pedido) => {
     try {
       showWarning("🔄 Generando link de pago...");
