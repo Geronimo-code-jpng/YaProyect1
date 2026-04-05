@@ -62,7 +62,7 @@ function AppContent() {
         {/* Success toast */}
         <div
           id="toastExito"
-          className="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-[99999] flex items-center gap-3 font-bold border-2 border-green-400"
+          className="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-99999 flex items-center gap-3 font-bold border-2 border-green-400"
         >
           <i className="fas fa-check-circle text-2xl"></i>
           <span id="toastMsg">¡Operación exitosa!</span>

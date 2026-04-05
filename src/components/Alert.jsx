@@ -47,7 +47,7 @@ export default function Alert({ type = 'success', message, duration = 4000, onCl
 
   return (
     <div
-      className={`fixed top-5 right-5 ${styles.bg} ${styles.textColor} px-6 py-4 rounded-2xl shadow-2xl transform transition-all duration-300 z-[99999] flex items-center gap-3 font-bold border-2 ${styles.border} ${
+      className={`fixed top-5 right-5 ${styles.bg} ${styles.textColor} px-6 py-4 rounded-2xl shadow-2xl transform transition-all duration-300 z-99999 flex items-center gap-3 font-bold border-2 ${styles.border} ${
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-[150%] opacity-0'
       }`}
     >

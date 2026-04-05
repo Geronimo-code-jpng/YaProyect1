@@ -42,7 +42,7 @@ function Toast({ message, type, onClose }) {
 
   return (
     <div
-      className={`fixed top-5 right-5 z-[9999] ${colors[type] || colors.info} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold`}
+      className={`fixed top-5 right-5 z-9999 ${colors[type] || colors.info} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold`}
     >
       <i
         className={`fas ${type === "success" ? "fa-check-circle" : type === "error" ? "fa-times-circle" : "fa-info-circle"} text-xl`}
