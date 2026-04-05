@@ -37,8 +37,14 @@ export default function CatalogMain() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
       const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
-        updateUI(e.target.value, categoriaActual);
+        // Sanitize search input to prevent XSS
+        const sanitizedValue = e.target.value
+          .replace(/[<>]/g, '') // Remove potential HTML tags
+          .replace(/["']/g, '') // Remove quotes
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        setSearchTerm(sanitizedValue);
+        updateUI(sanitizedValue, categoriaActual);
       };
       searchInput.addEventListener('input', handleSearch);
       return () => searchInput.removeEventListener('input', handleSearch);
@@ -47,11 +53,20 @@ export default function CatalogMain() {
 
   // Filter products
   const filtrados = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
+    // Sanitize and validate search term
+    const term = searchTerm
+      .replace(/[<>"']/g, '') // Remove potentially dangerous characters
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .toLowerCase()
+      .trim();
     const estaBuscando = term !== "";
 
     return allProducts.filter(p => {
-      const coincideTexto = (p.nombre || "").toLowerCase().includes(term);
+      // Sanitize product name for comparison
+      const productName = (p.nombre || "")
+        .replace(/[<>"']/g, '')
+        .toLowerCase();
+      const coincideTexto = productName.includes(term);
 
       if (estaBuscando) return coincideTexto;
 

@@ -1,54 +1,73 @@
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
-import { Trash, User, Phone, MessageSquare } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { supabaseClient } from '../db/supabeClient';
+import { useAlert } from "../contexts/AlertContext";
+import { Trash, User, Phone, MessageSquare, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabaseClient } from "../db/supabeClient";
+import { openPedidos } from "./PedidosModal";
 
 export default function CartModal() {
-  const { cart, removeFromCart, updateQuantity, cartTotal, isCartOpen, setIsCartOpen, clearCart } = useCart();
-  const { user, userProfile } = useAuth();
+  const {
+    cart,
+    removeFromCart,
+    updateQuantity,
+    cartTotal,
+    isCartOpen,
+    setIsCartOpen,
+    clearCart,
+  } = useCart();
+  const { user, userProfile, openAuthModal, switchTab } = useAuth();
+  const { showSuccess, showError } = useAlert();
   const [showCheckout, setShowCheckout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pedidoTimeout, setPedidoTimeout] = useState(null);
   const [orderData, setOrderData] = useState({
-    nombre: '',
-    telefono: '',
-    direccion: '',
-    notas: ''
+    nombre: "",
+    telefono: "",
+    direccion: "",
+    notas: "",
   });
 
+  // Cargar datos del usuario cuando esté disponible
   useEffect(() => {
-    // Auto-fill user data if logged in and make it read-only
-    if (userProfile) {
-      setOrderData(prev => ({
-        ...prev,
-        nombre: userProfile.nombre || prev.nombre,
-        telefono: userProfile.telefono || prev.telefono,
-        direccion: userProfile.direccion || prev.direccion
-      }));
+    if (!user) return;
+    setOrderData((prev) => ({
+      ...prev,
+      nombre: user.nombre || prev.nombre,
+      telefono: user.telefono || prev.telefono,
+      direccion: user.direccion || prev.direccion,
+    }));
+  }, [user]);
+
+  // Limpiar datos cuando el usuario cierra sesión
+  useEffect(() => {
+    if (!user) {
+      setOrderData({ nombre: "", telefono: "", direccion: "", notas: "" });
     }
-  }, [userProfile]);
+  }, [user]);
 
   useEffect(() => {
-    // Cleanup timeout on unmount
     return () => {
-      if (pedidoTimeout) {
-        clearTimeout(pedidoTimeout);
-      }
+      if (pedidoTimeout) clearTimeout(pedidoTimeout);
     };
   }, [pedidoTimeout]);
+
+  // Determinar si los campos están bloqueados (usuario logueado con datos)
+  const campoNombreBloqueado = !!(user && user.nombre);
+  const campoTelefonoBloqueado = !!(user && user.telefono);
+  const campoDireccionBloqueado = !!(user && user.direccion);
 
   const verificarPedidosVencidos = async () => {
     try {
       const { data, error } = await supabaseClient
-        .from('pedidos')
-        .update({ 
-          estado: 'cancelado', 
-          horario: 'Pedido vencido por timeout de 10 minutos' 
+        .from("pedidos")
+        .update({
+          estado: "cancelado",
+          horario: "Pedido vencido por timeout de 10 minutos",
         })
-        .eq('estado', 'pendiente')
-        .eq('fuente', 'web')
-        .lt('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
+        .eq("estado", "pendiente")
+        .eq("fuente", "web")
+        .lt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString())
         .select();
 
       if (error) throw error;
@@ -56,7 +75,7 @@ export default function CartModal() {
         console.log(`Cancelados ${data.length} pedidos vencidos`);
       }
     } catch (error) {
-      console.error('Error verificando pedidos vencidos:', error);
+      console.error("Error verificando pedidos vencidos:", error);
     }
   };
 
@@ -67,7 +86,7 @@ export default function CartModal() {
   const changeQty = (index, delta) => {
     const item = cart[index];
     const newCantidad = Math.max(1, item.cantidad + delta);
-    updateQuantity(item.id, newCantidad);
+    updateQuantity(item.Id, newCantidad);
   };
 
   const setQty = (index, valorIngresado) => {
@@ -76,113 +95,126 @@ export default function CartModal() {
       nuevaCantidad = 1;
     }
     const item = cart[index];
-    updateQuantity(item.id, nuevaCantidad);
+    updateQuantity(item.Id, nuevaCantidad);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setOrderData(prev => ({
+    setOrderData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const sendOrderToAdmin = async () => {
     setIsSubmitting(true);
-    
+
     try {
-      // Verificar que el total sea mayor a 0
       if (cartTotal <= 0) {
-        alert('❌ El total del pedido debe ser mayor a $0. Por favor agrega productos al carrito.');
+        showError(
+          "❌ El total del pedido debe ser mayor a $0. Por favor agrega productos al carrito.",
+        );
         setIsSubmitting(false);
         return;
       }
 
-      // Verificar que haya productos en el carrito
       if (cart.length === 0) {
-        alert('❌ No hay productos en el carrito. Por favor agrega productos antes de continuar.');
+        showError(
+          "❌ No hay productos en el carrito. Por favor agrega productos antes de continuar.",
+        );
         setIsSubmitting(false);
         return;
       }
 
-      // Verificar pedidos vencidos antes de crear uno nuevo
+      // Validar campos obligatorios
+      if (
+        !orderData.nombre.trim() ||
+        !orderData.telefono.trim() ||
+        !orderData.direccion.trim()
+      ) {
+        showError("❌ Por favor completá todos los campos obligatorios.");
+        setIsSubmitting(false);
+        return;
+      }
+
       await verificarPedidosVencidos();
 
-      // Guardar pedido en Supabase con estado pendiente (usando tabla pedidos existente)
       const pedidoData = {
-        nombre_cliente: orderData.nombre,
-        telefono: orderData.telefono,
-        direccion: orderData.direccion,
-        carrito: cart.map(item => ({
-          id: item.id,
+        nombre_cliente: orderData.nombre.trim(),
+        telefono: orderData.telefono.trim(),
+        direccion: orderData.direccion.trim(),
+        carrito: cart.map((item) => ({
+          Id: item.Id,
           nombre: item.nombre,
           cantidad: item.cantidad,
           precio: item.precio,
-          subtotal: item.precio * item.cantidad
+          subtotal: item.precio * item.cantidad,
         })),
         total: cartTotal,
-        estado: 'pendiente',
-        metodo: 'envio',
+        estado: "pendiente",
+        metodo: "envio",
         created_at: new Date().toISOString(),
-        expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutos
-        fuente: 'web',
-        horario: orderData.notas || 'Sin notas'
+        expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        fuente: "web",
+        horario: orderData.notas.trim() || "Sin notas",
+        user_id: user?.id || null,
       };
 
       const { data, error } = await supabaseClient
-        .from('pedidos')
+        .from("pedidos")
         .insert(pedidoData)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Configurar timeout para cancelación automática
-      const timeoutId = setTimeout(async () => {
-        try {
-          const { error: cancelError } = await supabaseClient
-            .from('pedidos')
-            .update({ 
-              estado: 'cancelado',
-              horario: 'Pedido cancelado automáticamente por timeout de 10 minutos'
-            })
-            .eq('id', data.id)
-            .eq('estado', 'pendiente');
-
-          if (cancelError) throw cancelError;
-          console.log(`Pedido #${data.id} cancelado automáticamente por timeout`);
-        } catch (error) {
-          console.error('Error cancelando pedido automáticamente:', error);
-        }
-      }, 10 * 60 * 1000); // 10 minutos
+      // Timeout para cancelación automática (usando id en minúscula)
+      const timeoutId = setTimeout(
+        async () => {
+          try {
+            await supabaseClient
+              .from("pedidos")
+              .update({
+                estado: "cancelado",
+                horario:
+                  "Pedido cancelado automáticamente por timeout de 10 minutos",
+              })
+              .eq("id", data.id)
+              .eq("estado", "pendiente");
+          } catch (error) {
+            console.error("Error cancelando pedido automáticamente:", error);
+          }
+        },
+        10 * 60 * 1000,
+      );
 
       setPedidoTimeout(timeoutId);
 
-      // Enviar mensaje por WhatsApp
-      const message = `🛒 *NUEVO PEDIDO WEB* #${data.id}\n\n` +
-        `👤 *Cliente:* ${orderData.nombre}\n` +
-        `📞 *Teléfono:* ${orderData.telefono}\n` +
-        `📍 *Dirección:* ${orderData.direccion}\n\n` +
-        `📦 *Productos:*\n` +
-        cart.map(item => `• ${item.cantidad}x ${item.nombre} - $${(item.precio * item.cantidad).toLocaleString('es-AR')}`).join('\n') +
-        `\n\n💰 *Total:* $${cartTotal.toLocaleString('es-AR')}\n\n` +
-        `📝 *Notas:* ${orderData.notas || 'Ninguna'}\n\n` +
-        `⏰ *Tiempo límite:* 10 minutos para aceptar\n` +
-        `🔗 *Gestionar pedido:* ${window.location.origin}/admin.html`;
-
-      // Open WhatsApp with pre-filled message
-      const whatsappUrl = `https://wa.me/5491112345678?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
-
-      // Clear cart and close modal
       clearCart();
       setShowCheckout(false);
       setIsCartOpen(false);
-      
-      alert(`✅ Pedido #${data.id} enviado con éxito. Tiene 10 minutos para ser aceptado antes de cancelarse automáticamente. Te contactaremos pronto para confirmar.`);
+
+      showSuccess("¡Pedido enviado! Lo revisaremos a la brevedad.");
+
+      setTimeout(() => {
+        if (!user) {
+          if (
+            confirm(
+              "Para ver el estado de tu pedido, necesitas una cuenta. ¿Querés crear una cuenta gratuita ahora?",
+            )
+          ) {
+            switchTab("register");
+            openAuthModal();
+          }
+        } else {
+          if (confirm("¿Querés ver el estado de tu pedido en 'Mis Pedidos'?")) {
+            openPedidos();
+          }
+        }
+      }, 1000);
     } catch (error) {
-      console.error('Error sending order:', error);
-      alert('❌ Error al enviar el pedido. Por favor intenta nuevamente.');
+      console.error("Error sending order:", error);
+      showError("❌ Error al enviar el pedido. Por favor intenta nuevamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -197,11 +229,14 @@ export default function CartModal() {
           <h3 className="text-2xl font-black flex items-center gap-3">
             <i className="fas fa-shopping-cart text-[#FF6600]"></i> Mi Pedido
           </h3>
-          <button onClick={toggleCart} className="text-4xl text-gray-400 hover:text-red-500 leading-none">
+          <button
+            onClick={toggleCart}
+            className="text-4xl text-gray-400 hover:text-red-500 leading-none"
+          >
             &times;
           </button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-5 bg-white">
           {cart.length === 0 ? (
             <div className="text-center text-gray-400 py-12">
@@ -210,34 +245,42 @@ export default function CartModal() {
             </div>
           ) : (
             cart.map((item, index) => (
-              <div key={`${item.id}-${index}`} className="flex gap-4 mb-5 pb-5 border-b relative">
-                <img 
-                  src={item.imagen} 
-                  className="w-20 h-20 object-contain rounded-xl border p-1 bg-white" 
+              <div
+                key={`${item.Id}-${index}`}
+                className="flex gap-4 mb-5 pb-5 border-b relative"
+              >
+                <img
+                  src={
+                    item.imagen ||
+                    "https://via.placeholder.com/80/f3f4f6/a1a1aa?text=Prod"
+                  }
+                  className="w-20 h-20 object-contain rounded-xl border p-1 bg-white"
                   alt={item.nombre}
                 />
                 <div className="flex-1">
                   <h4 className="font-bold text-sm pr-6">{item.nombre}</h4>
                   <div className="font-black text-[#FF6600]">
-                    ${item.precio.toLocaleString('es-AR')}
+                    ${item.precio.toLocaleString("es-AR")}
                   </div>
                   <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden mt-2 w-max relative">
-                    <button 
+                    <button
                       onClick={() => changeQty(index, -1)}
                       className="w-8 h-8 font-bold bg-gray-50 hover:bg-gray-200"
                     >
                       -
                     </button>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      value={item.cantidad} 
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.cantidad}
                       onChange={(e) => setQty(index, e.target.value)}
-                      onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
+                      onInput={(e) =>
+                        (e.target.value = e.target.value.replace(/[^0-9]/g, ""))
+                      }
                       className="w-12 h-8 text-center font-black focus:outline-none focus:bg-blue-50 text-gray-700"
-                      style={{MozAppearance: 'textfield'}}
+                      style={{ MozAppearance: "textfield" }}
                     />
-                    <button 
+                    <button
                       onClick={() => changeQty(index, 1)}
                       className="w-8 h-8 font-bold bg-gray-50 hover:bg-gray-200"
                     >
@@ -245,109 +288,169 @@ export default function CartModal() {
                     </button>
                   </div>
                 </div>
-                <button 
-                  onClick={() => removeFromCart(item.id)}
+                <button
+                  onClick={() => removeFromCart(item.Id)}
                   className="text-gray-300 hover:text-red-500 p-1"
                 >
-                  <Trash size={30}/>
+                  <Trash size={30} />
                 </button>
               </div>
             ))
           )}
         </div>
-        
+
         <div className="p-6 border-t bg-gray-50 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
           <div className="flex justify-between text-2xl font-black mb-4">
             <span>Subtotal:</span>
-            <span className="text-[#FF6600]">${cartTotal.toLocaleString('es-AR')}</span>
+            <span className="text-[#FF6600]">
+              ${cartTotal.toLocaleString("es-AR")}
+            </span>
           </div>
-          <button 
-            className="w-full py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg flex items-center justify-center gap-2"
+          <button
+            className="w-full py-4 bg-[#FF6600] hover:bg-orange-700 text-white text-lg font-black rounded-xl transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setShowCheckout(true)}
+            disabled={cart.length === 0}
           >
             Completar Compra <i className="fas fa-arrow-right"></i>
           </button>
         </div>
       </div>
-      
+
       {/* Checkout Modal */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b">
+            <div className="p-6 border-b flex justify-between items-center">
               <h3 className="text-2xl font-black flex items-center gap-3">
-                <i className="fas fa-clipboard-list text-[#FF6600]"></i> 
+                <i className="fas fa-clipboard-list text-[#FF6600]"></i>
                 Finalizar Pedido
               </h3>
+              <button
+                onClick={() => setShowCheckout(false)}
+                className="text-3xl text-gray-400 hover:text-red-500 leading-none"
+              >
+                &times;
+              </button>
             </div>
-            
+
+            {/* Banner de datos verificados si está logueado */}
+            {user && (
+              <div className="mx-6 mt-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-2 text-sm font-bold">
+                <Lock size={14} />
+                Los datos de tu cuenta se usarán para el pedido
+              </div>
+            )}
+
             <div className="p-6 space-y-4">
+              {/* Nombre */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   <User size={16} className="inline mr-2" />
                   Nombre completo
+                  {campoNombreBloqueado && (
+                    <span className="ml-2 text-xs text-gray-400 font-normal">
+                      (de tu cuenta)
+                    </span>
+                  )}
                 </label>
-                {userProfile ? (
-                  <div className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 font-medium text-gray-700">
-                    {orderData.nombre}
-                  </div>
-                ) : (
+                <div className="relative">
                   <input
                     type="text"
                     name="nombre"
                     value={orderData.nombre}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
-                    placeholder="Tu nombre"
-                    required
+                    onChange={
+                      campoNombreBloqueado ? undefined : handleInputChange
+                    }
+                    readOnly={campoNombreBloqueado}
+                    className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
+                      campoNombreBloqueado
+                        ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
+                        : "border-gray-200 focus:border-[#FF6600]"
+                    }`}
+                    placeholder="Tu nombre completo"
                   />
-                )}
+                  {campoNombreBloqueado && (
+                    <Lock
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                  )}
+                </div>
               </div>
-              
+
+              {/* Teléfono */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   <Phone size={16} className="inline mr-2" />
                   Teléfono
+                  {campoTelefonoBloqueado && (
+                    <span className="ml-2 text-xs text-gray-400 font-normal">
+                      (de tu cuenta)
+                    </span>
+                  )}
                 </label>
-                {userProfile ? (
-                  <div className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 font-medium text-gray-700">
-                    {orderData.telefono}
-                  </div>
-                ) : (
+                <div className="relative">
                   <input
                     type="tel"
                     name="telefono"
                     value={orderData.telefono}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                    onChange={
+                      campoTelefonoBloqueado ? undefined : handleInputChange
+                    }
+                    readOnly={campoTelefonoBloqueado}
+                    className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
+                      campoTelefonoBloqueado
+                        ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
+                        : "border-gray-200 focus:border-[#FF6600]"
+                    }`}
                     placeholder="Tu teléfono"
-                    required
                   />
-                )}
+                  {campoTelefonoBloqueado && (
+                    <Lock
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                  )}
+                </div>
               </div>
-              
+
+              {/* Dirección */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   <i className="fas fa-map-marker-alt mr-2"></i>
                   Dirección de entrega
+                  {campoDireccionBloqueado && (
+                    <span className="ml-2 text-xs text-gray-400 font-normal">
+                      (de tu cuenta)
+                    </span>
+                  )}
                 </label>
-                {userProfile ? (
-                  <div className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 font-medium text-gray-700">
-                    {orderData.direccion}
-                  </div>
-                ) : (
-                  <textarea
+                <div className="relative">
+                  <input
+                    type="text"
                     name="direccion"
                     value={orderData.direccion}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
-                    placeholder="Calle, número, departamento..."
-                    rows="2"
-                    required
+                    onChange={
+                      campoDireccionBloqueado ? undefined : handleInputChange
+                    }
+                    readOnly={campoDireccionBloqueado}
+                    className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
+                      campoDireccionBloqueado
+                        ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
+                        : "border-gray-200 focus:border-[#FF6600]"
+                    }`}
+                    placeholder="Tu dirección"
                   />
-                )}
+                  {campoDireccionBloqueado && (
+                    <Lock
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                  )}
+                </div>
               </div>
-              
+
+              {/* Notas */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   <MessageSquare size={16} className="inline mr-2" />
@@ -362,15 +465,20 @@ export default function CartModal() {
                   rows="2"
                 />
               </div>
-              
+
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex justify-between text-lg font-black mb-2">
                   <span>Total del pedido:</span>
-                  <span className="text-[#FF6600]">${cartTotal.toLocaleString('es-AR')}</span>
+                  <span className="text-[#FF6600]">
+                    ${cartTotal.toLocaleString("es-AR")}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500 font-medium">
+                  {cart.length} {cart.length === 1 ? "producto" : "productos"}
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6 border-t bg-gray-50 flex gap-3">
               <button
                 onClick={() => setShowCheckout(false)}
@@ -381,7 +489,12 @@ export default function CartModal() {
               </button>
               <button
                 onClick={sendOrderToAdmin}
-                disabled={isSubmitting || !orderData.nombre || !orderData.telefono || !orderData.direccion}
+                disabled={
+                  isSubmitting ||
+                  !orderData.nombre.trim() ||
+                  !orderData.telefono.trim() ||
+                  !orderData.direccion.trim()
+                }
                 className="flex-1 py-3 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
@@ -391,7 +504,7 @@ export default function CartModal() {
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-whatsapp"></i>
+                    <i className="fas fa-paper-plane"></i>
                     Enviar Pedido
                   </>
                 )}

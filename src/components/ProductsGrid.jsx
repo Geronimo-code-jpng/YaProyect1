@@ -1,33 +1,43 @@
 import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import { useState } from 'react';
 
-export default function ProductsGrid({ products, onAddToCart }) {
+export default function ProductsGrid({ products }) {
   const { addToCart } = useCart();
 
   const handleAddToCart = (producto, event) => {
     event.preventDefault();
     event.stopPropagation();
     
-    const nombreSeguro = producto.nombre ? producto.nombre.replace(/"/g, '&quot;').replace(/'/g, '&#39;').trim() : 'Producto';
+    const nombreSeguro = producto.nombre ? producto.nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, '').trim() : 'Producto';
     const precioNumero = Number(producto.precio) || 0;
     const imgSrc = producto.Imagen || producto.imagen || 'https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Sin+Foto';
 
     addToCart({
-      id: producto.id,
+      Id: producto.Id,
       nombre: nombreSeguro,
       precio: precioNumero,
       imagen: imgSrc,
       cantidad: 1
     });
     
-    // Visual feedback
+    // Visual feedback using safe DOM manipulation
     const button = event.currentTarget;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-check"></i> AGREGADO';
+    const originalContent = button.innerHTML;
+    
+    // Create safe content for the check state
+    const checkIcon = document.createElement('i');
+    checkIcon.className = 'fas fa-check';
+    const checkText = document.createTextNode(' AGREGADO');
+    
+    // Clear and append safe content
+    button.innerHTML = '';
+    button.appendChild(checkIcon);
+    button.appendChild(checkText);
+    
     button.classList.add('bg-[#FF6600]', 'text-white');
+    
     setTimeout(() => {
-      button.innerHTML = originalText;
+      button.innerHTML = originalContent;
       button.classList.remove('bg-[#FF6600]', 'text-white');
     }, 1000);
   };
@@ -50,8 +60,8 @@ export default function ProductsGrid({ products, onAddToCart }) {
 
         return (
           <Link
-            key={producto.id}
-            to={`/producto/${producto.id}`}
+            key={producto.Id}
+            to={`/producto/${producto.Id}`}
             className="product-card bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col relative hover:shadow-lg transition-shadow group"
           >
             {/* Badges */}

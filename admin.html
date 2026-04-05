@@ -92,6 +92,9 @@
                         <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
                         <p class="font-bold text-xl text-red-600">Error de permisos o base de datos</p>
                         <p class="text-gray-500">${perfilError.message}</p>
+                        <button onclick="window.location.reload()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition">
+                            <i class="fas fa-redo"></i> Reintentar
+                        </button>
                     `;
                     return; // Frenamos la ejecución acá
                 }
@@ -112,8 +115,12 @@
                 // Si el código falla por cualquier otro motivo, lo atrapamos
                 console.error("Error fatal en el código:", err);
                 document.getElementById('pantallaCarga').innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
                     <p class="font-bold text-xl text-red-600">Error crítico</p>
                     <p class="text-gray-500">${err.message}</p>
+                    <button onclick="window.location.reload()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition">
+                        <i class="fas fa-redo"></i> Reintentar
+                    </button>
                 `;
             }
           };
@@ -124,37 +131,59 @@
 
         // --- ACTUALIZAMOS CARGAR PEDIDOS ---
         async function cargarPedidosAdmin() {
-            // Cargar pedidos de Supabase (tabla pedidos)
-            const { data: pedidosAntiguos, error: errorAntiguo } = await supabaseClient
+            // Cargar todos los pedidos de la tabla pedidos
+            const { data: todosLosPedidos, error } = await supabaseClient
                 .from('pedidos')
                 .select('*')
                 .order('id', { ascending: false });
 
-            // Cargar pedidos web de la nueva tabla
-            const { data: pedidosWeb, error: errorWeb } = await supabaseClient
-                .from('pedidos_web')
-                .select('*')
-                .order('id', { ascending: false });
+            if (error) {
+                console.error("Error cargando pedidos:", error);
+                document.getElementById('listaPedidosAdmin').innerHTML = '<tr><td colspan="5" class="text-center p-4 text-red-500">Error cargando pedidos</td></tr>';
+                return;
+            }
+            
+            // Procesar y mostrar todos los pedidos
+            const pedidosProcesados = (todosLosPedidos || []).map(pedido => {
+                // Asegurar que los pedidos web tengan los campos correctos según la tabla
+                if (pedido.fuente === 'web') {
+                    return {
+                        ...pedido,
+                        nombre_cliente: pedido.nombre_cliente || 'Sin nombre',
+                        telefono: pedido.telefono || 'Sin teléfono',
+                        direccion: pedido.direccion || 'Sin dirección',
+                        metodo: pedido.metodo || 'envio',
+                        carrito: Array.isArray(pedido.carrito) ? pedido.carrito : (pedido.carrito ? JSON.parse(pedido.carrito) : []),
+                        total: Number(pedido.total) || 0,
+                        estado: pedido.estado || 'pendiente',
+                        created_at: pedido.created_at,
+                        expira_en: pedido.expira_en,
+                        horario: pedido.horario || ''
+                    };
+                }
+                // Para pedidos manuales, mantener estructura consistente
+                return {
+                    ...pedido,
+                    carrito: Array.isArray(pedido.carrito) ? pedido.carrito : (pedido.carrito ? JSON.parse(pedido.carrito) : []),
+                    total: Number(pedido.total) || 0,
+                    nombre_cliente: pedido.nombre_cliente || pedido.nombre || 'Sin nombre',
+                    telefono: pedido.telefono || 'Sin teléfono',
+                    direccion: pedido.direccion || 'Sin dirección',
+                    metodo: pedido.metodo || pedido.metodo_entrega || 'envio'
+                };
+            });
+            
+            renderizarPedidosAdmin(pedidosProcesados);
+        }
 
-            if (errorAntiguo) console.error("Error cargando pedidos antiguos:", errorAntiguo);
-            if (errorWeb) console.error("Error cargando pedidos web:", errorWeb);
+        function renderizarPedidosAdmin(pedidos) {
+            // Store global reference for modal access
+            pedidosGlobales = pedidos;
             
-            // Combinar ambos arrays
-            const todosLosPedidos = [
-                ...(pedidosAntiguos || []),
-                ...(pedidosWeb || []).map(p => ({
-                    ...p,
-                    fuente: 'web',
-                    nombre_cliente: p.nombre_cliente,
-                    carrito: p.items
-                }))
-            ];
-            
-            pedidosGlobales = todosLosPedidos;
             const tbody = document.getElementById('listaPedidosAdmin');
             tbody.innerHTML = '';
 
-            todosLosPedidos.forEach(p => {
+            pedidos.forEach(p => {
                 let badge = `<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Pendiente</span>`;
                 if(p.estado === 'aprobado') badge = `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Aprobado</span>`;
                 if(p.estado === 'configurado') badge = `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-xs uppercase">Configurado</span>`;
@@ -226,7 +255,7 @@
                                 <button onclick="cambiarEstado(${p.id}, 'rechazado')" class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full shadow" title="Rechazar"><i class="fas fa-times"></i></button>` : ''
                             }
                             
-                            <button onclick="abrirModalModificar('${p.id}')" class="bg-zinc-800 hover:bg-black text-white px-4 h-8 rounded-full shadow text-xs font-bold transition">
+                            <button onclick="abrirModalModificar(${p.id})" class="bg-zinc-800 hover:bg-black text-white px-4 h-8 rounded-full shadow text-xs font-bold transition">
                                 <i class="fas fa-eye mr-1"></i> Ver / Editar
                             </button>
                         </td>
@@ -243,7 +272,7 @@
                 const fechaVencimiento = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos desde ahora
                 
                 const { error } = await supabaseClient
-                    .from('pedidos_web')
+                    .from('pedidos')
                     .update({ 
                         estado: 'configurado',
                         fecha_configuracion: new Date().toISOString(),
@@ -270,7 +299,7 @@
             
             try {
                 const { error } = await supabaseClient
-                    .from('pedidos_web')
+                    .from('pedidos')
                     .update({ 
                         estado: 'pagado'
                     })
@@ -309,17 +338,17 @@
         async function verificarPedidosVencidos() {
             try {
                 const { data: pedidosConfigurados, error } = await supabaseClient
-                    .from('pedidos_web')
-                    .select('id, fecha_vencimiento_pago')
+                    .from('pedidos')
+                    .select('id, expira_en')
                     .eq('estado', 'configurado');
 
                 if (error) throw error;
 
                 const ahora = new Date();
                 for (const pedido of pedidosConfigurados) {
-                    if (new Date(pedido.fecha_vencimiento_pago) < ahora) {
+                    if (new Date(pedido.expira_en) < ahora) {
                         await supabaseClient
-                            .from('pedidos_web')
+                            .from('pedidos')
                             .update({ estado: 'vencido' })
                             .eq('id', pedido.id);
                     }
@@ -355,21 +384,36 @@
         }
 
         // --- FUNCIONES DEL MODAL DE DETALLES ---
-        function abrirModalModificar(id) {
-            // Buscamos el pedido completo en nuestra variable global
-            pedidoEditando = JSON.parse(JSON.stringify(pedidosGlobales.find(p => p.id === id))); // Copia profunda
+        function abrirModalModificar(idPedido) {
+            // Convertir a número si viene como string
+            const id = Number(idPedido);
+            // Buscamos el pedido en los datos procesados
+            const pedido = pedidosGlobales.find(p => p.id === id);
             
-            if (!pedidoEditando) {
+            if (!pedido) {
                 alert('Pedido no encontrado');
                 return;
             }
             
-            // Nos aseguramos de que el carrito sea un objeto (array)
+            // Hacemos una copia profunda del pedido
+            pedidoEditando = JSON.parse(JSON.stringify(pedido));
+            
+            // Nos aseguramos de que el carrito sea un array
             if (typeof pedidoEditando.carrito === 'string') {
-                pedidoEditando.carrito = JSON.parse(pedidoEditando.carrito);
+                try {
+                    pedidoEditando.carrito = JSON.parse(pedidoEditando.carrito);
+                } catch (e) {
+                    console.error('Error parsing carrito:', e);
+                    pedidoEditando.carrito = [];
+                }
+            }
+            
+            // Si no es array, lo convertimos a array vacío
+            if (!Array.isArray(pedidoEditando.carrito)) {
+                pedidoEditando.carrito = [];
             }
 
-            // MAGIA AQUÍ: Guardamos la cantidad original
+            // Guardamos la cantidad original de cada item
             pedidoEditando.carrito.forEach(item => {
                 if (item.cantidad_original === undefined) {
                     item.cantidad_original = item.cantidad;
@@ -442,12 +486,12 @@
 
         async function guardarModificacionPedido() {
             if (pedidoEditando.fuente === 'web') {
-                // Para pedidos web, actualizamos la tabla pedidos_web
+                // Para pedidos web, actualizamos la tabla pedidos
                 try {
                     const { error } = await supabaseClient
-                        .from('pedidos_web')
+                        .from('pedidos')
                         .update({ 
-                            items: pedidoEditando.carrito, 
+                            carrito: JSON.stringify(pedidoEditando.carrito), 
                             total: pedidoEditando.total,
                             estado: 'modificado'
                         })

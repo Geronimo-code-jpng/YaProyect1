@@ -36,8 +36,20 @@ export default function ProductsPage() {
 
   // Filter products based on category and search
   const productosFiltrados = allProducts.filter(product => {
+    // Sanitize search term
+    const sanitizedSearchTerm = searchTerm
+      .replace(/[<>"']/g, '')
+      .replace(/\s+/g, ' ')
+      .toLowerCase()
+      .trim();
+    
+    // Sanitize product name
+    const sanitizedName = (product.nombre || "")
+      .replace(/[<>"']/g, '')
+      .toLowerCase();
+    
     const matchesCategory = categoriaActual === 'Todas' || product.Categoria === categoriaActual;
-    const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = sanitizedName.includes(sanitizedSearchTerm);
     return matchesCategory && matchesSearch;
   });
 
@@ -52,7 +64,15 @@ export default function ProductsPage() {
             type="text"
             placeholder="Buscar productos..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              // Sanitize input
+              const sanitizedValue = e.target.value
+                .replace(/[<>]/g, '')
+                .replace(/["']/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              setSearchTerm(sanitizedValue);
+            }}
             className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
           />
           <select

@@ -95,7 +95,7 @@ export default function CategoriesPage() {
                   
                   <div className="space-y-2">
                     {products.slice(0, 3).map((product) => (
-                      <div key={product.id} className="flex justify-between items-center text-sm">
+                      <div key={product.Id || product.id} className="flex justify-between items-center text-sm">
                         <span className="text-gray-600 truncate flex-1">{product.nombre}</span>
                         <span className="font-black text-zinc-900 ml-2">${product.precio?.toLocaleString('es-AR')}</span>
                       </div>

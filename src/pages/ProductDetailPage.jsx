@@ -16,7 +16,7 @@ export default function ProductDetailPage() {
         const { data, error } = await supabaseClient
           .from("productos")
           .select('*')
-          .eq('id', id)
+          .eq('Id', id)
           .single();
         
         if (error) {

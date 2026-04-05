@@ -4,12 +4,6 @@ import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 export default function Footer() {
   return (
     <div>
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.x.x/css/all.min.css"
-        />
-      </head>
       <footer className="bg-gray-900 text-white pt-12 pb-8 mt-20">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>

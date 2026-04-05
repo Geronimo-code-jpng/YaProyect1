@@ -30,11 +30,11 @@ export default function ProductCatalog() {
         // This would be replaced with actual Supabase call
         // For now, using mock data
         const mockProducts = [
-          { id: 1, nombre: "Coca-Cola 2.25L", Categoria: "BEBIDAS", precio: 1500, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Coca-Cola" },
-          { id: 2, nombre: "Papas Lays 150g", Categoria: "ALIMENTO", precio: 800, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Papas" },
-          { id: 3, nombre: "Leche La Serenísima 1L", Categoria: "LACTEOS", precio: 1200, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Leche" },
-          { id: 4, nombre: "Aceite Cocinero 900ml", Categoria: "ACEITE", precio: 2500, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Aceite" },
-          { id: 5, nombre: "Yerba Mate Taragüi 1kg", Categoria: "YERBA", precio: 3500, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Yerba" },
+          { Id: 1, nombre: "Coca-Cola 2.25L", Categoria: "BEBIDAS", precio: 1500, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Coca-Cola" },
+          { Id: 2, nombre: "Papas Lays 150g", Categoria: "ALIMENTO", precio: 800, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Papas" },
+          { Id: 3, nombre: "Leche La Serenísima 1L", Categoria: "LACTEOS", precio: 1200, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Leche" },
+          { Id: 4, nombre: "Aceite Cocinero 900ml", Categoria: "ACEITE", precio: 2500, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Aceite" },
+          { Id: 5, nombre: "Yerba Mate Taragüi 1kg", Categoria: "YERBA", precio: 3500, imagen: "https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Yerba" },
         ];
         setAllProducts(mockProducts);
         setIsLoading(false);
@@ -52,7 +52,13 @@ export default function ProductCatalog() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
       const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
+        // Sanitize search input to prevent XSS
+        const sanitizedValue = e.target.value
+          .replace(/[<>]/g, '') // Remove potential HTML tags
+          .replace(/["']/g, '') // Remove quotes
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        setSearchTerm(sanitizedValue);
       };
       searchInput.addEventListener('input', handleSearch);
       return () => searchInput.removeEventListener('input', handleSearch);
@@ -95,23 +101,39 @@ export default function ProductCatalog() {
 
     // Update title
     if (estaBuscando) {
-      tituloSeccion.innerText = `Resultados para "${searchTerm}"`;
+      // Escape search term to prevent XSS in text content
+      const escapedSearchTerm = searchTerm
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      tituloSeccion.textContent = `Resultados para "${escapedSearchTerm}"`;
     } else if (categoriaActual === 'SoloOfertas') {
-      tituloSeccion.innerText = '🔥 Ofertas Exclusivas';
+      tituloSeccion.textContent = '🔥 Ofertas Exclusivas';
     } else if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') {
-      tituloSeccion.innerText = 'Todo el Catálogo';
+      tituloSeccion.textContent = 'Todo el Catálogo';
     } else {
-      tituloSeccion.innerText = categoriaActual;
+      tituloSeccion.textContent = categoriaActual;
     }
   }, [searchTerm, categoriaActual]);
 
   // Filter products
   const filtrados = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
+    // Sanitize and validate search term
+    const term = searchTerm
+      .replace(/[<>"']/g, '') // Remove potentially dangerous characters
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .toLowerCase()
+      .trim();
     const estaBuscando = term !== "";
 
     return allProducts.filter(p => {
-      const coincideTexto = (p.nombre || "").toLowerCase().includes(term);
+      // Sanitize product name for comparison
+      const productName = (p.nombre || "")
+        .replace(/[<>"']/g, '')
+        .toLowerCase();
+      const coincideTexto = productName.includes(term);
 
       if (estaBuscando) return coincideTexto;
 
@@ -146,56 +168,98 @@ export default function ProductCatalog() {
     
     const imgSrc = p.Imagen || p.imagen || 'https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Sin+Foto';
     const unidadVenta = p.Categoria || p.categoria || 'UNIDAD';
-    const nombreSeguro = p.nombre ? p.nombre.replace(/"/g, '&quot;').replace(/'/g, '&#39;').trim() : 'Producto';
+    const nombreSeguro = p.nombre ? p.nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, '').trim() : 'Producto';
     const precioNumero = Number(p.precio) || 0;
 
-    const ofertaBadge = p.Oferta ? `<div class="absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase animate-pulse"><i class="fas fa-fire"></i> OFERTA</div>` : '';
-    const tipoBadge = `<div class="absolute top-3 left-3 bg-yellow-400 text-black text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase">${unidadVenta}</div>`;
+    // Create badge elements safely
+    const ofertaBadge = p.Oferta ? (() => {
+      const badge = document.createElement('div');
+      badge.className = 'absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase animate-pulse';
+      badge.innerHTML = '<i class="fas fa-fire"></i> OFERTA';
+      return badge;
+    })() : null;
+    
+    const tipoBadge = (() => {
+      const badge = document.createElement('div');
+      badge.className = 'absolute top-3 left-3 bg-yellow-400 text-black text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase';
+      badge.textContent = unidadVenta;
+      return badge;
+    })();
 
-    let precioTextHtml = p.Oferta
-      ? `<p class="text-xs text-red-600 font-bold mb-1">OFERTA: -$${Number(p.Oferta).toLocaleString('es-AR')}</p>`
-      : `<span class="text-xs text-gray-500 font-semibold">Precio x ${unidadVenta.toLowerCase()}</span>`;
+    // Create image container
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'relative pt-[100%] bg-white p-4';
+    
+    const img = document.createElement('img');
+    img.src = imgSrc;
+    img.className = 'absolute inset-0 w-full h-full object-contain p-5 mix-blend-multiply';
+    img.alt = nombreSeguro;
+    imageContainer.appendChild(img);
 
-    card.innerHTML = `
-      ${tipoBadge} ${ofertaBadge}
-      <div class="relative pt-[100%] bg-white p-4">
-        <img src="${imgSrc}" class="absolute inset-0 w-full h-full object-contain p-5 mix-blend-multiply" alt="${nombreSeguro}">
-      </div>
-      <div class="p-5 flex flex-col flex-1 border-t border-gray-100 bg-gray-50/50">
-        <h3 class="text-sm text-gray-800 font-bold leading-snug mb-3 line-clamp-2 h-10">${nombreSeguro}</h3>
-        <div class="mt-auto">
-          ${precioTextHtml}
-          <p class="text-3xl font-black text-zinc-900 tracking-tight">$${precioNumero.toLocaleString('es-AR')}</p>
-          <button data-nombre="${nombreSeguro}" data-precio="${precioNumero}" data-imagen="${imgSrc}" 
-                  class="mt-4 w-full bg-white border-2 border-[#FF6600] text-[#FF6600] hover:bg-[#FF6600] hover:text-white py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm">
-            <i class="fas fa-cart-plus"></i> AGREGAR
-          </button>
-        </div>
-      </div>
-    `;
-
-    // Add click handler to button
-    const button = card.querySelector('button');
-    if (button) {
-      button.addEventListener('click', () => {
-        addToCart({
-          id: p.id,
-          nombre: nombreSeguro,
-          precio: precioNumero,
-          imagen: imgSrc,
-          cantidad: 1
-        });
-        
-        // Visual feedback
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-check"></i> AGREGADO';
-        button.classList.add('bg-[#FF6600]', 'text-white');
-        setTimeout(() => {
-          button.innerHTML = originalText;
-          button.classList.remove('bg-[#FF6600]', 'text-white');
-        }, 1000);
-      });
+    // Create content container
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'p-5 flex flex-col flex-1 border-t border-gray-100 bg-gray-50/50';
+    
+    const title = document.createElement('h3');
+    title.className = 'text-sm text-gray-800 font-bold leading-snug mb-3 line-clamp-2 h-10';
+    title.textContent = nombreSeguro;
+    
+    const priceContainer = document.createElement('div');
+    priceContainer.className = 'mt-auto';
+    
+    // Price display
+    if (p.Oferta) {
+      const ofertaText = document.createElement('p');
+      ofertaText.className = 'text-xs text-red-600 font-bold mb-1';
+      ofertaText.textContent = `OFERTA: -$${Number(p.Oferta).toLocaleString('es-AR')}`;
+      priceContainer.appendChild(ofertaText);
+    } else {
+      const precioUnitario = document.createElement('span');
+      precioUnitario.className = 'text-xs text-gray-500 font-semibold';
+      precioUnitario.textContent = `Precio x ${unidadVenta.toLowerCase()}`;
+      priceContainer.appendChild(precioUnitario);
     }
+    
+    const precio = document.createElement('p');
+    precio.className = 'text-3xl font-black text-zinc-900 tracking-tight';
+    precio.textContent = `$${precioNumero.toLocaleString('es-AR')}`;
+    priceContainer.appendChild(precio);
+    
+    // Create button
+    const button = document.createElement('button');
+    button.className = 'mt-4 w-full bg-white border-2 border-[#FF6600] text-[#FF6600] hover:bg-[#FF6600] hover:text-white py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm';
+    button.innerHTML = '<i class="fas fa-cart-plus"></i> AGREGAR';
+    
+    // Add click handler to button
+    button.addEventListener('click', () => {
+      addToCart({
+        Id: p.Id,
+        nombre: nombreSeguro,
+        precio: precioNumero,
+        imagen: imgSrc,
+        cantidad: 1
+      });
+      
+      // Visual feedback using safe DOM manipulation
+      const originalContent = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-check"></i> AGREGADO';
+      button.classList.add('bg-[#FF6600]', 'text-white');
+      
+      setTimeout(() => {
+        button.innerHTML = originalContent;
+        button.classList.remove('bg-[#FF6600]', 'text-white');
+      }, 1000);
+    });
+    
+    priceContainer.appendChild(button);
+    contentContainer.appendChild(title);
+    contentContainer.appendChild(priceContainer);
+    
+    // Assemble card
+    card.appendChild(tipoBadge);
+    if (ofertaBadge) card.appendChild(ofertaBadge);
+    card.appendChild(imageContainer);
+    card.appendChild(contentContainer);
 
     return card;
   };
@@ -205,17 +269,34 @@ export default function ProductCatalog() {
     const gridCat = document.getElementById('categoriasGrid');
     if (!gridCat) return;
 
-    gridCat.innerHTML = '';
+    // Clear grid safely
+    while (gridCat.firstChild) {
+      gridCat.removeChild(gridCat.firstChild);
+    }
+
     CATEGORIAS.forEach(cat => {
       const categoryCard = document.createElement('div');
       categoryCard.className = 'rounded-2xl cursor-pointer transform transition hover:-translate-y-2 hover:shadow-xl flex flex-col items-center justify-center text-center h-40 relative overflow-hidden group bg-gray-200';
       categoryCard.onclick = () => handleCategoryClick(cat.id);
       
-      categoryCard.innerHTML = `
-        <img src="${cat.imagen}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="${cat.nombre}">
-        <div class="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition"></div>
-        <h3 class="relative z-10 text-white font-black text-lg md:text-xl tracking-wide leading-tight px-3 drop-shadow-lg">${cat.nombre}</h3>
-      `;
+      // Create image safely
+      const img = document.createElement('img');
+      img.src = cat.imagen;
+      img.className = 'absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110';
+      img.alt = cat.nombre;
+      
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'absolute inset-0 bg-black/50 group-hover:bg-black/40 transition';
+      
+      // Create title safely
+      const title = document.createElement('h3');
+      title.className = 'relative z-10 text-white font-black text-lg md:text-xl tracking-wide leading-tight px-3 drop-shadow-lg';
+      title.textContent = cat.nombre;
+      
+      categoryCard.appendChild(img);
+      categoryCard.appendChild(overlay);
+      categoryCard.appendChild(title);
       
       gridCat.appendChild(categoryCard);
     });
@@ -228,13 +309,19 @@ export default function ProductCatalog() {
 
     const resultsCount = document.getElementById('resultsCount');
     if (resultsCount) {
-      resultsCount.innerText = `${filtrados.length} productos`;
+      resultsCount.textContent = `${filtrados.length} productos`;
     }
 
-    gridNormales.innerHTML = '';
+    // Clear grid safely
+    while (gridNormales.firstChild) {
+      gridNormales.removeChild(gridNormales.firstChild);
+    }
 
     if (filtrados.length === 0) {
-      gridNormales.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400 font-bold">No se encontraron productos.</div>`;
+      const noResults = document.createElement('div');
+      noResults.className = 'col-span-full text-center py-10 text-gray-400 font-bold';
+      noResults.textContent = 'No se encontraron productos.';
+      gridNormales.appendChild(noResults);
       return;
     }
 

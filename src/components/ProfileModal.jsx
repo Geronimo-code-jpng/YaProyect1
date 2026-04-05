@@ -66,7 +66,7 @@ export default function ProfileModal() {
                 <div>
                   <label className="text-sm font-bold text-gray-600">Tipo de Cliente</label>
                   <div className="p-3 bg-white border rounded-lg capitalize">
-                    {userProfile?.tipo_cliente || 'Personal'}
+                    {userProfile?.tipo_cliente || 'No especificada'}
                   </div>
                 </div>
                 <div>

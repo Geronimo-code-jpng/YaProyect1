@@ -34,10 +34,38 @@ export default function AuthModal() {
 
   async function iniciarSesion(event) {
     const btn = event.currentTarget;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...';
+    
+    // Safe button content update
+    const spinner = document.createElement('i');
+    spinner.className = 'fas fa-spinner fa-spin';
+    const text = document.createTextNode(' Ingresando...');
+    
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '';
+    btn.appendChild(spinner);
+    btn.appendChild(text);
     btn.disabled = true;
-    const email = document.getElementById("logEmail").value;
-    const pass = document.getElementById("logPass").value;
+    
+    // Obtener y limpiar valores
+    const email = document.getElementById("logEmail")?.value?.trim() || '';
+    const pass = document.getElementById("logPass")?.value || '';
+
+    // Validaciones mejoradas
+    const errores = [];
+    
+    if (!email) {
+      errores.push("El email es obligatorio");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errores.push("El email no es válido");
+    }
+    
+    if (!pass) {
+      errores.push("La contraseña es obligatoria");
+    }
+    
+    if (errores.length > 0) {
+      throw new Error(errores.join(". "));
+    }
 
     try {
       const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -75,29 +103,65 @@ export default function AuthModal() {
     } catch (err) {
       showError(err.message);
     } finally {
-      btn.innerHTML = "Ingresar";
+      btn.innerHTML = originalContent;
       btn.disabled = false;
     }
   }
 
   async function registrarUsuario(event) {
     const btn = event.currentTarget;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+    
+    // Safe button content update
+    const spinner = document.createElement('i');
+    spinner.className = 'fas fa-spinner fa-spin';
+    const text = document.createTextNode(' Creando...');
+    
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '';
+    btn.appendChild(spinner);
+    btn.appendChild(text);
     btn.disabled = true;
 
-    const email = document.getElementById("regEmail").value;
-    const pass = document.getElementById("regPass").value;
-    const nombre = document.getElementById("regNombre").value;
-    const tel = document.getElementById("regTelefono").value;
-    const dir = document.getElementById("regDireccion").value;
-    const tipo = document.getElementById("regTipo").value;
+    // Obtener y limpiar valores
+    const email = document.getElementById("regEmail")?.value?.trim() || '';
+    const pass = document.getElementById("regPass")?.value || '';
+    const nombre = document.getElementById("regNombre")?.value?.trim() || '';
+    const tel = document.getElementById("regTelefono")?.value?.trim() || '';
+    const dir = document.getElementById("regDireccion")?.value?.trim() || '';
+    const tipo = document.getElementById("regTipo")?.value || 'Personal';
+
+    // Validaciones mejoradas
+    const errores = [];
+    
+    if (!email) {
+      errores.push("El email es obligatorio");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errores.push("El email no es válido");
+    }
+    
+    if (!pass) {
+      errores.push("La contraseña es obligatoria");
+    } else if (pass.length < 6) {
+      errores.push("La contraseña debe tener 6 caracteres mínimo");
+    }
+    
+    if (!nombre) {
+      errores.push("El nombre es obligatorio");
+    } else if (nombre.length < 2) {
+      errores.push("El nombre debe tener al menos 2 caracteres");
+    }
+    
+    if (!tel) {
+      errores.push("El teléfono es obligatorio");
+    } else if (!/^\d{10,}$/.test(tel.replace(/\D/g, ''))) {
+      errores.push("El teléfono debe tener al menos 10 dígitos");
+    }
+    
+    if (errores.length > 0) {
+      throw new Error(errores.join(". "));
+    }
 
     try {
-      if (!email || !pass || !nombre || !tel)
-        throw new Error("Completa todos los campos obligatorios.");
-      if (pass.length < 6)
-        throw new Error("La contraseña debe tener 6 caracteres mínimo.");
-
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password: pass,
@@ -108,6 +172,8 @@ export default function AuthModal() {
           throw new Error(
             "Límite de registros alcanzado. Intenta de nuevo más tarde.",
           );
+        if (error.message.includes("User already registered"))
+          throw new Error("Este email ya está registrado. Intenta con otro email.");
         throw new Error(error.message);
       }
 
@@ -117,17 +183,26 @@ export default function AuthModal() {
           .insert([
             {
               id: data.user.id,
+              email: email, // Agregamos el email
               nombre: nombre,
               telefono: tel,
               tipo_cliente: tipo,
-              direccion: dir,
+              direccion: dir || null,
             },
           ]);
-        if (profileErr) console.error("Error al guardar perfil:", profileErr);
-        if (!data.session)
-          throw new Error(
-            "Cuenta creada, pero Supabase exige confirmar tu correo.",
-          );
+          
+        if (profileErr) {
+          console.error("Error al guardar perfil:", profileErr);
+          throw new Error("Error al guardar los datos del perfil. Intenta nuevamente.");
+        }
+        
+        if (!data.session) {
+          // Mostrar mensaje específico para confirmación de email
+          closeAuthModal();
+          cerrarPromo();
+          mostrarToast("¡Cuenta creada! Revisa tu email para confirmar la cuenta.");
+          return;
+        }
 
         closeAuthModal();
         cerrarPromo();
@@ -137,7 +212,7 @@ export default function AuthModal() {
     } catch (err) {
       showError(err.message);
     } finally {
-      btn.innerHTML = "Crear Mi Cuenta";
+      btn.innerHTML = originalContent;
       btn.disabled = false;
     }
   }
@@ -147,7 +222,7 @@ export default function AuthModal() {
   return (
     <div
       id="authModal"
-      className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/80 z-9999 flex items-center justify-center p-4 backdrop-blur-sm"
     >
       <div className="bg-white rounded-3xl w-full max-w-md flex flex-col modal-animate shadow-2xl overflow-hidden relative">
         <button

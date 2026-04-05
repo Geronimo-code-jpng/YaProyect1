@@ -7,7 +7,7 @@ import { ShoppingCart, CircleUserRound, User, PackageOpen } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 export default function NavBar() {
-  const { openAuthModal, user, userProfile, logout } = useAuth();
+  const { openAuthModal, user, userProfile } = useAuth();
   const { cartCount, cartTotal, setIsCartOpen } = useCart();
   const location = useLocation();
 

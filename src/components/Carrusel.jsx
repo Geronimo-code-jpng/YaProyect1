@@ -60,7 +60,7 @@ export default function Carrusel() {
           </div>
 
           {/* Slide 2 */}
-          <div className="w-full flex-none h-full bg-gradient-to-r from-green-600 to-emerald-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+          <div className="w-full flex-none h-full bg-linear-to-r from-green-600 to-emerald-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
             <div className="z-10 w-full">
               <span className="bg-white text-green-700 text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
                 Logística
