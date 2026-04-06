@@ -47,8 +47,8 @@ export default function NavBar() {
   const isAdmin = userProfile?.rol === "admin";
 
   return (
-    <div>
-      <div className="bg-white sticky top-0 z-40 shadow-sm border-b-4 border-[#FF6600]">
+    <div className="sticky top-0 z-40">
+      <div className="bg-white shadow-sm border-b-4 border-[#FF6600]">
         {isAdmin && (
           <div className="text-center py-2 bg-red-600">
             <Link

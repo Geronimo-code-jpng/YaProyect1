@@ -30,10 +30,10 @@ export default function Carrusel() {
   };
 
   return (
-    <div className="py-2">
+    <div className="py-1 sm:py-2">
       <div
         id="heroCarousel"
-        className="relative w-full overflow-hidden shadow-xl mb-8 h-48 md:h-96"
+        className="relative w-full overflow-hidden shadow-xl mb-6 sm:mb-8 h-25 sm:h-40 md:h-56 lg:h-80 xl:h-96 2xl:h-[500px]"
       >
         <div
           id="carouselInner"
@@ -72,24 +72,24 @@ export default function Carrusel() {
         {/* Removed the () from the onClick handlers */}
         <button
           onClick={prevSlide}
-          className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70 text-white w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"
+          className="absolute left-1 sm:left-2 md:left-4 lg:left-6 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/70 text-white w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-14 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"
         >
-          <ChevronLeft className="text-sm md:text-xl" />
+          <ChevronLeft className="text-xs sm:text-sm md:text-base lg:text-xl" />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70 text-white w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"
+          className="absolute right-1 sm:right-2 md:right-4 lg:right-6 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/70 text-white w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-14 rounded-full flex items-center justify-center transition z-20 backdrop-blur-sm"
         >
-          <ChevronRight className="text-sm md:text-xl" />
+          <ChevronRight className="text-xs sm:text-sm md:text-base lg:text-xl" />
         </button>
 
-        <div className="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-20">
+        <div className="absolute bottom-2 sm:bottom-3 md:bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3 z-20">
           {/* Mapped over an array to dynamically render the dots and their active states */}
           {[0, 1, 2].map((index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`dot w-2 h-2 md:w-3 md:h-3 rounded-full transition ${
+              className={`dot w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 rounded-full transition ${
                 currentSlide === index ? "bg-white" : "bg-white/50"
               }`}
             ></button>

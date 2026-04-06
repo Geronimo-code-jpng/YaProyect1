@@ -1,0 +1,3 @@
+agreagr la opcion de Envio o Retiro ( envio = $7200 , retira = $0) con los precios deifnidos 
+agregar rechazar pedido en el panel de admin para colocar pedido como rechazado y notificar por wehstsapp al comprador con esto y dando una razon perosnalizada 
+AGREGAR DESCUENTO DE $1.000 EN PRIMERA COMPRA SUPERIOR A $80.000 
