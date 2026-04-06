@@ -94,11 +94,14 @@ export default function ProductDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Product Image */}
-        <div className="bg-gray-100 rounded-2xl overflow-hidden">
+        <div className="bg-gray-100 rounded-2xl overflow-hidden aspect-square">
           <img
             src={product.imagen || 'https://via.placeholder.com/600/f3f4f6/a1a1aa?text=Producto'}
             alt={product.nombre}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
+            onError={(e) => {
+              e.target.src = 'https://via.placeholder.com/600/f3f4f6/a1a1aa?text=Producto';
+            }}
           />
         </div>
 

@@ -46,7 +46,7 @@ export default function Carrusel() {
             <img
               src="./Carrusel1.png"
               alt="CarruselSlide1"
-              className="absolute inset-0 w-full h-full object-fill"
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
           </div>
 
@@ -55,7 +55,7 @@ export default function Carrusel() {
             <img
               src="./Carrusel2.png"
               alt="CarruselSlide2"
-              className="absolute inset-0 w-full h-full object-fill"
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
           </div>
 
@@ -64,7 +64,7 @@ export default function Carrusel() {
             <img
               src="./Carrusel3.png"
               alt="CarruselSlide3"
-              className="absolute inset-0 w-full h-full object-fill"
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
           </div>
         </div>

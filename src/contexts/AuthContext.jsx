@@ -99,12 +99,22 @@ export function AuthProvider({ children }) {
         } = await supabaseClient.auth.getSession();
 
         if (session?.user) {
-          const { userWithProfile, profile } = await getProfileData(
-            session.user,
-          );
-          setUser(userWithProfile);
-          setUserProfile(profile);
-          console.log("Sesión restaurada exitosamente para:", userWithProfile.email);
+          try {
+            const { userWithProfile, profile } = await getProfileData(session.user);
+            setUser(userWithProfile);
+            setUserProfile(profile);
+            console.log("Sesión restaurada exitosamente para:", userWithProfile.email);
+          } catch (profileErr) {
+            console.error("Error cargando perfil en inicialización:", profileErr);
+            // Limpiar sesión corrupta
+            await supabaseClient.auth.signOut();
+            setUser(null);
+            setUserProfile(null);
+          }
+        } else {
+          // No hay sesión, limpiar estado
+          setUser(null);
+          setUserProfile(null);
         }
       } catch (err) {
         console.error("Error inicializando auth:", err);
@@ -114,6 +124,10 @@ export function AuthProvider({ children }) {
         } catch (signOutErr) {
           console.error("Error limpiando sesión:", signOutErr);
         }
+        // Forzar limpieza de estado
+        setUser(null);
+        setUserProfile(null);
+        setAuthError("");
       }
     };
 
@@ -125,13 +139,27 @@ export function AuthProvider({ children }) {
     } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state change:", event, session?.user?.email);
       
-      if (session?.user) {
-        const { userWithProfile, profile } = await getProfileData(session.user);
-        setUser(userWithProfile);
-        setUserProfile(profile);
-      } else {
+      // Limpiar estado inmediatamente para evitar estados inconsistentes
+      if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
         setUserProfile(null);
+        setAuthError("");
+        return;
+      }
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          const { userWithProfile, profile } = await getProfileData(session.user);
+          setUser(userWithProfile);
+          setUserProfile(profile);
+          setAuthError("");
+        } catch (err) {
+          console.error("Error cargando perfil en sign-in:", err);
+          // No dejar el estado en loading, limpiarlo
+          setUser(null);
+          setUserProfile(null);
+          setAuthError("Error cargando perfil del usuario");
+        }
       }
     });
 
@@ -180,7 +208,23 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await supabaseClient.auth.signOut();
+    try {
+      // Limpiar estado local primero
+      setUser(null);
+      setUserProfile(null);
+      setAuthError("");
+      
+      // Luego hacer logout en Supabase
+      await supabaseClient.auth.signOut();
+      
+      console.log("Sesión cerrada exitosamente");
+    } catch (err) {
+      console.error("Error cerrando sesión:", err);
+      // Forzar limpieza de estado aunque falle el logout
+      setUser(null);
+      setUserProfile(null);
+      setAuthError("");
+    }
   };
 
   // Permite refrescar el perfil manualmente (útil tras editar datos)

@@ -1,10 +1,27 @@
 import React from 'react';
 
 export default function CatalogHeader() {
+  const handleRefresh = () => {
+    // Forzar recarga de la página para obtener datos frescos
+    window.location.reload();
+  };
+
   return (
     <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-gray-100 shadow-sm">
-      <span className="text-sm font-black text-[#FF6600] bg-orange-100 px-4 py-1.5 rounded-full uppercase" id="resultsCount"></span>
-      <h2 className="text-3xl md:text-4xl font-black text-zinc-800 tracking-tight" id="tituloSeccion"></h2>
+      <div className="flex items-center gap-4">
+        <div>
+          <span className="text-sm font-black text-[#FF6600] bg-orange-100 px-4 py-1.5 rounded-full uppercase" id="resultsCount"></span>
+          <h2 className="text-3xl md:text-4xl font-black text-zinc-800 tracking-tight" id="tituloSeccion"></h2>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+          title="Refrescar productos"
+        >
+          <i className="fas fa-sync-alt"></i>
+          Refrescar
+        </button>
+      </div>
 
       <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-2.5 rounded-xl min-w-[280px] hover:border-orange-300 transition">
         <div className="bg-[#FF6600] text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 shadow-sm">

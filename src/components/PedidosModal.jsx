@@ -412,6 +412,14 @@ export default function PedidosModal() {
           </h3>
           <div className="flex items-center gap-2">
             <button
+              onClick={cargarPedidos}
+              className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+              title="Refrescar pedidos"
+            >
+              <i className="fas fa-sync-alt"></i>
+              Refrescar
+            </button>
+            <button
               onClick={closePedidos}
               className="text-4xl text-gray-400 hover:text-black leading-none"
             >

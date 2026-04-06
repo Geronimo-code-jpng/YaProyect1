@@ -70,6 +70,9 @@ export default function AuthModal() {
           alert(error);
         }, 100);
       });
+      // Restaurar el botón antes de salir
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
       return; // Salir de la función sin lanzar error
     }
 
@@ -172,6 +175,9 @@ export default function AuthModal() {
           alert(error);
         }, 100);
       });
+      // Restaurar el botón antes de salir
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
       return; // Salir de la función sin lanzar error
     }
 
