@@ -624,7 +624,12 @@ export default function PedidosModal() {
                           </div>
                           <div className="flex justify-between text-green-600">
                             <span>Envío:</span>
-                            <span>A convenir</span>
+                            <span>
+                              {pedido.metodo === "retiro" 
+                                ? "Gratis" 
+                                : "$7.300"
+                              }
+                            </span>
                           </div>
                           <div className="flex justify-between font-black text-lg border-t pt-2">
                             <span>Total:</span>
