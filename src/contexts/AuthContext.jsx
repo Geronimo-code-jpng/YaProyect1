@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
         email: authUser.email || "",
         rol: profile?.rol || "user",
         tipo_cliente: profile?.tipo_cliente || "Personal",
+        cantidad_pedidos: profile?.cantidad_pedidos || 0,
       };
 
       return { userWithProfile, profile: profile || null };
@@ -68,6 +69,7 @@ export function AuthProvider({ children }) {
           email: authUser.email || "",
           rol: "user",
           tipo_cliente: "Personal",
+          cantidad_pedidos: 0,
         },
         profile: null,
       };

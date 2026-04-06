@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import "./Global.css";
 import Footer from "./components/Footer";
@@ -18,7 +18,24 @@ import { useAuth } from "./contexts/AuthContext";
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showPromoModal, setShowPromoModal] = useState(true);
-  const { openAuthModal, user } = useAuth();
+  const { openAuthModal, user, userProfile } = useAuth();
+  const location = useLocation();
+
+  // Update document title based on current route
+  useEffect(() => {
+    const titles = {
+      '/': 'YA MAYORISTA! | Página Principal',
+      '/productos': 'YA MAYORISTA! | Catálogo Oficial',
+      '/admin': 'YA MAYORISTA! | Panel Administración'
+    };
+    
+    // Handle dynamic routes
+    if (location.pathname.startsWith('/producto/')) {
+      document.title = 'YA MAYORISTA! | Detalle del Producto';
+    } else {
+      document.title = titles[location.pathname] || 'YA MAYORISTA!';
+    }
+  }, [location]);
 
   useEffect(() => {
     // Initialize app
@@ -57,7 +74,6 @@ function AppContent() {
   }
 
   return (
-    <Router>
       <div className="min-h-screen bg-gray-50">
         {/* Success toast */}
         <div
@@ -78,8 +94,8 @@ function AppContent() {
           <FontAwesomeIcon icon={faWhatsapp} />
         </a>
 
-        {/* Promo modal - Solo mostrar si no hay sesión iniciada */}
-        {showPromoModal && !user && (
+        {/* Promo modal - Solo mostrar si no hay sesión iniciada o es primera compra */}
+        {showPromoModal && (!user || (userProfile?.cantidad_pedidos || 0) === 0) && (
           <div
             id="promoModal"
             className="fixed inset-0 bg-black/60 z-99999 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity"
@@ -96,14 +112,16 @@ function AppContent() {
                 ¡$1.000 OFF!
               </h2>
               <p className="text-gray-600 font-medium mb-6">
-                Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera
-                compra superior a $80.000.
+                {user 
+                  ? `¡Hola ${userProfile?.nombre || user.email?.split('@')[0]}! Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000.`
+                  : "Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000."
+                }
               </p>
               <button
                 onClick={() => (openAuthModal(), setShowPromoModal(false))}
                 className="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg"
               >
-                Crear Mi Cuenta
+                {user ? "Ir al Catálogo" : "Crear Mi Cuenta"}
               </button>
               <button
                 onClick={() => setShowPromoModal(false)}
@@ -127,8 +145,7 @@ function AppContent() {
         <Footer />
         <CartModal />
       </div>
-    </Router>
-  );
+    );
 }
 
 function App() {
@@ -136,7 +153,9 @@ function App() {
     <AlertProvider>
       <AuthProvider>
         <CartProvider>
-          <AppContent />
+          <Router>
+            <AppContent />
+          </Router>
         </CartProvider>
       </AuthProvider>
     </AlertProvider>

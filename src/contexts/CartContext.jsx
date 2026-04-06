@@ -65,6 +65,23 @@ export const CartProvider = ({ children }) => {
 
   const cartCount = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
+  // Función para calcular total con descuento de primera compra
+  const getCartTotalWithDiscount = (userProfile) => {
+    const subtotal = cartTotal;
+    const isFirstBuy = userProfile && (userProfile.cantidad_pedidos || 0) === 0;
+    const qualifiesForDiscount = isFirstBuy && subtotal >= 80000;
+    
+    if (qualifiesForDiscount) {
+      return Math.max(0, subtotal - 1000); // $1.000 de descuento
+    }
+    return subtotal;
+  };
+
+  // Función para verificar si califica para descuento
+  const qualifiesForFirstBuyDiscount = (userProfile) => {
+    return userProfile && (userProfile.cantidad_pedidos || 0) === 0 && cartTotal >= 80000;
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -77,6 +94,8 @@ export const CartProvider = ({ children }) => {
         cartCount,
         isCartOpen,
         setIsCartOpen,
+        getCartTotalWithDiscount,
+        qualifiesForFirstBuyDiscount,
       }}
     >
       {children}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import ProductsGrid from '../components/ProductsGrid';
 import { supabaseClient } from '../db/supabeClient';
+import { useSearchParams } from 'react-router-dom';
 
 export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState([]);
@@ -9,6 +10,37 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
+  const [searchParams] = useSearchParams();
+
+  // Load search and category from URL params on component mount
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search');
+    const categoryFromUrl = searchParams.get('categoria');
+    
+    if (searchFromUrl) {
+      setSearchTerm(searchFromUrl);
+    }
+    
+    if (categoryFromUrl) {
+      // Convert category parameter to display format
+      const categoryMap = {
+        'soloofertas': 'SoloOfertas',
+        'todas_filtro': 'Todas_Filtro',
+        'alimento': 'ALIMENTO',
+        'bebidas': 'BEBIDAS',
+        'lacteos': 'LACTEOS',
+        'harina': 'HARINA',
+        'aceite': 'ACEITE',
+        'vinos': 'VINOS',
+        'cervezas': 'CERVEZAS',
+        'yerba': 'YERBA',
+        'aperitivos': 'APERITIVOS'
+      };
+      
+      const normalizedCategory = categoryMap[categoryFromUrl.toLowerCase()] || categoryFromUrl.toUpperCase();
+      setCategoriaActual(normalizedCategory);
+    }
+  }, [searchParams]);
 
   // Load products from Supabase
   useEffect(() => {
@@ -32,7 +64,7 @@ export default function ProductsPage() {
   }, []);
 
   // Get unique categories
-  const categorias = ['Todas', ...new Set(allProducts.map(product => product.Categoria))];
+  const categorias = ['Todas', 'SoloOfertas', 'Todas_Filtro', ...new Set(allProducts.map(product => product.Categoria))];
 
   // Filter products based on category and search
   const productosFiltrados = allProducts.filter(product => {
@@ -48,8 +80,19 @@ export default function ProductsPage() {
       .replace(/[<>"']/g, '')
       .toLowerCase();
     
-    const matchesCategory = categoriaActual === 'Todas' || product.Categoria === categoriaActual;
     const matchesSearch = sanitizedName.includes(sanitizedSearchTerm);
+    
+    // Handle special categories
+    if (categoriaActual === 'SoloOfertas') {
+      return matchesSearch && (product.Oferta !== null && product.Oferta !== "");
+    }
+    
+    if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') {
+      return matchesSearch;
+    }
+    
+    // Handle regular categories
+    const matchesCategory = categoriaActual === 'Todas' || product.Categoria === categoriaActual;
     return matchesCategory && matchesSearch;
   });
 
@@ -80,11 +123,18 @@ export default function ProductsPage() {
             onChange={(e) => setCategoriaActual(e.target.value)}
             className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
           >
-            {categorias.map(categoria => (
-              <option key={categoria} value={categoria}>
-                {categoria}
-              </option>
-            ))}
+            {categorias.map(categoria => {
+              let displayLabel = categoria;
+              if (categoria === 'SoloOfertas') displayLabel = '🔥 Ofertas Exclusivas';
+              else if (categoria === 'Todas_Filtro') displayLabel = 'Todos Los Productos';
+              else if (categoria === 'Todas') displayLabel = 'Todas las Categorías';
+              
+              return (
+                <option key={categoria} value={categoria}>
+                  {displayLabel}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>

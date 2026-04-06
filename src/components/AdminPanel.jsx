@@ -2,6 +2,52 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabaseClient } from "../db/supabeClient";
 import { useNavigate } from "react-router-dom";
 
+// Componente de confirmación con razón personalizada para rechazo
+function RejectDialog({ message, onConfirm, onCancel }) {
+  const [razon, setRazon] = useState("");
+
+  const handleConfirm = () => {
+    if (razon.trim()) {
+      onConfirm(razon.trim());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-9999 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <p className="text-gray-800 font-bold text-center mb-4">{message}</p>
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-gray-700 mb-2">
+            Razón del rechazo (obligatorio):
+          </label>
+          <textarea
+            value={razon}
+            onChange={(e) => setRazon(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+            placeholder="Ej: No tenemos stock de los productos solicitados"
+            rows="3"
+          />
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-100 font-black rounded-xl transition"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!razon.trim()}
+            className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Rechazar Pedido
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Componente de confirmación inline (reemplaza alert/confirm nativos)
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
@@ -65,6 +111,7 @@ const AdminPanel = () => {
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
   const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const [rejectDialog, setRejectDialog] = useState(null); // { message, onConfirm }
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const timerRef = useRef(null);
   const [tiempoActual, setTiempoActual] = useState(Date.now());
@@ -84,7 +131,6 @@ const AdminPanel = () => {
         .from("pedidos")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (error) {
         console.error("Error cargando pedidos admin:", error);
         if (error.message?.includes("pedidos_web")) {
@@ -328,81 +374,95 @@ const AdminPanel = () => {
   const cambiarEstado = (idPedido, nuevoEstado) => {
     const mensajesEstado = {
       aprobado: "¿Aprobar este pedido? Se enviará confirmación al cliente.",
-      rechazado: "¿Rechazar este pedido? Se notificará al cliente.",
       cancelado: "¿Cancelar este pedido? Se notificará al cliente."
     };
 
-    showConfirm(
-      `${mensajesEstado[nuevoEstado] || `¿Marcar pedido #${idPedido} como ${nuevoEstado.toUpperCase()}?`}`,
-      async () => {
-        setConfirm(null);
-        try {
-          // Verificar que el pedido exista
-          const { data: pedido, error: fetchError } = await supabaseClient
-            .from("pedidos")
-            .select("*")
-            .eq("id", idPedido)
-            .single();
+    if (nuevoEstado === "rechazado") {
+      // Mostrar modal de rechazo con razón personalizada
+      setRejectDialog({
+        message: `¿Rechazar este pedido #${idPedido}? Por favor, indica la razón del rechazo.`,
+        onConfirm: async (razon) => {
+          setRejectDialog(null);
+          await procesarCambioEstado(idPedido, nuevoEstado, razon);
+        }
+      });
+    } else {
+      // Usar el diálogo normal para otros estados
+      showConfirm(
+        `${mensajesEstado[nuevoEstado] || `¿Marcar pedido #${idPedido} como ${nuevoEstado.toUpperCase()}?`}`,
+        async () => {
+          setConfirm(null);
+          await procesarCambioEstado(idPedido, nuevoEstado);
+        }
+      );
+    }
+  };
 
-          if (fetchError || !pedido) {
-            showToast("❌ Pedido no encontrado", "error");
-            return;
-          }
+  const procesarCambioEstado = async (idPedido, nuevoEstado, razon = "") => {
+    try {
+      // Verificar que el pedido exista
+      const { data: pedido, error: fetchError } = await supabaseClient
+        .from("pedidos")
+        .select("*")
+        .eq("id", idPedido)
+        .single();
 
-          // Validar transiciones de estado
-          if (nuevoEstado === "aprobado" && pedido.estado !== "pendiente") {
-            showToast("❌ Solo se pueden aprobar pedidos pendientes", "error");
-            return;
-          }
+      if (fetchError || !pedido) {
+        showToast("❌ Pedido no encontrado", "error");
+        return;
+      }
+
+      // Validar transiciones de estado
+      if (nuevoEstado === "aprobado" && pedido.estado !== "pendiente") {
+        showToast("❌ Solo se pueden aprobar pedidos pendientes", "error");
+        return;
+      }
 
           const updateData = {
-            estado: nuevoEstado,
-            modificado_por: currentUser?.email,
-            fecha_modificacion: new Date().toISOString()
-          };
+        estado: nuevoEstado,
+        modificado_por: currentUser?.email,
+        fecha_modificacion: new Date().toISOString()
+      };
 
-          // Si se aprueba, iniciar temporizador de pago
-          if (nuevoEstado === "aprobado") {
-            const fechaVencimiento = new Date(Date.now() + 10 * 60 * 1000);
-            updateData.expira_en = fechaVencimiento.toISOString();
-            updateData.estado = "configurado";
-          }
+      // Si se aprueba, iniciar temporizador de pago
+      if (nuevoEstado === "aprobado") {
+        const fechaVencimiento = new Date(Date.now() + 10 * 60 * 1000);
+        updateData.expira_en = fechaVencimiento.toISOString();
+        updateData.estado = "configurado";
+      }
 
-          const { error } = await supabaseClient
-            .from("pedidos")
-            .update(updateData)
-            .eq("id", idPedido);
+      const { error } = await supabaseClient
+        .from("pedidos")
+        .update(updateData)
+        .eq("id", idPedido);
 
-          if (error) throw error;
-          
-          const estadoFinal = nuevoEstado === "aprobado" ? "configurado" : nuevoEstado;
-          showToast(`✅ Pedido ${estadoFinal} con éxito!`);
-          cargarPedidosAdmin();
-          
-          // Enviar notificación si es necesario
-          if (nuevoEstado === "aprobado") {
-            await enviarWhatsAppConfiguracion(pedido);
-          } else if (nuevoEstado === "rechazado" || nuevoEstado === "cancelado") {
-            await enviarWhatsAppRechazo(pedido, nuevoEstado);
-          }
-          
-        } catch (err) {
-          console.error(`Error cambiando estado a ${nuevoEstado}:`, err);
-          showToast("Error al cambiar el estado: " + err.message, "error");
-        }
-      },
-    );
+      if (error) throw error;
+      
+      const estadoFinal = nuevoEstado === "aprobado" ? "configurado" : nuevoEstado;
+      showToast(`✅ Pedido ${estadoFinal} con éxito!`);
+      cargarPedidosAdmin();
+      
+      // Enviar notificación si es necesario
+      if (nuevoEstado === "aprobado") {
+        await enviarWhatsAppConfiguracion(pedido);
+      } else if (nuevoEstado === "rechazado" || nuevoEstado === "cancelado") {
+        await enviarWhatsAppRechazo(pedido, nuevoEstado, razon);
+      }
+      
+    } catch (err) {
+      console.error(`Error cambiando estado a ${nuevoEstado}:`, err);
+      showToast("Error al cambiar el estado: " + err.message, "error");
+    }
   };
 
   const abrirModalModificar = (id) => {
     const pedido = pedidos.find((p) => p.id === id);
-    if (!pedido) {
-      showToast("Pedido no encontrado", "error");
-      return;
-    }
+    if (!pedido) return;
 
-    let pedidoCopia = JSON.parse(JSON.stringify(pedido));
-
+    // Asegurar copia profunda para no mutar el original
+    const pedidoCopia = JSON.parse(JSON.stringify(pedido));
+    
+    // Manejar el carrito correctamente
     if (typeof pedidoCopia.carrito === "string") {
       try {
         pedidoCopia.carrito = JSON.parse(pedidoCopia.carrito);
@@ -412,10 +472,12 @@ const AdminPanel = () => {
     }
     if (!Array.isArray(pedidoCopia.carrito)) pedidoCopia.carrito = [];
 
-    pedidoCopia.carrito.forEach((item) => {
-      if (item.cantidad_original === undefined)
-        item.cantidad_original = item.cantidad;
-    });
+    // Asegurar que todos los items tengan todas las propiedades necesarias
+    pedidoCopia.carrito = pedidoCopia.carrito.map(item => ({
+      ...item,
+      cantidad_original: item.cantidad,
+      subtotal: (item.precio_unitario || item.precio || 0) * item.cantidad
+    }));
 
     setPedidoEditando(pedidoCopia);
     setModalOpen(true);
@@ -448,7 +510,7 @@ const AdminPanel = () => {
     nuevoPedido.carrito = [...nuevoPedido.carrito];
     nuevoPedido.carrito[index] = { ...nuevoPedido.carrito[index], cantidad: 0 };
     nuevoPedido.total = nuevoPedido.carrito.reduce(
-      (acc, item) => acc + item.precio * item.cantidad,
+      (acc, item) => acc + item.precio_unitario * item.cantidad,
       0,
     );
     setPedidoEditando(nuevoPedido);
@@ -515,11 +577,11 @@ const AdminPanel = () => {
     }
   };
 
-  const enviarWhatsAppRechazo = async (pedido, tipo) => {
+  const enviarWhatsAppRechazo = async (pedido, tipo, razon = "") => {
     try {
       const mensaje = tipo === 'rechazado' 
-        ? `❌ *TU PEDIDO HA SIDO RECHAZADO*\n\n📦 *Pedido #${pedido.id}*\n👤 *Cliente:* ${pedido.nombre_cliente}\n\n⚠️ *Lamentamos informarte que tu pedido no ha sido aprobado. Si tienes dudas, contáctanos.`
-        : `❌ *TU PEDIDO HA SIDO CANCELADO*\n\n📦 *Pedido #${pedido.id}*\n👤 *Cliente:* ${pedido.nombre_cliente}\n\n⚠️ *Tu pedido ha sido cancelado. Si tienes dudas, contáctanos.`;
+        ? `❌ *TU PEDIDO HA SIDO RECHAZADO*\n\n📦 *Pedido #${pedido.id}*\n👤 *Cliente:* ${pedido.nombre_cliente}\n\n⚠️ *Lamentamos informarte que tu pedido no ha sido aprobado.*\n\n📝 *Razón del rechazo:*\n${razon}\n\n❓ *¿Tienes dudas?* Contáctanos para más información.`
+        : `❌ *TU PEDIDO HA SIDO CANCELADO*\n\n📦 *Pedido #${pedido.id}*\n👤 *Cliente:* ${pedido.nombre_cliente}\n\n⚠️ *Tu pedido ha sido cancelado.*\n\n${razon ? `📝 *Motivo:*\n${razon}\n\n` : ''}❓ *¿Tienes dudas?* Contáctanos para más información.`;
 
       const telefonoFormateado = pedido.telefono
         .replace(/\D/g, "")
@@ -709,6 +771,15 @@ const AdminPanel = () => {
           message={confirm.message}
           onConfirm={confirm.onConfirm}
           onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {/* Reject dialog */}
+      {rejectDialog && (
+        <RejectDialog
+          message={rejectDialog.message}
+          onConfirm={rejectDialog.onConfirm}
+          onCancel={() => setRejectDialog(null)}
         />
       )}
 
@@ -931,34 +1002,25 @@ const AdminPanel = () => {
                                   <i className="fas fa-check"></i> Pagado
                                 </button>
                               )}
-                            {p.fuente !== "web" && (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    cambiarEstado(p.id, "aprobado")
-                                  }
-                                  className="bg-green-500 hover:bg-green-600 text-white w-9 h-9 rounded-lg shadow flex items-center justify-center transition"
-                                  title="Aprobar"
-                                >
-                                  <i className="fas fa-check text-xs"></i>
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    cambiarEstado(p.id, "rechazado")
-                                  }
-                                  className="bg-red-500 hover:bg-red-600 text-white w-9 h-9 rounded-lg shadow flex items-center justify-center transition"
-                                  title="Rechazar"
-                                >
-                                  <i className="fas fa-times text-xs"></i>
-                                </button>
-                              </>
-                            )}
                             <button
                               onClick={() => abrirModalModificar(p.id)}
                               className="bg-zinc-800 hover:bg-black text-white px-3 py-2 rounded-lg shadow text-xs font-bold transition flex items-center gap-1"
                             >
                               <i className="fas fa-eye"></i> Ver
                             </button>
+                            {p.fuente === "web" && p.estado === "pendiente" && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    cambiarEstado(p.id, "rechazado")
+                                  }
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg shadow text-xs font-bold transition flex items-center gap-1"
+                                  title="Rechazar"
+                                >
+                                  <i className="fas fa-times"></i> Rechazar
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1062,12 +1124,12 @@ const AdminPanel = () => {
                           )}
                         </h4>
                         <p className="text-xs text-gray-500 font-medium mt-1">
-                          ${Number(item.precio).toLocaleString("es-AR")} c/u
+                          ${Number(item.precio_unitario || item.precio || 0).toLocaleString("es-AR")} c/u
                           {item.cantidad > 0 && (
                             <span className="ml-2 text-gray-700 font-bold">
                               = $
                               {(
-                                Number(item.precio) * item.cantidad
+                                (Number(item.precio_unitario || item.precio || 0) * item.cantidad)
                               ).toLocaleString("es-AR")}
                             </span>
                           )}

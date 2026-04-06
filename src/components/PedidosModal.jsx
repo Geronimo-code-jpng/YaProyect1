@@ -70,15 +70,10 @@ export default function PedidosModal() {
 
   const handleTiempoExpirado = async (pedidoId) => {
     try {
-      console.log("⏰ Tiempo expirado para pedido:", pedidoId);
-
       // Actualizar el estado del pedido a 'vencido' en la base de datos
       const { error } = await supabaseClient
         .from("pedidos")
-        .update({
-          estado: "vencido",
-          fecha_expiracion: new Date().toISOString(),
-        })
+        .update({ estado: "vencido" })
         .eq("id", pedidoId);
 
       if (error) {
@@ -86,13 +81,10 @@ export default function PedidosModal() {
         return;
       }
 
-      console.log("✅ Pedido marcado como vencido:", pedidoId);
-
       // Recargar los pedidos para actualizar la UI
       cargarPedidos();
 
-      // Mostrar notificación
-      showError(
+      showSuccess(
         "⏰ El tiempo de pago ha expirado. El pedido ha sido cancelado.",
       );
     } catch (error) {
@@ -107,8 +99,6 @@ export default function PedidosModal() {
 
   const verificarEstadoPago = async (pedidoId) => {
     try {
-      console.log("🔍 Verificando estado del pago para pedido:", pedidoId);
-
       const { data: pedido, error } = await supabaseClient
         .from("pedidos")
         .select("*")
@@ -153,12 +143,14 @@ export default function PedidosModal() {
     try {
       showWarning("🔄 Generando link de pago...");
 
-      // Usar las credenciales correctas de Supabase
-      const supabaseUrl = "https://vcbqhwxlwmhwdbcplgbj.supabase.co";
-      const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYnFod3hsd21od2RiY3BsZ2JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDI4MzAsImV4cCI6MjA5MDAxODgzMH0.8gB7gNCVHOhQTuk2qWFgGvdpxZXHAc9LsIRST3fcMiA";
+      // Usar las credenciales desde variables de entorno
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseAnonKey = process.env.SUPBASE_ANON_KEY;
 
-      console.log(supabaseUrl);
-      console.log(supabaseAnonKey);
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Configuración de Supabase no encontrada");
+      }
+
       // Parsear carrito correctamente sin importar el formato
       let payloadCart = [];
       if (typeof pedido.carrito === "string") {
@@ -201,12 +193,6 @@ export default function PedidosModal() {
 
       // Para Edge Functions de Supabase, siempre usar el anon_key
       const authToken = supabaseAnonKey;
-
-      console.log("📦 Payload enviado a Edge Function:", {
-        cart: payloadCart,
-        idPedido: pedido.id,
-        totalEsperado: totalPedido,
-      });
 
       const response = await fetch(`${supabaseUrl}/functions/v1/crear-pago`, {
         method: "POST",
@@ -288,28 +274,17 @@ export default function PedidosModal() {
 
     setIsLoading(true);
     try {
-      console.log("🔍 Cargando pedidos para usuario:", {
-        userId: user?.id,
-        userEmail: user?.email,
-        profileEmail: userProfile?.email,
-        profileTelefono: userProfile?.telefono,
-        profileNombre: userProfile?.nombre,
-      });
-
-      let query = supabaseClient.from("pedidos").select("*");
+      let query = supabaseClient
+        .from("pedidos")
+        .select("*")
+        .match({ user_id: user.id });
 
       // ESTRATEGIA 1: Si el usuario está logueado, buscar PRIMERO por user_id
       if (user && user.id) {
-        console.log("🔍 Buscando pedidos por user_id:", user.id);
         query = query.eq("user_id", user.id);
       }
       // ESTRATEGIA 2: Si no está logueado, buscar por email O teléfono exactos
       else if (userProfile) {
-        console.log(
-          "🔍 Buscando pedidos por email/teléfono:",
-          userProfile.email,
-          userProfile.telefono,
-        );
 
         // Buscar por email exacto en el perfil del usuario
         if (userProfile.email) {
@@ -334,25 +309,13 @@ export default function PedidosModal() {
         throw error;
       }
 
-      console.log("🔍 Pedidos crudos encontrados:", data?.length || 0, data);
-
       // Asegurarse de que data sea un array
       const pedidosArray = Array.isArray(data) ? data : [];
 
       // FILTRADO ADICIONAL: Verificar que los pedidos realmente pertenezcan al usuario
       const pedidosFiltrados = pedidosArray.filter((pedido, index) => {
-        console.log(`🔍 Analizando pedido ${index + 1}:`, {
-          pedidoId: pedido.id,
-          pedidoUserId: pedido.user_id,
-          pedidoEmail: pedido.email,
-          pedidoTelefono: pedido.telefono,
-          pedidoNombreCliente: pedido.nombre_cliente,
-          pedidoEstado: pedido.estado,
-        });
-
         // Si tiene user_id y coincide, es del usuario
         if (user && user.id && pedido.user_id === user.id) {
-          console.log("✅ Pedido coincide por user_id");
           return true;
         }
 
@@ -379,25 +342,14 @@ export default function PedidosModal() {
               .includes(userProfile.nombre.toLowerCase());
 
           const resultado = coincideEmail || coincideTelefono || coincideNombre;
-          console.log("🔍 Verificación sin user_id:", {
-            coincideEmail,
-            coincideTelefono,
-            coincideNombre,
-            resultado,
-          });
 
           return resultado;
         }
 
-        console.log("❌ Pedido no coincide con este usuario");
         return false;
       });
 
-      console.log(
-        "✅ Pedidos filtrados para este usuario:",
-        pedidosFiltrados.length,
-        pedidosFiltrados,
-      );
+      // Agregar número de pedido secuencial por usuario
 
       // Agregar número de pedido secuencial por usuario
       const pedidosConNumero = pedidosFiltrados.map((pedido, index) => ({
@@ -639,12 +591,12 @@ export default function PedidosModal() {
                                   </div>
                                   <div className="text-right">
                                     <span className="font-black">
-                                      ${item.precio.toLocaleString("es-AR")} c/u
+                                      ${(item.precio_unitario || item.precio || 0).toLocaleString("es-AR")} c/u
                                     </span>
                                     <div className="text-[#FF6600] font-bold">
                                       $
                                       {(
-                                        item.precio * item.cantidad
+                                        (item.precio_unitario || item.precio || 0) * item.cantidad
                                       ).toLocaleString("es-AR")}
                                     </div>
                                   </div>
@@ -740,7 +692,7 @@ export default function PedidosModal() {
                                         >
                                           • {item.nombre} x{item.cantidad} = $
                                           {(
-                                            item.precio * item.cantidad
+                                            (item.precio_unitario || 0) * item.cantidad
                                           ).toLocaleString("es-AR")}
                                         </div>
                                       ))
@@ -803,7 +755,7 @@ export default function PedidosModal() {
                                         >
                                           • {item.nombre} x{item.cantidad} = $
                                           {(
-                                            item.precio * item.cantidad
+                                            (item.precio_unitario || 0) * item.cantidad
                                           ).toLocaleString("es-AR")}
                                         </div>
                                       ))

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft } from "lucide-react";
 
 export default function Carrusel() {
   // 1. Use React State to track the current slide instead of a global let
@@ -33,7 +33,7 @@ export default function Carrusel() {
     <div className="py-2">
       <div
         id="heroCarousel"
-        className="relative w-full overflow-hidden shadow-xl mb-8 h-48 md:h-[230px]"
+        className="relative w-full overflow-hidden shadow-xl mb-8 h-48 md:h-96"
       >
         <div
           id="carouselInner"
@@ -43,54 +43,29 @@ export default function Carrusel() {
         >
           {/* Slide 1 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-blue-700 to-blue-900 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
-            <div className="z-10 w-full">
-              <span className="bg-yellow-400 text-black text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
-                Especial
-              </span>
-              <h2 className="text-3xl md:text-6xl font-black italic mt-2 leading-none">
-                {/* Fixed unclosed <br> tags */}
-                SEMANA DE <br />
-                <span className="text-blue-300">BEBIDAS</span>
-              </h2>
-              <p className="mt-2 text-blue-100 text-xs md:text-xl font-medium line-clamp-2">
-                Hasta 20% OFF llevando por bulto cerrado.
-              </p>
-            </div>
-            <i className="fas fa-wine-bottle text-7xl md:text-[220px] text-white/10 absolute right-[-10px] md:right-16 bottom-[-10px] md:bottom-auto"></i>
+            <img
+              src="./Carrusel1.png"
+              alt="CarruselSlide1"
+              className="absolute inset-0 w-full h-full object-fill"
+            />
           </div>
 
           {/* Slide 2 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-green-600 to-emerald-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
-            <div className="z-10 w-full">
-              <span className="bg-white text-green-700 text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
-                Logística
-              </span>
-              <h2 className="text-3xl md:text-6xl font-black italic mt-2 leading-none">
-                ENVÍO <br />
-                <span className="text-green-300">10% OFF</span>
-              </h2>
-              <p className="mt-2 text-green-100 text-xs md:text-xl font-medium line-clamp-2">
-                10% en todos los envios por WEB.
-              </p>
-            </div>
-            <i className="fas fa-truck-fast text-7xl md:text-[220px] text-white/10 absolute right-[-10px] md:right-16 bottom-[-10px] md:bottom-auto"></i>
+            <img
+              src="./Carrusel2.png"
+              alt="CarruselSlide2"
+              className="absolute inset-0 w-full h-full object-fill"
+            />
           </div>
 
           {/* Slide 3 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
-            <div className="z-10 w-full">
-              <span className="bg-black text-white text-[10px] md:text-sm font-black px-2 md:px-3 py-1 rounded uppercase tracking-wider">
-                Catálogo
-              </span>
-              <h2 className="text-3xl md:text-6xl font-black italic mt-2 leading-none">
-                TODO PARA <br />
-                <span className="text-yellow-300">TU LOCAL</span>
-              </h2>
-              <p className="mt-2 text-orange-100 text-xs md:text-xl font-medium line-clamp-2">
-                Surtido completo, los mejores precios.
-              </p>
-            </div>
-            <i className="fas fa-boxes-stacked text-7xl md:text-[220px] text-white/10 absolute right-[-10px] md:right-16 bottom-[-10px] md:bottom-auto"></i>
+            <img
+              src="./Carrusel3.png"
+              alt="CarruselSlide3"
+              className="absolute inset-0 w-full h-full object-fill"
+            />
           </div>
         </div>
 

@@ -4,15 +4,30 @@ import { useCart } from "../contexts/CartContext";
 import PedidosModal, { openPedidos } from "./PedidosModal";
 import ProfileModal, { openProfile } from "./ProfileModal";
 import { ShoppingCart, CircleUserRound, User, PackageOpen } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export default function NavBar() {
   const { openAuthModal, user, userProfile } = useAuth();
-  const { cartCount, cartTotal, setIsCartOpen } = useCart();
+  const { cartCount, cartTotal, setIsCartOpen, getCartTotalWithDiscount, qualifiesForFirstBuyDiscount } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchInput, setSearchInput] = useState('');
 
   const toggleCart = () => {
     setIsCartOpen(true);
+  };
+
+  const handleSearch = (e) => {
+    const searchTerm = e.target.value;
+    setSearchInput(searchTerm);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      navigate(`/productos?search=${encodeURIComponent(searchInput.trim())}`);
+    }
   };
 
   // Get user display name
@@ -44,7 +59,7 @@ export default function NavBar() {
             </Link>
           </div>
         )}
-        <div className="max-w-7xl mx-auto py-4">
+        <div className="max-w-7xl mx-auto py-4 px-4">
           <div className="flex flex-wrap md:flex-nowrap items-center md:gap-6">
             <Link
               to="/"
@@ -73,17 +88,19 @@ export default function NavBar() {
               </Link>
             </nav>
 
-            <div className="w-full basis-full md:basis-auto md:flex-1 order-3 md:order-2 mt-4 md:mt-0 relative">
+            <form onSubmit={handleSearchSubmit} className="w-full basis-full md:basis-auto md:flex-1 order-3 md:order-2 mt-4 md:mt-0 relative">
               <input
                 type="text"
                 id="searchInput"
                 placeholder="Buscar productos..."
+                value={searchInput}
+                onChange={handleSearch}
                 className={`${location.pathname.startsWith("/productos") && "invisible"} w-full border-2 border-gray-200 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:border-[#FF6600] text-sm font-medium transition shadow-inner placeholder:text-transparent sm:placeholder:text-gray-400`}
               />
-              <button className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF6600]">
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF6600]">
                 <i className="fas fa-search text-xl"></i>
               </button>
-            </div>
+            </form>
 
             <div className="flex items-center gap-3 order-2 md:order-3 shrink-0 ml-auto md:ml-0">
               {/* Show login button when not logged in */}
@@ -139,7 +156,10 @@ export default function NavBar() {
                   className="hidden sm:inline ml-1 text-lg"
                   id="cartTotalHeader"
                 >
-                  ${cartTotal.toLocaleString("es-AR")}
+                  ${getCartTotalWithDiscount(userProfile).toLocaleString("es-AR")}
+                  {qualifiesForFirstBuyDiscount(userProfile) && (
+                    <span className="text-green-600 text-xs ml-1">✨</span>
+                  )}
                 </span>
               </button>
             </div>

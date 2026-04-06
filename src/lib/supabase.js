@@ -1,20 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
-import 'dotenv/config';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPBASE_ANON_KEY
+export const supabaseUrl = process.env.SUPABASE_URL;
+export const supabaseAnonKey = process.env.SUPBASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-async function getProfiles() {
-    const { data, error } = await supabase.from("perfiles").select("id");
-
-    if (error) {
-        console.log(await error)
-    }
-
-
-    return data
+if (!supabaseUrl) {
+  console.error('❌ SUPABASE_URL is not defined in environment variables');
 }
 
-console.log(await getProfiles())
+if (!supabaseAnonKey) {
+  console.error('❌ SUPBASE_ANON_KEY is not defined in environment variables');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

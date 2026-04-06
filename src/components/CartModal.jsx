@@ -15,6 +15,8 @@ export default function CartModal() {
     isCartOpen,
     setIsCartOpen,
     clearCart,
+    getCartTotalWithDiscount,
+    qualifiesForFirstBuyDiscount,
   } = useCart();
   const { user, userProfile, openAuthModal, switchTab } = useAuth();
   const { showSuccess, showError } = useAlert();
@@ -26,6 +28,7 @@ export default function CartModal() {
     telefono: "",
     direccion: "",
     notas: "",
+    metodoEntrega: "envio", // "envio" o "retiro"
   });
 
   // Cargar datos del usuario cuando esté disponible
@@ -42,7 +45,7 @@ export default function CartModal() {
   // Limpiar datos cuando el usuario cierra sesión
   useEffect(() => {
     if (!user) {
-      setOrderData({ nombre: "", telefono: "", direccion: "", notas: "" });
+      setOrderData({ nombre: "", telefono: "", direccion: "", notas: "", metodoEntrega: "envio" });
     }
   }, [user]);
 
@@ -71,9 +74,7 @@ export default function CartModal() {
         .select();
 
       if (error) throw error;
-      if (data && data.length > 0) {
-        console.log(`Cancelados ${data.length} pedidos vencidos`);
-      }
+      // Pedidos vencidos cancelados exitosamente
     } catch (error) {
       console.error("Error verificando pedidos vencidos:", error);
     }
@@ -110,6 +111,14 @@ export default function CartModal() {
     setIsSubmitting(true);
 
     try {
+      // Verificar si el usuario está logueado
+      if (!user) {
+        showError("❌ No puedes enviar el pedido. Crea una cuenta o inicia sesión para continuar.");
+        setIsSubmitting(false);
+        openAuthModal(); // Abrir modal de autenticación
+        return;
+      }
+
       if (cartTotal <= 0) {
         showError(
           "❌ El total del pedido debe ser mayor a $0. Por favor agrega productos al carrito.",
@@ -126,11 +135,11 @@ export default function CartModal() {
         return;
       }
 
-      // Validar campos obligatorios
+      // Validar que los campos obligatorios estén completos
       if (
         !orderData.nombre.trim() ||
         !orderData.telefono.trim() ||
-        !orderData.direccion.trim()
+        (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
       ) {
         showError("❌ Por favor completá todos los campos obligatorios.");
         setIsSubmitting(false);
@@ -142,17 +151,21 @@ export default function CartModal() {
       const pedidoData = {
         nombre_cliente: orderData.nombre.trim(),
         telefono: orderData.telefono.trim(),
-        direccion: orderData.direccion.trim(),
+        direccion: orderData.metodoEntrega === "retiro" ? "Retiro en local" : orderData.direccion.trim(),
         carrito: cart.map((item) => ({
           Id: item.Id,
           nombre: item.nombre,
           cantidad: item.cantidad,
-          precio: item.precio,
+          precio: item.precio,  // Se guarda como 'precio' en el JSON
+          precio_unitario: item.precio,  // Para compatibilidad con código existente
           subtotal: item.precio * item.cantidad,
         })),
-        total: cartTotal,
+        total: orderData.metodoEntrega === "retiro" 
+          ? getCartTotalWithDiscount(userProfile) 
+          : getCartTotalWithDiscount(userProfile) + 7200,
+        descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile) ? 1000 : 0,
         estado: "pendiente",
-        metodo: "envio",
+        metodo: orderData.metodoEntrega,
         created_at: new Date().toISOString(),
         expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
         fuente: "web",
@@ -167,6 +180,21 @@ export default function CartModal() {
         .single();
 
       if (error) throw error;
+
+      // Actualizar cantidad de pedidos del usuario
+      if (user) {
+        try {
+          await supabaseClient
+            .from("perfiles")
+            .update({ 
+              cantidad_pedidos: (userProfile?.cantidad_pedidos || 0) + 1 
+            })
+            .eq("id", user.id);
+        } catch (updateError) {
+          console.error("Error actualizando cantidad de pedidos:", updateError);
+          // No fallar el pedido si no se puede actualizar el contador
+        }
+      }
 
       // Timeout para cancelación automática (usando id en minúscula)
       const timeoutId = setTimeout(
@@ -414,41 +442,81 @@ export default function CartModal() {
                 </div>
               </div>
 
-              {/* Dirección */}
+              {/* Método de Entrega */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  <i className="fas fa-map-marker-alt mr-2"></i>
-                  Dirección de entrega
-                  {campoDireccionBloqueado && (
-                    <span className="ml-2 text-xs text-gray-400 font-normal">
-                      (de tu cuenta)
-                    </span>
-                  )}
+                  <i className="fas fa-truck mr-2"></i>
+                  Método de entrega
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="direccion"
-                    value={orderData.direccion}
-                    onChange={
-                      campoDireccionBloqueado ? undefined : handleInputChange
-                    }
-                    readOnly={campoDireccionBloqueado}
-                    className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
-                      campoDireccionBloqueado
-                        ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
-                        : "border-gray-200 focus:border-[#FF6600]"
-                    }`}
-                    placeholder="Tu dirección"
-                  />
-                  {campoDireccionBloqueado && (
-                    <Lock
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="metodoEntrega"
+                      value="envio"
+                      checked={orderData.metodoEntrega === "envio"}
+                      onChange={handleInputChange}
+                      className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
                     />
-                  )}
+                    <div className="flex-1">
+                      <span className="font-medium">Envío a domicilio</span>
+                      <span className="text-sm text-gray-500 ml-2">(+ $7.200)</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="metodoEntrega"
+                      value="retiro"
+                      checked={orderData.metodoEntrega === "retiro"}
+                      onChange={handleInputChange}
+                      className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Retiro en local</span>
+                      <span className="text-sm text-green-600 ml-2">(Gratis)</span>
+                    </div>
+                  </label>
                 </div>
               </div>
+
+              {/* Dirección - solo mostrar si es envío */}
+              {orderData.metodoEntrega === "envio" && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <i className="fas fa-map-marker-alt mr-2"></i>
+                    Dirección de entrega
+                    {campoDireccionBloqueado && (
+                      <span className="ml-2 text-xs text-gray-400 font-normal">
+                        (de tu cuenta)
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="direccion"
+                      value={orderData.direccion}
+                      onChange={
+                        campoDireccionBloqueado ? undefined : handleInputChange
+                      }
+                      readOnly={campoDireccionBloqueado}
+                      className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
+                        campoDireccionBloqueado
+                          ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
+                          : "border-gray-200 focus:border-[#FF6600]"
+                      }`}
+                      placeholder="Tu dirección"
+                    />
+                    {campoDireccionBloqueado && (
+                      <Lock
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Notas */}
               <div>
@@ -468,13 +536,43 @@ export default function CartModal() {
 
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex justify-between text-lg font-black mb-2">
-                  <span>Total del pedido:</span>
-                  <span className="text-[#FF6600]">
+                  <span>Subtotal:</span>
+                  <span>
                     ${cartTotal.toLocaleString("es-AR")}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500 font-medium">
+                
+                {/* Descuento de primera compra */}
+                {qualifiesForFirstBuyDiscount(userProfile) && (
+                  <div className="flex justify-between text-sm font-medium mb-2">
+                    <span className="text-green-600">🎉 Descuento primera compra:</span>
+                    <span className="text-green-600">
+                      -$1.000
+                    </span>
+                  </div>
+                )}
+                
+                {orderData.metodoEntrega === "envio" && (
+                  <div className="flex justify-between text-sm font-medium mb-2">
+                    <span>Costo de envío:</span>
+                    <span className="text-gray-600">
+                      $7.200
+                    </span>
+                  </div>
+                )}
+                <div className="border-t pt-2 flex justify-between text-xl font-black">
+                  <span>Total:</span>
+                  <span className="text-[#FF6600]">
+                    ${((orderData.metodoEntrega === "retiro" 
+                      ? getCartTotalWithDiscount(userProfile) 
+                      : getCartTotalWithDiscount(userProfile) + 7200)).toLocaleString("es-AR")}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500 font-medium mt-2">
                   {cart.length} {cart.length === 1 ? "producto" : "productos"}
+                  {qualifiesForFirstBuyDiscount(userProfile) && (
+                    <span className="text-green-600 ml-2">✨ ¡$1.000 OFF aplicado!</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -493,7 +591,7 @@ export default function CartModal() {
                   isSubmitting ||
                   !orderData.nombre.trim() ||
                   !orderData.telefono.trim() ||
-                  !orderData.direccion.trim()
+                  (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
                 }
                 className="flex-1 py-3 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >

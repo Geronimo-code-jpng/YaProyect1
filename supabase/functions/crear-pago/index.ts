@@ -6,14 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+interface RequestBody {
+  cart: any[];
+  idPedido: number;
+}
+
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { cart, idPedido } = await req.json()
+    const { cart, idPedido }: RequestBody = await req.json()
     
     if (!cart || !idPedido) {
       return new Response(
@@ -25,7 +30,7 @@ serve(async (req) => {
     // Crear cliente de Supabase
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPBASE_ANON_KEY') ?? '',
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -73,7 +78,7 @@ serve(async (req) => {
     }
 
     // Preparar items para Mercado Pago
-    const items = cart.map(item => ({
+    const items = cart.map((item: any) => ({
       title: item.nombre,
       quantity: item.cantidad,
       unit_price: Number(item.precio),
@@ -150,7 +155,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en crear-pago:', error)
     return new Response(
       JSON.stringify({ error: 'Error interno del servidor', details: error.message }),
