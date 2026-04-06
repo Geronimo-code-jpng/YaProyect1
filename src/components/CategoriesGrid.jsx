@@ -1,15 +1,15 @@
 const CATEGORIAS = [
-  { id: "SoloOfertas", nombre: " Ofertas Exclusivas", imagen: ".ofertas.jpg" },
-  { id: "Todas_Filtro", nombre: " Todos Los Productos", imagen: "./carpetafotos/todocatalogo.jpg" },
-  { id: "ALIMENTO", nombre: " Alimentos", imagen: "./carpetafotos/alimentos.jpg" },
-  { id: "BEBIDAS", nombre: " Bebidas", imagen: "./carpetafotos/bebidas.jpg" },
-  { id: "LACTEOS", nombre: " Lácteos", imagen: "./carpetafotos/lacteos.jpg" },
-  { id: "HARINA", nombre: " Harinas", imagen: "./carpetafotos/harinas.jpg" },
-  { id: "ACEITE", nombre: " Aceites", imagen: "./carpetafotos/aceites.jpg" },
-  { id: "VINOS", nombre: " Vinos", imagen: "./carpetafotos/vinos.jpg" },
-  { id: "CERVEZAS", nombre: " Cervezas", imagen: "./carpetafotos/cervezas.jpg" },
-  { id: "YERBA", nombre: " Yerbas", imagen: "./carpetafotos/yerbas.jpg" },
-  { id: "APERITIVOS", nombre: " Aperitivos", imagen: "./carpetafotos/aperitivos.jpg" }
+  { id: "SoloOfertas", nombre: " Ofertas Exclusivas", imagen: "../../public/ofertas.jpg" },
+  { id: "Todas_Filtro", nombre: " Todos Los Productos", imagen: "./todos.jpg" },
+  { id: "ALIMENTO", nombre: " Alimentos", imagen: "./arroz.jpg" },
+  { id: "BEBIDAS", nombre: " Bebidas", imagen: "./gaseosas.jpg" },
+  { id: "LACTEOS", nombre: " Lácteos", imagen: "./lacteos.jpg" },
+  { id: "HARINA", nombre: " Harinas", imagen: "./harinas.jpg" },
+  { id: "ACEITE", nombre: " Aceites", imagen: "./aceite.jpg" },
+  { id: "VINOS", nombre: " Vinos", imagen: "./vinos.jpg" },
+  { id: "CERVEZAS", nombre: " Cervezas", imagen: "./cervezas.jpg" },
+  { id: "YERBA", nombre: " Yerbas", imagen: "./yerba.jpg" },
+  { id: "APERITIVOS", nombre: " Aperitivos", imagen: "./aperitivos.jpg" }
 ];
 
 export default function CategoriesGrid({ onCategoryClick }) {
