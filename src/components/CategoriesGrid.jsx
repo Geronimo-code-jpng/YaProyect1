@@ -1,7 +1,7 @@
 import React from 'react';
 
 const CATEGORIAS = [
-  { id: "SoloOfertas", nombre: " Ofertas Exclusivas", imagen: "./ofertas.jpg" },
+  { id: "SoloOfertas", nombre: " Ofertas Exclusivas", imagen: "../../public/ofertas.jpg" },
   { id: "Todas_Filtro", nombre: " Todos Los Productos", imagen: "./todos.jpg" },
   { id: "ALIMENTO", nombre: " Alimentos", imagen: "./arroz.jpg" },
   { id: "BEBIDAS", nombre: " Bebidas", imagen: "./gaseosas.jpg" },
