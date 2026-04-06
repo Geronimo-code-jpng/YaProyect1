@@ -64,7 +64,13 @@ export default function AuthModal() {
     }
     
     if (errores.length > 0) {
-      throw new Error(errores.join(". "));
+      // Mostrar errores individualmente como alertas
+      errores.forEach(error => {
+        setTimeout(() => {
+          alert(error);
+        }, 100);
+      });
+      return; // Salir de la función sin lanzar error
     }
 
     try {
@@ -102,6 +108,8 @@ export default function AuthModal() {
       await checkSession();
     } catch (err) {
       showError(err.message);
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
     } finally {
       btn.innerHTML = originalContent;
       btn.disabled = false;
@@ -158,7 +166,13 @@ export default function AuthModal() {
     }
     
     if (errores.length > 0) {
-      throw new Error(errores.join(". "));
+      // Mostrar errores individualmente como alertas
+      errores.forEach(error => {
+        setTimeout(() => {
+          alert(error);
+        }, 100);
+      });
+      return; // Salir de la función sin lanzar error
     }
 
     try {
@@ -211,6 +225,8 @@ export default function AuthModal() {
       }
     } catch (err) {
       showError(err.message);
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
     } finally {
       btn.innerHTML = originalContent;
       btn.disabled = false;
