@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import NavBar from "./components/NavBar";
 import "./Global.css";
 import Footer from "./components/Footer";
@@ -7,6 +12,7 @@ import CartModal from "./components/CartModal";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { AlertProvider } from "./contexts/AlertContext";
+import { ProductProvider } from "./contexts/ProductContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import ProductsPage from "./pages/ProductsPage";
@@ -24,16 +30,16 @@ function AppContent() {
   // Update document title based on current route
   useEffect(() => {
     const titles = {
-      '/': 'YA MAYORISTA! | Página Principal',
-      '/productos': 'YA MAYORISTA! | Catálogo Oficial',
-      '/admin': 'YA MAYORISTA! | Panel Administración'
+      "/": "YA MAYORISTA! | Página Principal",
+      "/productos": "YA MAYORISTA! | Catálogo Oficial",
+      "/admin": "YA MAYORISTA! | Panel Administración",
     };
-    
+
     // Handle dynamic routes
-    if (location.pathname.startsWith('/producto/')) {
-      document.title = 'YA MAYORISTA! | Detalle del Producto';
+    if (location.pathname.startsWith("/producto/")) {
+      document.title = "YA MAYORISTA! | Detalle del Producto";
     } else {
-      document.title = titles[location.pathname] || 'YA MAYORISTA!';
+      document.title = titles[location.pathname] || "YA MAYORISTA!";
     }
   }, [location]);
 
@@ -74,28 +80,29 @@ function AppContent() {
   }
 
   return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Success toast */}
-        <div
-          id="toastExito"
-          className="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-99999 flex items-center gap-3 font-bold border-2 border-green-400"
-        >
-          <i className="fas fa-check-circle text-2xl"></i>
-          <span id="toastMsg">¡Operación exitosa!</span>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Success toast */}
+      <div
+        id="toastExito"
+        className="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-transform translate-x-[150%] z-99999 flex items-center gap-3 font-bold border-2 border-green-400"
+      >
+        <i className="fas fa-check-circle text-2xl"></i>
+        <span id="toastMsg">¡Operación exitosa!</span>
+      </div>
 
-        {/* WhatsApp floating button */}
-        <a
-          id="floatingWa"
-          href="https://wa.me/3425084197"
-          target="_blank"
-          className="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110"
-        >
-          <FontAwesomeIcon icon={faWhatsapp} />
-        </a>
+      {/* WhatsApp floating button */}
+      <a
+        id="floatingWa"
+        href="https://wa.me/3425084197"
+        target="_blank"
+        className="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110"
+      >
+        <FontAwesomeIcon icon={faWhatsapp} />
+      </a>
 
-        {/* Promo modal - Solo mostrar si no hay sesión iniciada o es primera compra */}
-        {showPromoModal && (!user || (userProfile?.cantidad_pedidos || 0) === 0) && (
+      {/* Promo modal - Solo mostrar si no hay sesión iniciada o es primera compra */}
+      {showPromoModal &&
+        (!user || (userProfile?.cantidad_pedidos || 0) === 0) && (
           <div
             id="promoModal"
             className="fixed inset-0 bg-black/60 z-99999 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity"
@@ -112,10 +119,9 @@ function AppContent() {
                 ¡$1.000 OFF!
               </h2>
               <p className="text-gray-600 font-medium mb-6">
-                {user 
-                  ? `¡Hola ${userProfile?.nombre || user.email?.split('@')[0]}! Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000.`
-                  : "Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000."
-                }
+                {user
+                  ? `¡Hola ${userProfile?.nombre || user.email?.split("@")[0]}! Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000.`
+                  : "Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000."}
               </p>
               <button
                 onClick={() => (openAuthModal(), setShowPromoModal(false))}
@@ -133,19 +139,19 @@ function AppContent() {
           </div>
         )}
 
-        <NavBar />
+      <NavBar />
 
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/productos" element={<ProductsPage />} />
-          <Route path="/producto/:id" element={<ProductDetailPage />} />
-          <Route path="/admin" element={<AdminPanel />} />
-        </Routes>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/productos" element={<ProductsPage />} />
+        <Route path="/producto/:id" element={<ProductDetailPage />} />
+        <Route path="/admin" element={<AdminPanel />} />
+      </Routes>
 
-        <Footer />
-        <CartModal />
-      </div>
-    );
+      <Footer />
+      <CartModal />
+    </div>
+  );
 }
 
 function App() {
@@ -153,9 +159,11 @@ function App() {
     <AlertProvider>
       <AuthProvider>
         <CartProvider>
-          <Router>
-            <AppContent />
-          </Router>
+          <ProductProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </ProductProvider>
         </CartProvider>
       </AuthProvider>
     </AlertProvider>

@@ -1,27 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
+import { useProducts } from '../contexts/ProductContext';
 import ProductsGrid from '../components/ProductsGrid';
-import { supabase as supabaseClient } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
 
 export default function ProductsPage() {
-  const [allProducts, setAllProducts] = useState([]);
   const [categoriaActual, setCategoriaActual] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
+  const { products, isLoading, error, refreshProducts } = useProducts();
   const [searchParams] = useSearchParams();
 
-  // Load search and category from URL params on component mount
+  // Obtener parámetros de la URL
   useEffect(() => {
-    const searchFromUrl = searchParams.get('search');
-    const categoryFromUrl = searchParams.get('categoria');
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
     
-    if (searchFromUrl) {
-      setSearchTerm(searchFromUrl);
-    }
-    
-    if (categoryFromUrl) {
+    if (category) {
       // Convert category parameter to display format
       const categoryMap = {
         'soloofertas': 'SoloOfertas',
@@ -42,32 +37,11 @@ export default function ProductsPage() {
     }
   }, [searchParams]);
 
-  // Load products from Supabase
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const { data, error } = await supabaseClient.from("productos").select()
-        if (error) {
-          console.error("Error loading products:", error);
-          setIsLoading(false);
-          return;
-        }
-        setAllProducts(data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading products:", error);
-        setIsLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, []);
-
   // Get unique categories
-  const categorias = ['Todas', 'SoloOfertas', 'Todas_Filtro', ...new Set(allProducts.map(product => product.Categoria))];
+  const categorias = ['Todas', 'SoloOfertas', 'Todas_Filtro', ...new Set(products.map(product => product.Categoria))];
 
   // Filter products based on category and search
-  const productosFiltrados = allProducts.filter(product => {
+  const productosFiltrados = products.filter(product => {
     // Sanitize search term
     const sanitizedSearchTerm = searchTerm
       .replace(/[<>"']/g, '')

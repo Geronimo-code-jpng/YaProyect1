@@ -9,7 +9,7 @@ import { useState } from "react";
 
 export default function NavBar() {
   const { openAuthModal, user, userProfile } = useAuth();
-  const { cartCount, cartTotal, setIsCartOpen, getCartTotalWithDiscount, qualifiesForFirstBuyDiscount } = useCart();
+  const { cartCount, setIsCartOpen, getCartTotalWithDiscount, qualifiesForFirstBuyDiscount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');

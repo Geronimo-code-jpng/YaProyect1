@@ -1,36 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../contexts/CartContext';
+import { useProducts } from '../contexts/ProductContext';
 import CategoriesGrid from './CategoriesGrid';
 import ProductsGrid from './ProductsGrid';
-import { supabase as supabaseClient } from '../lib/supabase';
 
 export default function CatalogMain() {
-  const [allProducts, setAllProducts] = useState([]);
   const [categoriaActual, setCategoriaActual] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
+  const { products, isLoading, error, refreshProducts } = useProducts();
 
-  // Load products from Supabase
+  // Manejar errores
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const { data, error } = await supabaseClient.from("productos").select()
-        if (error) {
-          console.error("Error loading products:", error);
-          setIsLoading(false);
-          return;
-        }
-        setAllProducts(data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading products:", error);
-        setIsLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, []);
+    if (error) {
+      console.error("Error cargando productos:", error);
+    }
+  }, [error]);
 
   // Handle search input
   useEffect(() => {
@@ -61,7 +46,7 @@ export default function CatalogMain() {
       .trim();
     const estaBuscando = term !== "";
 
-    return allProducts.filter(p => {
+    return products.filter(p => {
       // Sanitize product name for comparison
       const productName = (p.nombre || "")
         .replace(/[<>"']/g, '')
@@ -78,11 +63,9 @@ export default function CatalogMain() {
         return coincideTexto;
       }
 
-      const categoria = p.Categoria || p.categoria;
-      const coincideCat = categoria && categoria.toLowerCase() === categoriaActual.toLowerCase();
-      return coincideTexto && coincideCat;
+      return coincideTexto && p.Categoria === categoriaActual;
     });
-  }, [allProducts, searchTerm, categoriaActual]);
+  }, [products, searchTerm, categoriaActual]);
 
   // Update UI elements
   const updateUI = (term, categoria) => {
