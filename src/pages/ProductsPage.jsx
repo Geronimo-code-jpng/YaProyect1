@@ -13,7 +13,7 @@ export default function ProductsPage() {
 
   // Obtener parámetros de la URL
   useEffect(() => {
-    const category = searchParams.get('category');
+    const category = searchParams.get('categoria'); // Cambiado de 'category' a 'categoria'
     const search = searchParams.get('search');
     
     if (category) {
@@ -29,11 +29,16 @@ export default function ProductsPage() {
         'vinos': 'VINOS',
         'cervezas': 'CERVEZAS',
         'yerba': 'YERBA',
-        'aperitivos': 'APERITIVOS'
+        'aperitivos': 'APERITIVOS',
+        'cigarrillos': 'CIGARRILLOS'
       };
       
-      const normalizedCategory = categoryMap[categoryFromUrl.toLowerCase()] || categoryFromUrl.toUpperCase();
+      const normalizedCategory = categoryMap[category.toLowerCase()] || category.toUpperCase();
       setCategoriaActual(normalizedCategory);
+    }
+    
+    if (search) {
+      setSearchTerm(search);
     }
   }, [searchParams]);
 
