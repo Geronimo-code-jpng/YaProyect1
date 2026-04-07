@@ -1,5 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
-import { supabaseClient } from '../db/supabeClient';
+import { supabase as supabaseClient } from '../lib/supabase';
 
 export default function AuthModal() {
   const { showAuthModal, closeAuthModal, activeTab, switchTab, authError, showError } = useAuth();

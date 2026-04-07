@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import ProductsGrid from '../components/ProductsGrid';
-import { supabaseClient } from '../db/supabeClient';
+import { supabase as supabaseClient } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
 
 export default function ProductsPage() {

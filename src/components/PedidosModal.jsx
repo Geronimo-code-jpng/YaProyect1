@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
-import { supabaseClient } from "../db/supabeClient";
+import { supabase as supabaseClient } from "../lib/supabase";
 
 // Countdown Timer Component
 function CountdownTimer({ expira_en, onExpire }) {

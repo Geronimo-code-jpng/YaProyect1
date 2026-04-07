@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../contexts/CartContext';
 import CategoriesGrid from './CategoriesGrid';
 import ProductsGrid from './ProductsGrid';
-import { supabaseClient } from '../db/supabeClient';
+import { supabase as supabaseClient } from '../lib/supabase';
 
 export default function CatalogMain() {
   const [allProducts, setAllProducts] = useState([]);

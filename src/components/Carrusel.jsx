@@ -4,7 +4,7 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 export default function Carrusel() {
   // 1. Use React State to track the current slide instead of a global let
   const [currentSlide, setCurrentSlide] = useState(0);
-  const totalSlides = 3;
+  const totalSlides = 4;
 
   // 2. Use useEffect to handle the interval so it doesn't run infinitely on re-renders
   useEffect(() => {
@@ -43,29 +43,72 @@ export default function Carrusel() {
         >
           {/* Slide 1 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-blue-700 to-blue-900 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
-            <img
-              src="./Carrusel1.png"
-              alt="CarruselSlide1"
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
+            <picture>
+              {/* Imagen para celulares (máximo 640px) */}
+              <source
+                media="(max-width: 640px)"
+                srcset="./Carrusel1-mobile.png"
+              />
+              {/* Imagen para computadoras (más de 1024px) */}
+              <img
+                src="./Carrusel1.png"
+                alt="CarruselSlide1"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            </picture>
           </div>
 
           {/* Slide 2 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-green-600 to-emerald-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
-            <img
-              src="./Carrusel2.png"
-              alt="CarruselSlide2"
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
+            <picture>
+              {/* Imagen para celulares */}
+              <source
+                media="(max-width: 640px)"
+                srcset="./Carrusel2-mobile.png"
+              />
+              {/* Imagen para computadoras */}
+              <img
+                src="./Carrusel2.png"
+                alt="CarruselSlide2"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            </picture>
           </div>
 
           {/* Slide 3 */}
           <div className="w-full flex-none h-full bg-linear-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
-            <img
-              src="./Carrusel3.png"
-              alt="CarruselSlide3"
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
+            <picture>
+              {/* Imagen para celulares */}
+              <source
+                media="(max-width: 640px)"
+                srcset="./Carrusel3-mobile.png"
+              />
+
+              {/* Imagen para computadoras */}
+              <img
+                src="./Carrusel3.png"
+                alt="CarruselSlide3"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            </picture>
+          </div>
+
+          {/* Slide 4 */}
+          <div className="w-full flex-none h-full bg-linear-to-r from-[#FF6600] to-orange-800 flex items-center justify-between px-6 md:px-20 text-white relative overflow-hidden">
+            <picture>
+              {/* Imagen para celulares */}
+              <source
+                media="(max-width: 640px)"
+                srcset="./Carrusel4-mobile.png"
+              />
+
+              {/* Imagen para computadoras */}
+              <img
+                src="./Carrusel4.png"
+                alt="CarruselSlide4"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            </picture>
           </div>
         </div>
 
@@ -85,7 +128,7 @@ export default function Carrusel() {
 
         <div className="absolute bottom-2 sm:bottom-3 md:bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3 z-20">
           {/* Mapped over an array to dynamically render the dots and their active states */}
-          {[0, 1, 2].map((index) => (
+          {[0, 1, 2, 3].map((index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}

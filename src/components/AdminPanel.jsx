@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabaseClient } from "../db/supabeClient";
+import { supabase as supabaseClient } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 
 // Componente de confirmación con razón personalizada para rechazo

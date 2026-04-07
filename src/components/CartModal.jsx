@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { Trash, User, Phone, MessageSquare, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
-import { supabaseClient } from "../db/supabeClient";
+import { supabase as supabaseClient } from "../lib/supabase";
 import { openPedidos } from "./PedidosModal";
 
 export default function CartModal() {
