@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
+import ProductModal from "./ProductModal";
 
 // Componente de confirmación con razón personalizada para rechazo
 function RejectDialog({ message, onConfirm, onCancel }) {
@@ -107,6 +108,11 @@ const AdminPanel = () => {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('pedidos'); // 'pedidos' o 'productos'
+  const [products, setProducts] = useState([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
@@ -272,6 +278,151 @@ const AdminPanel = () => {
     const diferencia = new Date(fechaVencimiento) - new Date(tiempoActual);
     return Math.max(0, Math.floor(diferencia / 1000));
   };
+
+  // Funciones para gestión de productos
+  const cargarProductos = async () => {
+    setProductLoading(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from("productos")
+        .select("*")
+        .order("nombre");
+      
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (err) {
+      console.error("Error cargando productos:", err);
+      showToast("Error cargando productos", "error");
+    } finally {
+      setProductLoading(false);
+    }
+  };
+
+  const abrirModalProducto = (producto = null) => {
+    setEditingProduct(producto);
+    setProductModalOpen(true);
+  };
+
+  const cerrarModalProducto = () => {
+    setEditingProduct(null);
+    setProductModalOpen(false);
+  };
+
+  const guardarProducto = async (productoData) => {
+    try {
+      let finalImageUrl = productoData.Imagen;
+      
+      // Si hay un archivo de imagen, procesarlo primero
+      if (productoData.imageFile) {
+        try {
+          // Convertir imagen a base64
+          const reader = new FileReader();
+          
+          // Usar Promise para manejar el FileReader asíncrono
+          const base64Image = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(productoData.imageFile);
+          });
+          
+          finalImageUrl = base64Image;
+        } catch (error) {
+          console.error("Error procesando imagen:", error);
+          showToast("Error procesando la imagen", "error");
+          return;
+        }
+      }
+
+      // Preparar datos para guardar en la base de datos
+      const dataToSave = {
+        nombre: productoData.nombre,
+        precio: productoData.precio,
+        Categoria: productoData.Categoria,
+        Imagen: finalImageUrl,
+        Oferta: productoData.Oferta,
+        stock: productoData.stock
+      };
+      
+      // Eliminar campos que no existen o son nulos/vacíos
+      if (!dataToSave.Imagen) delete dataToSave.Imagen;
+      if (!dataToSave.Oferta || dataToSave.Oferta.trim() === '') delete dataToSave.Oferta;
+      if (dataToSave.stock === 0 || !dataToSave.stock) delete dataToSave.stock;
+
+      console.log("Guardando producto:", dataToSave);
+      console.log("Editando producto:", editingProduct);
+
+      if (editingProduct) {
+        // Actualizar producto existente
+        const { error } = await supabaseClient
+          .from("productos")
+          .update(dataToSave)
+          .eq("Id", editingProduct.Id);
+        
+        if (error) {
+          console.error("Error de Supabase actualizando:", error);
+          throw error;
+        }
+        showToast("Producto actualizado exitosamente", "success");
+      } else {
+        // Crear nuevo producto
+        const { error } = await supabaseClient
+          .from("productos")
+          .insert(dataToSave);
+        
+        if (error) {
+          console.error("Error de Supabase insertando:", error);
+          throw error;
+        }
+        showToast("Producto creado exitosamente", "success");
+      }
+      
+      await cargarProductos();
+      cerrarModalProducto();
+    } catch (err) {
+      console.error("Error guardando producto:", err);
+      showToast(`Error guardando producto: ${err.message}`, "error");
+    }
+  };
+
+  const eliminarProducto = async (productoId) => {
+    if (!productoId) {
+      showToast("ID de producto no válido", "error");
+      return;
+    }
+
+    showConfirm(
+      "¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.",
+      async () => {
+        setConfirm(null);
+        try {
+          console.log("Eliminando producto con ID:", productoId);
+          
+          const { error } = await supabaseClient
+            .from("productos")
+            .delete()
+            .eq("Id", productoId);
+          
+          if (error) {
+            console.error("Error de Supabase:", error);
+            throw error;
+          }
+          
+          showToast("Producto eliminado exitosamente", "success");
+          await cargarProductos(); // Recargar la lista
+        } catch (err) {
+          console.error("Error eliminando producto:", err);
+          showToast(`Error eliminando producto: ${err.message}`, "error");
+        }
+      }
+    );
+  };
+
+  // Cargar productos cuando se cambia a la pestaña de productos
+  useEffect(() => {
+    if (activeTab === 'productos' && products.length === 0) {
+      cargarProductos();
+    }
+  }, [activeTab]);
 
   const configurarPedido = (idPedido) => {
     showConfirm(
@@ -868,12 +1019,41 @@ const AdminPanel = () => {
           ))}
         </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-black text-zinc-800 flex items-center gap-2">
-            <i className="fas fa-inbox text-[#FF6600]"></i>
-            Pedidos
-            {filtroEstado !== "todos" && (
-              <span className="text-base font-bold text-gray-400 ml-2">
+        {/* Pestañas de navegación */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('pedidos')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+                activeTab === 'pedidos'
+                  ? 'border-[#FF6600] text-[#FF6600]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Pedidos
+            </button>
+            <button
+              onClick={() => setActiveTab('productos')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+                activeTab === 'productos'
+                  ? 'border-[#FF6600] text-[#FF6600]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Productos
+            </button>
+          </nav>
+        </div>
+
+        {/* Contenido de la pestaña activa */}
+        {activeTab === 'pedidos' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-black text-zinc-800 flex items-center gap-2">
+                <i className="fas fa-inbox text-[#FF6600]"></i>
+                Pedidos
+                {filtroEstado !== "todos" && (
+                  <span className="text-base font-bold text-gray-400 ml-2">
                 — {filtroEstado}
               </span>
             )}
@@ -1031,6 +1211,135 @@ const AdminPanel = () => {
             </div>
           )}
         </div>
+      </div>
+      )}
+
+      {/* Sección de Productos */}
+      {activeTab === 'productos' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-black text-zinc-800 flex items-center gap-2">
+              <i className="fas fa-box text-[#FF6600]"></i>
+              Productos
+            </h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={cargarProductos}
+                className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+                title="Refrescar productos"
+              >
+                <i className="fas fa-sync-alt"></i>
+                Refrescar
+              </button>
+              <button
+                onClick={() => abrirModalProducto()}
+                className="bg-[#FF6600] hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2 shadow-md"
+              >
+                <i className="fas fa-plus"></i>
+                Nuevo Producto
+              </button>
+            </div>
+          </div>
+
+          {productLoading ? (
+            <div className="text-center py-20">
+              <i className="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-4"></i>
+              <p className="text-lg font-bold text-gray-500">Cargando productos...</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              <i className="fas fa-box-open text-6xl mb-4"></i>
+              <p className="text-lg font-bold">No hay productos</p>
+              <p className="text-gray-500 mt-2">Comienza agregando tu primer producto</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                    <th className="p-4 font-black">ID</th>
+                    <th className="p-4 font-black">Imagen</th>
+                    <th className="p-4 font-black">Nombre</th>
+                    <th className="p-4 font-black">Categoría</th>
+                    <th className="p-4 font-black">Precio</th>
+                    <th className="p-4 font-black">Stock</th>
+                    <th className="p-4 font-black">Oferta</th>
+                    <th className="p-4 font-black">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.Id} className="border-b hover:bg-gray-50">
+                      <td className="p-4 font-medium">{product.Id}</td>
+                      <td className="p-4">
+                        {product.Imagen ? (
+                          <img
+                            src={product.Imagen}
+                            alt={product.nombre}
+                            className="w-12 h-12 object-cover rounded-lg"
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/48/f3f4f6/a1a1aa?text=';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <i className="fas fa-image text-gray-400"></i>
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4 font-medium">{product.nombre}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-black">
+                          {product.Categoria}
+                        </span>
+                      </td>
+                      <td className="p-4 font-black text-green-600">
+                        ${product.precio?.toLocaleString('es-AR')}
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-black ${
+                          product.stock > 0 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {product.stock || 0}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {product.Oferta ? (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-black">
+                            {product.Oferta}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => abrirModalProducto(product)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
+                            title="Editar"
+                          >
+                            <i className="fas fa-edit">Editar</i>
+                          </button>
+                          <button
+                            onClick={() => eliminarProducto(product.Id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
+                            title="Eliminar"
+                          >
+                            <i className="fas fa-trash">Eliminar</i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       </main>
 
       {/* Modal de edición */}
@@ -1189,6 +1498,14 @@ const AdminPanel = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Productos */}
+      <ProductModal
+        isOpen={productModalOpen}
+        onClose={cerrarModalProducto}
+        product={editingProduct}
+        onSave={guardarProducto}
+      />
     </div>
   );
 };
