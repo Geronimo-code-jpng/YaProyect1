@@ -33,7 +33,7 @@ export default function Carrusel() {
     <div className="py-1 sm:py-2">
       <div
         id="heroCarousel"
-        className="relative w-full overflow-hidden shadow-xl mb-6 sm:mb-8 h-25 sm:h-40 md:h-56 lg:h-80 xl:h-96 2xl:h-[500px]"
+        className="relative w-full overflow-hidden shadow-xl mb-6 sm:mb-8 h-33 sm:h-40 md:h-56 lg:h-80 xl:h-96 2xl:h-[500px]"
       >
         <div
           id="carouselInner"
