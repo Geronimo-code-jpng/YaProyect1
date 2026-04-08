@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 
 export default function Alert({ type = 'success', message, duration = 4000, onClose }) {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    setIsVisible(true);
-    
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => {

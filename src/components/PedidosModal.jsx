@@ -1,38 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { supabase as supabaseClient } from "../lib/supabase";
+import { setOpenPedidosRef } from "../utils/pedidosUtils";
+import "dotenv/config";
 
 // Countdown Timer Component
 function CountdownTimer({ expira_en, onExpire }) {
-  const [timeLeft, setTimeLeft] = useState(null);
+  const calculateTimeLeft = useCallback(() => {
+    const difference = new Date(expira_en) - new Date();
+    if (difference > 0) {
+      return {
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      };
+    }
+    return null;
+  }, [expira_en]);
+
+  const [timeLeft, setTimeLeft] = useState(() => calculateTimeLeft());
+  const prevTimeLeftRef = useRef(timeLeft);
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = new Date(expira_en) - new Date();
-      if (difference > 0) {
-        return {
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60),
-        };
-      }
-      return null;
-    };
-
-    setTimeLeft(calculateTimeLeft());
-
     const timer = setInterval(() => {
       const newTimeLeft = calculateTimeLeft();
       setTimeLeft(newTimeLeft);
 
       // Si el tiempo se venció, llamar a onExpire
-      if (newTimeLeft === null && timeLeft !== null) {
+      if (newTimeLeft === null && prevTimeLeftRef.current !== null) {
         onExpire();
       }
+      
+      prevTimeLeftRef.current = newTimeLeft;
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [expira_en, onExpire]);
+  }, [expira_en, onExpire, calculateTimeLeft]);
 
   if (!timeLeft) {
     return <span className="text-red-600 font-bold">⏰ Tiempo vencido</span>;
@@ -45,9 +48,6 @@ function CountdownTimer({ expira_en, onExpire }) {
     </span>
   );
 }
-
-// Create a ref to store the openPedidos function
-let openPedidosRef = null;
 
 export default function PedidosModal() {
   const { user, userProfile } = useAuth();
@@ -62,7 +62,7 @@ export default function PedidosModal() {
   };
 
   // Store the function in the ref
-  openPedidosRef = openPedidos;
+  setOpenPedidosRef(openPedidos);
 
   const closePedidos = () => {
     setShowModal(false);
@@ -97,7 +97,7 @@ export default function PedidosModal() {
     return new Date(expira_en) <= new Date();
   };
 
-  const verificarEstadoPago = async (pedidoId) => {
+  const verificarEstadoPago = useCallback(async (pedidoId) => {
     try {
       const { data: pedido, error } = await supabaseClient
         .from("pedidos")
@@ -122,7 +122,7 @@ export default function PedidosModal() {
       console.error("❌ Error verificando estado del pago:", error);
       showError("Error verificando el estado del pago");
     }
-  };
+  }, [cargarPedidos, showError, showSuccess, showWarning]);
 
   // Verificar estado del pago al cargar el modal si viene de Mercado Pago
   useEffect(() => {
@@ -137,15 +137,15 @@ export default function PedidosModal() {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
-  }, [showModal]);
+  }, [showModal, verificarEstadoPago]);
 
   const generarLinkPagoCliente = async (pedido) => {
     try {
       showWarning("🔄 Generando link de pago...");
 
       // Usar las credenciales desde variables de entorno
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseAnonKey = process.env.SUPBASE_ANON_KEY;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error("Configuración de Supabase no encontrada");
@@ -157,7 +157,7 @@ export default function PedidosModal() {
         try {
           payloadCart = JSON.parse(pedido.carrito);
         } catch (e) {
-          throw new Error("El carrito del pedido tiene un formato inválido");
+          throw new Error("El carrito del pedido tiene un formato inválido: ", e);
         }
       } else if (Array.isArray(pedido.carrito)) {
         payloadCart = pedido.carrito;
@@ -266,7 +266,37 @@ export default function PedidosModal() {
     }
   };
 
-  const cargarPedidos = async () => {
+  const responderModificacion = async (pedidoId, respuesta) => {
+    try {
+      // Actualizar el historial con la respuesta del usuario
+      const { error } = await supabaseClient
+        .from("pedidos")
+        .update({
+          "historial->>respuesta_usuario": respuesta,
+          estado: respuesta === "aceptado" ? "configurado" : "rechazado",
+          ...(respuesta === "aceptado" && {
+            expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+            horario: "Modificación aceptada - iniciando pago",
+          }),
+        })
+        .eq("id", pedidoId);
+
+      if (error) throw error;
+
+      if (respuesta === "aceptado") {
+        showSuccess("✅ Modificación aceptada. Tenés 10 minutos para pagar.");
+      } else {
+        showSuccess("❌ Pedido rechazado.");
+      }
+      
+      cargarPedidos(); // Recargar la lista
+    } catch (error) {
+      console.error("Error respondiendo modificación:", error);
+      showError("Error al procesar tu respuesta. Intenta nuevamente.");
+    }
+  };
+
+  const cargarPedidos = useCallback(async () => {
     if (!user && !userProfile) {
       console.log("🔍 No hay usuario ni perfil, no se pueden cargar pedidos");
       return;
@@ -313,7 +343,7 @@ export default function PedidosModal() {
       const pedidosArray = Array.isArray(data) ? data : [];
 
       // FILTRADO ADICIONAL: Verificar que los pedidos realmente pertenezcan al usuario
-      const pedidosFiltrados = pedidosArray.filter((pedido, index) => {
+      const pedidosFiltrados = pedidosArray.filter((pedido) => {
         // Si tiene user_id y coincide, es del usuario
         if (user && user.id && pedido.user_id === user.id) {
           return true;
@@ -365,7 +395,7 @@ export default function PedidosModal() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, userProfile, showError]);
 
   const getStatusBadge = (estado) => {
     const badges = {
@@ -686,6 +716,7 @@ export default function PedidosModal() {
                                         );
                                       } catch (e) {
                                         carritoAnterior = [];
+                                        console.log("Error: ", e)
                                       }
                                     } else if (
                                       Array.isArray(
@@ -749,6 +780,7 @@ export default function PedidosModal() {
                                         );
                                       } catch (e) {
                                         carritoNuevo = [];
+                                        console.error("Error: ", e)
                                       }
                                     } else if (
                                       Array.isArray(
@@ -881,9 +913,3 @@ export default function PedidosModal() {
   );
 }
 
-// Export function to be used in NavBar
-export const openPedidos = () => {
-  if (openPedidosRef) {
-    openPedidosRef();
-  }
-};

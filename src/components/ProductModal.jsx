@@ -1,40 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 
 export default function ProductModal({ isOpen, onClose, product, onSave }) {
-  const [formData, setFormData] = useState({
-    nombre: '',
-    precio: 0,
-    Categoria: '',
-    Imagen: '',
-    Oferta: '',
-    stock: 0
-  });
+  const [formOverrides, setFormOverrides] = useState({});
+  const [imageFile, setImageFile] = useState(null);
 
-  useEffect(() => {
-    if (product) {
-      setFormData({
-        nombre: product.nombre || '',
-        precio: product.precio || 0,
-        Categoria: product.Categoria || '',
-        Imagen: product.Imagen || '',
-        Oferta: product.Oferta || '',
-        stock: product.stock || 0
-      });
-    } else {
-      setFormData({
-        nombre: '',
-        precio: 0,
-        Categoria: '',
-        Imagen: '',
-        Oferta: '',
-        stock: 0
-      });
-    }
-  }, [product]);
+  const formData = useMemo(() => ({
+    nombre: product?.nombre || '',
+    precio: product?.precio || 0,
+    Categoria: product?.Categoria || '',
+    Imagen: product?.Imagen || '',
+    Oferta: product?.Oferta || '',
+    stock: product?.stock || 0,
+    imageFile: imageFile,
+    ...formOverrides
+  }), [product, imageFile, formOverrides]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
+    setFormOverrides(prev => ({
       ...prev,
       [name]: type === 'number' ? parseFloat(value) || 0 : value
     }));
@@ -58,10 +41,10 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
       // Crear URL para vista previa
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({
+        setImageFile(file);
+        setFormOverrides(prev => ({
           ...prev,
-          Imagen: reader.result,
-          imageFile: file // Guardar el archivo para subir
+          Imagen: reader.result
         }));
       };
       reader.readAsDataURL(file);
@@ -226,13 +209,13 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                       name="Imagen"
                       value={formData.Imagen && !formData.imageFile ? formData.Imagen : ''}
                       onChange={(e) => {
-                        if (!formData.imageFile) {
+                        if (!imageFile) {
                           handleChange(e);
                         }
                       }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
                       placeholder="O ingresa URL de imagen (opcional)"
-                      disabled={formData.imageFile}
+                      disabled={imageFile}
                     />
                   </div>
                 </div>

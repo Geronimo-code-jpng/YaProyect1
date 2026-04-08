@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useCart } from "../contexts/CartContext";
 
 // Categorías reales del sistema (misma configuración que CategoriesGrid)
 const CATEGORIAS = [
@@ -42,8 +41,6 @@ const CATEGORIAS = [
 ];
 
 export default function CategoriesSection() {
-  const { setIsCartOpen } = useCart();
-
   return (
     <section className="py-16 bg-linear-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

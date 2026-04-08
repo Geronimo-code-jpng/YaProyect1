@@ -122,13 +122,13 @@ const AdminPanel = () => {
   const timerRef = useRef(null);
   const [tiempoActual, setTiempoActual] = useState(Date.now());
 
-  const showToast = (message, type = "success") => {
+  const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
-  };
+  }, [setToast]);
 
-  const showConfirm = (message, onConfirm) => {
+  const showConfirm = useCallback((message, onConfirm) => {
     setConfirm({ message, onConfirm });
-  };
+  }, [setConfirm]);
 
   // Cargar pedidos (con useCallback para evitar re-renders)
   const cargarPedidosAdmin = useCallback(async () => {
@@ -175,7 +175,7 @@ const AdminPanel = () => {
       setError("Error crítico cargando pedidos: " + err.message);
       setPedidos([]);
     }
-  }, []);
+  }, [setPedidos]);
 
   // Verificar autenticación y rol de admin
   useEffect(() => {
@@ -280,7 +280,7 @@ const AdminPanel = () => {
   };
 
   // Funciones para gestión de productos
-  const cargarProductos = async () => {
+  const cargarProductos = useCallback(async () => {
     setProductLoading(true);
     try {
       const { data, error } = await supabaseClient
@@ -296,7 +296,7 @@ const AdminPanel = () => {
     } finally {
       setProductLoading(false);
     }
-  };
+  }, [setProductLoading, setProducts, showToast]);
 
   const abrirModalProducto = (producto = null) => {
     setEditingProduct(producto);
@@ -422,7 +422,7 @@ const AdminPanel = () => {
     if (activeTab === 'productos' && products.length === 0) {
       cargarProductos();
     }
-  }, [activeTab]);
+  }, [activeTab, cargarProductos, products.length]);
 
   const configurarPedido = (idPedido) => {
     showConfirm(
@@ -753,6 +753,7 @@ const AdminPanel = () => {
           productos = JSON.parse(pedido.carrito);
         } catch (e) {
           productos = [];
+          console.error("Error parsing carrito:", e);
         }
       } else if (Array.isArray(pedido.carrito)) {
         productos = pedido.carrito;
@@ -1501,6 +1502,7 @@ const AdminPanel = () => {
 
       {/* Modal de Productos */}
       <ProductModal
+        key={editingProduct?.id || 'new'}
         isOpen={productModalOpen}
         onClose={cerrarModalProducto}
         product={editingProduct}

@@ -8,7 +8,7 @@ export default function CatalogMain() {
   const [categoriaActual, setCategoriaActual] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const { addToCart } = useCart();
-  const { products, isLoading, error, refreshProducts } = useProducts();
+  const { products, isLoading, error } = useProducts();
 
   // Manejar errores
   useEffect(() => {
@@ -16,56 +16,6 @@ export default function CatalogMain() {
       console.error("Error cargando productos:", error);
     }
   }, [error]);
-
-  // Handle search input
-  useEffect(() => {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-      const handleSearch = (e) => {
-        // Sanitize search input to prevent XSS
-        const sanitizedValue = e.target.value
-          .replace(/[<>]/g, '') // Remove potential HTML tags
-          .replace(/["']/g, '') // Remove quotes
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim();
-        setSearchTerm(sanitizedValue);
-        updateUI(sanitizedValue, categoriaActual);
-      };
-      searchInput.addEventListener('input', handleSearch);
-      return () => searchInput.removeEventListener('input', handleSearch);
-    }
-  }, []);
-
-  // Filter products
-  const filtrados = useMemo(() => {
-    // Sanitize and validate search term
-    const term = searchTerm
-      .replace(/[<>"']/g, '') // Remove potentially dangerous characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .toLowerCase()
-      .trim();
-    const estaBuscando = term !== "";
-
-    return products.filter(p => {
-      // Sanitize product name for comparison
-      const productName = (p.nombre || "")
-        .replace(/[<>"']/g, '')
-        .toLowerCase();
-      const coincideTexto = productName.includes(term);
-
-      if (estaBuscando) return coincideTexto;
-
-      if (categoriaActual === 'SoloOfertas') {
-        return coincideTexto && (p.Oferta !== null && p.Oferta !== "");
-      }
-
-      if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') {
-        return coincideTexto;
-      }
-
-      return coincideTexto && p.Categoria === categoriaActual;
-    });
-  }, [products, searchTerm, categoriaActual]);
 
   // Update UI elements
   const updateUI = (term, categoria) => {
@@ -112,6 +62,56 @@ export default function CatalogMain() {
       tituloSeccion.innerText = categoria;
     }
   };
+
+  // Handle search input
+  useEffect(() => {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      const handleSearch = (e) => {
+        // Sanitize search input to prevent XSS
+        const sanitizedValue = e.target.value
+          .replace(/[<>]/g, '') // Remove potential HTML tags
+          .replace(/["']/g, '') // Remove quotes
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        setSearchTerm(sanitizedValue);
+        updateUI(sanitizedValue, categoriaActual);
+      };
+      searchInput.addEventListener('input', handleSearch);
+      return () => searchInput.removeEventListener('input', handleSearch);
+    }
+  }, [categoriaActual]);
+
+  // Filter products
+  const filtrados = useMemo(() => {
+    // Sanitize and validate search term
+    const term = searchTerm
+      .replace(/[<>"']/g, '') // Remove potentially dangerous characters
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .toLowerCase()
+      .trim();
+    const estaBuscando = term !== "";
+
+    return products.filter(p => {
+      // Sanitize product name for comparison
+      const productName = (p.nombre || "")
+        .replace(/[<>"']/g, '')
+        .toLowerCase();
+      const coincideTexto = productName.includes(term);
+
+      if (estaBuscando) return coincideTexto;
+
+      if (categoriaActual === 'SoloOfertas') {
+        return coincideTexto && (p.Oferta !== null && p.Oferta !== "");
+      }
+
+      if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') {
+        return coincideTexto;
+      }
+
+      return coincideTexto && p.Categoria === categoriaActual;
+    });
+  }, [products, searchTerm, categoriaActual]);
 
   // Handle category click
   const handleCategoryClick = (categoria) => {

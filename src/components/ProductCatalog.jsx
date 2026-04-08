@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCart } from "../contexts/CartContext";
 
 // Categories data
@@ -152,17 +152,17 @@ export default function ProductCatalog() {
   }, [allProducts, searchTerm, categoriaActual]);
 
   // Handle category click
-  const handleCategoryClick = (categoria) => {
+  const handleCategoryClick = useCallback((categoria) => {
     setCategoriaActual(categoria);
     setSearchTerm("");
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
       searchInput.value = "";
     }
-  };
+  }, [setCategoriaActual, setSearchTerm]);
 
   // Create product card
-  const crearTarjetaProducto = (p) => {
+  const crearTarjetaProducto = useCallback((p) => {
     const card = document.createElement('div');
     card.className = 'product-card bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col relative';
     
@@ -262,10 +262,10 @@ export default function ProductCatalog() {
     card.appendChild(contentContainer);
 
     return card;
-  };
+  }, [addToCart]);
 
   // Render categories
-  const renderCategories = () => {
+  const renderCategories = useCallback(() => {
     const gridCat = document.getElementById('categoriasGrid');
     if (!gridCat) return;
 
@@ -300,10 +300,10 @@ export default function ProductCatalog() {
       
       gridCat.appendChild(categoryCard);
     });
-  };
+  }, [handleCategoryClick]);
 
   // Render products
-  const renderProducts = () => {
+  const renderProducts = useCallback(() => {
     const gridNormales = document.getElementById('productsGrid');
     if (!gridNormales) return;
 
@@ -328,7 +328,7 @@ export default function ProductCatalog() {
     filtrados.forEach(p => {
       gridNormales.appendChild(crearTarjetaProducto(p));
     });
-  };
+  }, [filtrados, crearTarjetaProducto]);
 
   // Update rendering based on state
   useEffect(() => {
@@ -340,7 +340,7 @@ export default function ProductCatalog() {
     } else {
       renderProducts();
     }
-  }, [filtrados, categoriaActual, searchTerm]);
+  }, [filtrados, categoriaActual, searchTerm, renderCategories, renderProducts]);
 
   if (isLoading) {
     return (

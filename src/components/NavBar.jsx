@@ -1,8 +1,10 @@
 import AuthModal from "./AuthModal";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import PedidosModal, { openPedidos } from "./PedidosModal";
-import ProfileModal, { openProfile } from "./ProfileModal";
+import PedidosModal from "./PedidosModal";
+import { openPedidos } from "../utils/pedidosUtils";
+import ProfileModal from "./ProfileModal";
+import { openProfile } from "../utils/profileUtils";
 import { ShoppingCart, CircleUserRound, User, PackageOpen } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";

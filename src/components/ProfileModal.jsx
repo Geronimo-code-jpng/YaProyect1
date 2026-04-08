@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
-// Create a ref to store the openProfile function
-let openProfileRef = null;
+import { setOpenProfileRef } from '../utils/profileUtils';
 
 export default function ProfileModal() {
   const { userProfile, logout } = useAuth();
   const [showModal, setShowModal] = useState(false);
 
-  const openProfile = () => setShowModal(true);
+  const openProfile = useCallback(() => setShowModal(true), [setShowModal]);
   const closeProfile = () => setShowModal(false);
   
-  // Store the function in the ref
-  openProfileRef = openProfile;
+  // Store the function in the ref using useEffect
+  useEffect(() => {
+    setOpenProfileRef(openProfile);
+  }, [openProfile]);
 
   if (!showModal) return null;
 
@@ -107,9 +107,3 @@ export default function ProfileModal() {
   );
 }
 
-// Export function to be used in NavBar
-export const openProfile = () => {
-  if (openProfileRef) {
-    openProfileRef();
-  }
-};

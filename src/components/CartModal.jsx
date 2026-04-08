@@ -4,7 +4,7 @@ import { useAlert } from "../contexts/AlertContext";
 import { Trash, User, Phone, MessageSquare, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase as supabaseClient } from "../lib/supabase";
-import { openPedidos } from "./PedidosModal";
+import { openPedidos } from "../utils/pedidosUtils";
 
 export default function CartModal() {
   const {
@@ -62,7 +62,7 @@ export default function CartModal() {
 
   const verificarPedidosVencidos = async () => {
     try {
-      const { data, error } = await supabaseClient
+      const { error } = await supabaseClient
         .from("pedidos")
         .update({
           estado: "cancelado",
