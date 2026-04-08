@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 
 export default function ProductsGrid({ products }) {
   const { addToCart } = useCart();
+  const [addedToCart, setAddedToCart] = useState(new Set());
 
   const handleAddToCart = (producto, event) => {
     event.preventDefault();
@@ -20,25 +22,15 @@ export default function ProductsGrid({ products }) {
       cantidad: 1
     });
     
-    // Visual feedback using safe DOM manipulation
-    const button = event.currentTarget;
-    const originalContent = button.innerHTML;
-    
-    // Create safe content for the check state
-    const checkIcon = document.createElement('i');
-    checkIcon.className = 'fas fa-check';
-    const checkText = document.createTextNode(' AGREGADO');
-    
-    // Clear and append safe content
-    button.innerHTML = '';
-    button.appendChild(checkIcon);
-    button.appendChild(checkText);
-    
-    button.classList.add('bg-[#FF6600]', 'text-white');
+    // Visual feedback using React state
+    setAddedToCart(prev => new Set(prev).add(producto.Id));
     
     setTimeout(() => {
-      button.innerHTML = originalContent;
-      button.classList.remove('bg-[#FF6600]', 'text-white');
+      setAddedToCart(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(producto.Id);
+        return newSet;
+      });
     }, 1000);
   };
 
@@ -102,10 +94,14 @@ export default function ProductsGrid({ products }) {
                 </p>
                 <button 
                   onClick={(e) => handleAddToCart(producto, e)}
-                  className="mt-4 w-full bg-white border-2 border-[#FF6600] text-[#FF6600] hover:bg-[#FF6600] hover:text-white py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700"
+                  className={`mt-4 w-full border-2 py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700 ${
+                    addedToCart.has(producto.Id) 
+                      ? 'bg-[#FF6600] text-white border-[#FF6600]' 
+                      : 'bg-white text-[#FF6600] border-[#FF6600] hover:bg-[#FF6600] hover:text-white'
+                  }`}
                 >
-                  <i className="fas fa-cart-plus"></i> 
-                  AGREGAR
+                  <i className={`fas ${addedToCart.has(producto.Id) ? 'fa-check' : 'fa-cart-plus'}`}></i> 
+                  {addedToCart.has(producto.Id) ? 'AGREGADO' : 'AGREGAR'}
                 </button>
               </div>
             </div>

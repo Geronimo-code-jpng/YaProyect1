@@ -96,104 +96,176 @@ export default function PedidosModal() {
     return new Date(expira_en) <= new Date();
   };
 
+  // Función de reintentos con exponential backoff
+  const retryWithBackoff = useCallback(async (fn, maxRetries = 3, delay = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        // Si es el último intento o no es un error recuperable, lanzar el error
+        if (i === maxRetries - 1 || !isRetriableError(error)) {
+          throw error;
+        }
+        
+        // Esperar con exponential backoff
+        const waitTime = delay * Math.pow(2, i);
+        console.warn(`Reintentando carga de pedidos (${i + 1}/${maxRetries}) en ${waitTime}ms... Error:`, error.message);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }, []);
+
+  // Determinar si un error es recuperable
+  const isRetriableError = useCallback((error) => {
+    if (!error) return false;
+    
+    const errorMessage = error.message || error.toString();
+    const retriableErrors = [
+      'AbortError',
+      'NetworkError',
+      'timeout',
+      'connection',
+      'lock request',
+      'fetch error',
+      'ECONNRESET',
+      'ETIMEDOUT'
+    ];
+    
+    return retriableErrors.some(err => 
+      errorMessage.toLowerCase().includes(err.toLowerCase())
+    );
+  }, []);
+
   const cargarPedidos = useCallback(async () => {
     if (!user && !userProfile) {
-      console.log("🔍 No hay usuario ni perfil, no se pueden cargar pedidos");
+      console.log("No hay usuario ni perfil, no se pueden cargar pedidos");
       return;
     }
 
     setIsLoading(true);
+    
+    // Crear AbortController para este ciclo de carga
+    const abortController = new AbortController();
+    
     try {
-      let query = supabaseClient
-        .from("pedidos")
-        .select("*")
-        .match({ user_id: user.id });
-
-      // ESTRATEGIA 1: Si el usuario está logueado, buscar PRIMERO por user_id
-      if (user && user.id) {
-        query = query.eq("user_id", user.id);
-      }
-      // ESTRATEGIA 2: Si no está logueado, buscar por email O teléfono exactos
-      else if (userProfile) {
-
-        // Buscar por email exacto en el perfil del usuario
-        if (userProfile.email) {
-          // También buscar en el campo email del perfil si existe
-          query = query.or(
-            `email.eq.${userProfile.email},nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
-          );
-        } else {
-          // Si no hay email, buscar por teléfono y nombre
-          query = query.or(
-            `nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
-          );
+      const fetchPedidos = async () => {
+        // Verificar si fue abortado antes de continuar
+        if (abortController.signal.aborted) {
+          throw new Error('Operación cancelada');
         }
-      }
+        let query = supabaseClient
+          .from("pedidos")
+          .select("*");
 
-      const { data, error } = await query.order("created_at", {
-        ascending: false,
-      });
-
-      if (error) {
-        console.error("❌ Error detallado cargando pedidos:", error);
-        throw error;
-      }
-
-      // Asegurarse de que data sea un array
-      const pedidosArray = Array.isArray(data) ? data : [];
-
-      // FILTRADO ADICIONAL: Verificar que los pedidos realmente pertenezcan al usuario
-      const pedidosFiltrados = pedidosArray.filter((pedido) => {
-        // Si tiene user_id y coincide, es del usuario
-        if (user && user.id && pedido.user_id === user.id) {
-          return true;
+        // ESTRATEGIA 1: Si el usuario está logueado, buscar PRIMERO por user_id
+        if (user && user.id) {
+          query = query.eq("user_id", user.id);
+        }
+        // ESTRATEGIA 2: Si no está logueado, buscar por email O teléfono exactos
+        else if (userProfile) {
+          // Buscar por email exacto en el perfil del usuario
+          if (userProfile.email) {
+            query = query.or(
+              `email.eq.${userProfile.email},nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
+            );
+          } else {
+            // Si no hay email, buscar por teléfono y nombre
+            query = query.or(
+              `nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
+            );
+          }
         }
 
-        // Si no tiene user_id, verificar por email o teléfono
-        if (!pedido.user_id && userProfile) {
-          const coincideEmail =
-            userProfile.email &&
-            (pedido.email === userProfile.email ||
+        const { data, error } = await query.order("created_at", {
+          ascending: false,
+        });
+
+        if (error) {
+          console.error("Error detallado cargando pedidos:", error);
+          throw error;
+        }
+
+        // Asegurarse de que data sea un array
+        const pedidosArray = Array.isArray(data) ? data : [];
+
+        // FILTRADO ADICIONAL: Verificar que los pedidos realmente pertenezcan al usuario
+        const pedidosFiltrados = pedidosArray.filter((pedido) => {
+          // Si tiene user_id y coincide, es del usuario
+          if (user && user.id && pedido.user_id === user.id) {
+            return true;
+          }
+
+          // Si no tiene user_id, verificar por email o teléfono
+          if (!pedido.user_id && userProfile) {
+            const coincideEmail =
+              userProfile.email &&
+              (pedido.email === userProfile.email ||
+                pedido.nombre_cliente
+                  ?.toLowerCase()
+                  .includes(userProfile.email.toLowerCase()));
+
+            const coincideTelefono =
+              userProfile.telefono &&
+              (pedido.telefono === userProfile.telefono ||
+                pedido.nombre_cliente
+                  ?.toLowerCase()
+                  .includes(userProfile.telefono.toLowerCase()));
+
+            const coincideNombre =
+              userProfile.nombre &&
               pedido.nombre_cliente
                 ?.toLowerCase()
-                .includes(userProfile.email.toLowerCase()));
+                .includes(userProfile.nombre.toLowerCase());
 
-          const coincideTelefono =
-            userProfile.telefono &&
-            (pedido.telefono === userProfile.telefono ||
-              pedido.nombre_cliente
-                ?.toLowerCase()
-                .includes(userProfile.telefono.toLowerCase()));
+            return coincideEmail || coincideTelefono || coincideNombre;
+          }
 
-          const coincideNombre =
-            userProfile.nombre &&
-            pedido.nombre_cliente
-              ?.toLowerCase()
-              .includes(userProfile.nombre.toLowerCase());
+          return false;
+        });
 
-          const resultado = coincideEmail || coincideTelefono || coincideNombre;
+        // Agregar número de pedido secuencial por usuario
+        const pedidosConNumero = pedidosFiltrados.map((pedido, index) => ({
+          ...pedido,
+          numeroPedidoUsuario: pedidosFiltrados.length - index, // Mi pedido #1, #2, etc.
+        }));
 
-          return resultado;
-        }
+        return pedidosConNumero;
+      };
 
-        return false;
-      });
-
-      // Agregar número de pedido secuencial por usuario
-      const pedidosConNumero = pedidosFiltrados.map((pedido, index) => ({
-        ...pedido,
-        numeroPedidoUsuario: pedidosFiltrados.length - index, // Mi pedido #1, #2, etc.
-      }));
-
-      setPedidos(pedidosConNumero);
+      // Usar reintentos para la carga de pedidos con timeout
+      const pedidosConNumero = await Promise.race([
+        retryWithBackoff(fetchPedidos, 3, 1000),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout cargando pedidos')), 15000)
+        )
+      ]);
+      
+      // Verificar si no fue abortado antes de actualizar estado
+      if (!abortController.signal.aborted) {
+        setPedidos(pedidosConNumero);
+      }
     } catch (error) {
-      console.error("❌ Error cargando pedidos web:", error);
-      showError("Error cargando tus pedidos: " + error.message);
-      setPedidos([]);
+      if (!abortController.signal.aborted) {
+        console.error("Error cargando pedidos web:", error);
+        
+        // Manejo específico para errores de lock/abort
+        if (error.message.includes('AbortError') || error.message.includes('lock') || error.message.includes('cancelada')) {
+          console.warn("Operación cancelada o lock detectado, no mostrar error al usuario");
+          showError("Conexión interrumpida, intenta recargar la página");
+        } else if (error.message.includes('Timeout')) {
+          showError("La conexión está tomando demasiado tiempo, intenta nuevamente");
+        } else {
+          showError("Error cargando tus pedidos: " + error.message);
+        }
+        
+        setPedidos([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (!abortController.signal.aborted) {
+        setIsLoading(false);
+      }
     }
-  }, [user, userProfile, showError]);
+  }, [user, userProfile, showError, retryWithBackoff]);
 
   const verificarEstadoPago = useCallback(async (pedidoId) => {
     try {
@@ -255,19 +327,46 @@ export default function PedidosModal() {
         try {
           payloadCart = JSON.parse(pedido.carrito);
         } catch (e) {
-          throw new Error("El carrito del pedido tiene un formato inválido: ", e);
+          console.error("Error parsing cart:", e, "Original cart:", pedido.carrito);
+          throw new Error("El carrito del pedido tiene un formato inválido: " + e.message);
         }
       } else if (Array.isArray(pedido.carrito)) {
         payloadCart = pedido.carrito;
       } else {
+        console.error("Invalid cart format:", pedido.carrito);
         throw new Error("El carrito del pedido está vacío o es inválido");
       }
 
-      // Filtrar items con cantidad > 0
-      payloadCart = payloadCart.filter((item) => item.cantidad > 0);
+      // Validar que el carrito tenga items
+      if (!Array.isArray(payloadCart) || payloadCart.length === 0) {
+        console.error("Cart is empty or not an array:", payloadCart);
+        throw new Error("El carrito está vacío");
+      }
+
+      // Filtrar items válidos con mejor validación
+      payloadCart = payloadCart.filter((item) => {
+        if (!item || typeof item !== 'object') {
+          console.warn("Invalid cart item:", item);
+          return false;
+        }
+        
+        // Validar cantidad (aceptar número o string convertible a número)
+        const cantidad = Number(item.cantidad);
+        const precio = Number(item.precio);
+        const nombre = item.nombre || item.title;
+        
+        if (!nombre || isNaN(cantidad) || isNaN(precio) || cantidad <= 0 || precio <= 0) {
+          console.warn("Invalid item data:", { nombre, cantidad, precio, item });
+          return false;
+        }
+        
+        return true;
+      });
+
+      console.log("Valid cart items:", payloadCart);
 
       if (payloadCart.length === 0) {
-        throw new Error("El carrito no tiene productos válidos");
+        throw new Error("El carrito no tiene productos válidos (todos los items fueron filtrados)");
       }
 
       // Calcular total real del carrito
@@ -325,7 +424,7 @@ export default function PedidosModal() {
       }
 
       if (data?.link_pago) {
-        showSuccess("✅ Redirigiendo a Mercado Pago...");
+        showSuccess("Redirigiendo a Mercado Pago...");
         window.location.href = data.link_pago;
       } else {
         throw new Error(
@@ -333,8 +432,10 @@ export default function PedidosModal() {
         );
       }
     } catch (error) {
-      console.error("❌ Error generando link de pago:", error);
-      showError("❌ Error al generar link de pago: " + error.message);
+      console.error("Error generando link de pago:", error);
+      console.error("Pedido data:", pedido);
+      console.error("Carrito original:", pedido.carrito);
+      showError("Error al generar link de pago: " + error.message);
     }
   };
 

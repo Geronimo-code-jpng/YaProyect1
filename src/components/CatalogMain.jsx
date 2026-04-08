@@ -1,8 +1,23 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useProducts } from '../contexts/ProductContext';
 import CategoriesGrid from './CategoriesGrid';
 import ProductsGrid from './ProductsGrid';
+
+// Categories data
+const CATEGORIAS = [
+  { id: "SoloOfertas", nombre: " Ofertas Exclusivas", imagen: "./carpetafotos/ofertas.jpg" },
+  { id: "Todas_Filtro", nombre: " Todos Los Productos", imagen: "./carpetafotos/todocatalogo.jpg" },
+  { id: "ALIMENTO", nombre: " Alimentos", imagen: "./carpetafotos/alimentos.jpg" },
+  { id: "BEBIDAS", nombre: " Bebidas", imagen: "./carpetafotos/bebidas.jpg" },
+  { id: "LACTEOS", nombre: " Lácteos", imagen: "./carpetafotos/lacteos.jpg" },
+  { id: "HARINA", nombre: " Harinas", imagen: "./carpetafotos/harinas.jpg" },
+  { id: "ACEITE", nombre: " Aceites", imagen: "./carpetafotos/aceites.jpg" },
+  { id: "VINOS", nombre: " Vinos", imagen: "./carpetafotos/vinos.jpg" },
+  { id: "CERVEZAS", nombre: " Cervezas", imagen: "./carpetafotos/cervezas.jpg" },
+  { id: "YERBA", nombre: " Yerbas", imagen: "./carpetafotos/yerbas.jpg" },
+  { id: "APERITIVOS", nombre: " Aperitivos", imagen: "./carpetafotos/aperitivos.jpg" }
+];
 
 export default function CatalogMain() {
   const [categoriaActual, setCategoriaActual] = useState('Todas');
@@ -17,74 +32,24 @@ export default function CatalogMain() {
     }
   }, [error]);
 
-  // Update UI elements
-  const updateUI = (term, categoria) => {
-    const tituloSeccion = document.getElementById('tituloSeccion');
-    const resultsCount = document.getElementById('resultsCount');
-    const carousel = document.getElementById('heroCarousel');
-    const categoriasGrid = document.getElementById('categoriasGrid');
-    const productsGrid = document.getElementById('productsGrid');
+  // Handle search input change
+  const handleSearchChange = useCallback((e) => {
+    const sanitizedValue = e.target.value
+      .replace(/[<>]/g, '') // Remove potential HTML tags
+      .replace(/["']/g, '') // Remove quotes
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    setSearchTerm(sanitizedValue);
+  }, []);
 
-    if (!tituloSeccion || !resultsCount) return;
-
-    const estaBuscando = term.trim() !== "";
-
-    // Show/hide carousel
-    if (carousel) {
-      if (estaBuscando) {
-        carousel.classList.add('hidden');
-      } else if (categoria === 'Todas' || categoria === 'inicio') {
-        carousel.classList.remove('hidden');
-      }
-    }
-
-    // Show/hide grids
-    if (categoriasGrid && productsGrid) {
-      if (!estaBuscando && (categoria === 'Todas' || categoria === 'inicio')) {
-        categoriasGrid.classList.remove('hidden');
-        productsGrid.classList.add('hidden');
-        tituloSeccion.innerText = '¿Qué estás buscando hoy?';
-        resultsCount.innerText = 'Categorías';
-      } else {
-        categoriasGrid.classList.add('hidden');
-        productsGrid.classList.remove('hidden');
-      }
-    }
-
-    // Update title
-    if (estaBuscando) {
-      tituloSeccion.innerText = `Resultados para "${term}"`;
-    } else if (categoria === 'SoloOfertas') {
-      tituloSeccion.innerText = '🔥 Ofertas Exclusivas';
-    } else if (categoria === 'Todas_Filtro' || categoria === 'Todas') {
-      tituloSeccion.innerText = 'Todo el Catálogo';
-    } else {
-      tituloSeccion.innerText = categoria;
-    }
-  };
-
-  // Handle search input
-  useEffect(() => {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-      const handleSearch = (e) => {
-        // Sanitize search input to prevent XSS
-        const sanitizedValue = e.target.value
-          .replace(/[<>]/g, '') // Remove potential HTML tags
-          .replace(/["']/g, '') // Remove quotes
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim();
-        setSearchTerm(sanitizedValue);
-        updateUI(sanitizedValue, categoriaActual);
-      };
-      searchInput.addEventListener('input', handleSearch);
-      return () => searchInput.removeEventListener('input', handleSearch);
-    }
-  }, [categoriaActual]);
+  // Handle category click
+  const handleCategoryClick = useCallback((categoria) => {
+    setCategoriaActual(categoria);
+    setSearchTerm("");
+  }, []);
 
   // Filter products
   const filtrados = useMemo(() => {
-    // Sanitize and validate search term
     const term = searchTerm
       .replace(/[<>"']/g, '') // Remove potentially dangerous characters
       .replace(/\s+/g, ' ') // Normalize whitespace
@@ -93,7 +58,6 @@ export default function CatalogMain() {
     const estaBuscando = term !== "";
 
     return products.filter(p => {
-      // Sanitize product name for comparison
       const productName = (p.nombre || "")
         .replace(/[<>"']/g, '')
         .toLowerCase();
@@ -113,29 +77,31 @@ export default function CatalogMain() {
     });
   }, [products, searchTerm, categoriaActual]);
 
-  // Handle category click
-  const handleCategoryClick = (categoria) => {
-    setCategoriaActual(categoria);
-    setSearchTerm("");
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-      searchInput.value = "";
+  // Determine what to show
+  const estaBuscando = searchTerm.trim() !== "";
+  const mostrarCategorias = !estaBuscando && (categoriaActual === 'Todas' || categoriaActual === 'inicio');
+
+  // Get section title
+  const getSectionTitle = () => {
+    if (estaBuscando) {
+      return `Resultados para "${searchTerm}"`;
+    } else if (categoriaActual === 'SoloOfertas') {
+      return '🔥 Ofertas Exclusivas';
+    } else if (categoriaActual === 'Todas_Filtro' || categoriaActual === 'Todas') {
+      return 'Todo el Catálogo';
+    } else {
+      return categoriaActual;
     }
-    updateUI("", categoria);
   };
 
-  // Update UI when dependencies change
-  useEffect(() => {
-    updateUI(searchTerm, categoriaActual);
-  }, [searchTerm, categoriaActual]);
-
-  // Update results count
-  useEffect(() => {
-    const resultsCount = document.getElementById('resultsCount');
-    if (resultsCount) {
-      resultsCount.innerText = `${filtrados.length} productos`;
+  // Get results count text
+  const getResultsCount = () => {
+    if (mostrarCategorias) {
+      return 'Categorías';
+    } else {
+      return `${filtrados.length} productos`;
     }
-  }, [filtrados.length]);
+  };
 
   if (isLoading) {
     return (
@@ -146,22 +112,35 @@ export default function CatalogMain() {
     );
   }
 
-  const estaBuscando = searchTerm.trim() !== "";
-  const mostrarCategorias = !estaBuscando && (categoriaActual === 'Todas' || categoriaActual === 'inicio');
-
   return (
     <div>
-      {/* Offers section */}
-      <div id="ofertasSection" className="mb-14 hidden">
-        <h3 className="text-3xl font-black text-red-600 mb-6 flex items-center gap-3">
-          <i className="fas fa-fire animate-pulse"></i> Ofertas Únicas
-        </h3>
-        <div id="ofertasGrid" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"></div>
+      {/* Search Input */}
+      <div className="mb-6">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleSearchChange}
+          placeholder="Buscar productos..."
+          className="w-full max-w-md mx-auto block px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-[#FF6600] focus:outline-none"
+        />
+      </div>
+
+      {/* Section Title and Results Count */}
+      <div className="mb-6 text-center">
+        <h2 id="tituloSeccion" className="text-2xl font-bold text-gray-800 mb-2">
+          {getSectionTitle()}
+        </h2>
+        <p id="resultsCount" className="text-gray-600">
+          {getResultsCount()}
+        </p>
       </div>
 
       {/* Categories Grid */}
       {mostrarCategorias && (
-        <CategoriesGrid onCategoryClick={handleCategoryClick} />
+        <CategoriesGrid 
+          categories={CATEGORIAS}
+          onCategoryClick={handleCategoryClick}
+        />
       )}
 
       {/* Products Grid */}
