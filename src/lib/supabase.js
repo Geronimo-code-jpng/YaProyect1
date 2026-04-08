@@ -8,7 +8,7 @@ if (!supabaseUrl) {
 }
 
 if (!supabaseAnonKey) {
-  console.error('❌ SUPBASE_ANON_KEY is not defined in environment variables');
+  console.error('❌ SUPABASE_ANON_KEY is not defined in environment variables');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

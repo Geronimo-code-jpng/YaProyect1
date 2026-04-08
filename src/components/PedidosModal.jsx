@@ -3,7 +3,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { setOpenPedidosRef } from "../utils/pedidosUtils";
-import "dotenv/config";
 
 // Countdown Timer Component
 function CountdownTimer({ expira_en, onExpire }) {
@@ -97,6 +96,105 @@ export default function PedidosModal() {
     return new Date(expira_en) <= new Date();
   };
 
+  const cargarPedidos = useCallback(async () => {
+    if (!user && !userProfile) {
+      console.log("🔍 No hay usuario ni perfil, no se pueden cargar pedidos");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let query = supabaseClient
+        .from("pedidos")
+        .select("*")
+        .match({ user_id: user.id });
+
+      // ESTRATEGIA 1: Si el usuario está logueado, buscar PRIMERO por user_id
+      if (user && user.id) {
+        query = query.eq("user_id", user.id);
+      }
+      // ESTRATEGIA 2: Si no está logueado, buscar por email O teléfono exactos
+      else if (userProfile) {
+
+        // Buscar por email exacto en el perfil del usuario
+        if (userProfile.email) {
+          // También buscar en el campo email del perfil si existe
+          query = query.or(
+            `email.eq.${userProfile.email},nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
+          );
+        } else {
+          // Si no hay email, buscar por teléfono y nombre
+          query = query.or(
+            `nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
+          );
+        }
+      }
+
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
+      });
+
+      if (error) {
+        console.error("❌ Error detallado cargando pedidos:", error);
+        throw error;
+      }
+
+      // Asegurarse de que data sea un array
+      const pedidosArray = Array.isArray(data) ? data : [];
+
+      // FILTRADO ADICIONAL: Verificar que los pedidos realmente pertenezcan al usuario
+      const pedidosFiltrados = pedidosArray.filter((pedido) => {
+        // Si tiene user_id y coincide, es del usuario
+        if (user && user.id && pedido.user_id === user.id) {
+          return true;
+        }
+
+        // Si no tiene user_id, verificar por email o teléfono
+        if (!pedido.user_id && userProfile) {
+          const coincideEmail =
+            userProfile.email &&
+            (pedido.email === userProfile.email ||
+              pedido.nombre_cliente
+                ?.toLowerCase()
+                .includes(userProfile.email.toLowerCase()));
+
+          const coincideTelefono =
+            userProfile.telefono &&
+            (pedido.telefono === userProfile.telefono ||
+              pedido.nombre_cliente
+                ?.toLowerCase()
+                .includes(userProfile.telefono.toLowerCase()));
+
+          const coincideNombre =
+            userProfile.nombre &&
+            pedido.nombre_cliente
+              ?.toLowerCase()
+              .includes(userProfile.nombre.toLowerCase());
+
+          const resultado = coincideEmail || coincideTelefono || coincideNombre;
+
+          return resultado;
+        }
+
+        return false;
+      });
+
+      // Agregar número de pedido secuencial por usuario
+      const pedidosConNumero = pedidosFiltrados.map((pedido, index) => ({
+        ...pedido,
+        numeroPedidoUsuario: pedidosFiltrados.length - index, // Mi pedido #1, #2, etc.
+      }));
+
+      setPedidos(pedidosConNumero);
+    } catch (error) {
+      console.error("❌ Error cargando pedidos web:", error);
+      showError("Error cargando tus pedidos: " + error.message);
+      setPedidos([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, userProfile, showError]);
+
   const verificarEstadoPago = useCallback(async (pedidoId) => {
     try {
       const { data: pedido, error } = await supabaseClient
@@ -144,8 +242,8 @@ export default function PedidosModal() {
       showWarning("🔄 Generando link de pago...");
 
       // Usar las credenciales desde variables de entorno
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseAnonKey = process.env.SUPBASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error("Configuración de Supabase no encontrada");
@@ -296,107 +394,7 @@ export default function PedidosModal() {
     }
   };
 
-  const cargarPedidos = useCallback(async () => {
-    if (!user && !userProfile) {
-      console.log("🔍 No hay usuario ni perfil, no se pueden cargar pedidos");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      let query = supabaseClient
-        .from("pedidos")
-        .select("*")
-        .match({ user_id: user.id });
-
-      // ESTRATEGIA 1: Si el usuario está logueado, buscar PRIMERO por user_id
-      if (user && user.id) {
-        query = query.eq("user_id", user.id);
-      }
-      // ESTRATEGIA 2: Si no está logueado, buscar por email O teléfono exactos
-      else if (userProfile) {
-
-        // Buscar por email exacto en el perfil del usuario
-        if (userProfile.email) {
-          // También buscar en el campo email del perfil si existe
-          query = query.or(
-            `email.eq.${userProfile.email},nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
-          );
-        } else {
-          // Si no hay email, buscar por teléfono y nombre
-          query = query.or(
-            `nombre_cliente.ilike.%${userProfile.nombre || ""}%,telefono.eq.${userProfile.telefono || ""}`,
-          );
-        }
-      }
-
-      const { data, error } = await query.order("created_at", {
-        ascending: false,
-      });
-
-      if (error) {
-        console.error("❌ Error detallado cargando pedidos:", error);
-        throw error;
-      }
-
-      // Asegurarse de que data sea un array
-      const pedidosArray = Array.isArray(data) ? data : [];
-
-      // FILTRADO ADICIONAL: Verificar que los pedidos realmente pertenezcan al usuario
-      const pedidosFiltrados = pedidosArray.filter((pedido) => {
-        // Si tiene user_id y coincide, es del usuario
-        if (user && user.id && pedido.user_id === user.id) {
-          return true;
-        }
-
-        // Si no tiene user_id, verificar por email o teléfono
-        if (!pedido.user_id && userProfile) {
-          const coincideEmail =
-            userProfile.email &&
-            (pedido.email === userProfile.email ||
-              pedido.nombre_cliente
-                ?.toLowerCase()
-                .includes(userProfile.email.toLowerCase()));
-
-          const coincideTelefono =
-            userProfile.telefono &&
-            (pedido.telefono === userProfile.telefono ||
-              pedido.nombre_cliente
-                ?.toLowerCase()
-                .includes(userProfile.telefono.toLowerCase()));
-
-          const coincideNombre =
-            userProfile.nombre &&
-            pedido.nombre_cliente
-              ?.toLowerCase()
-              .includes(userProfile.nombre.toLowerCase());
-
-          const resultado = coincideEmail || coincideTelefono || coincideNombre;
-
-          return resultado;
-        }
-
-        return false;
-      });
-
-      // Agregar número de pedido secuencial por usuario
-
-      // Agregar número de pedido secuencial por usuario
-      const pedidosConNumero = pedidosFiltrados.map((pedido, index) => ({
-        ...pedido,
-        numeroPedidoUsuario: pedidosFiltrados.length - index, // Mi pedido #1, #2, etc.
-      }));
-
-      setPedidos(pedidosConNumero);
-    } catch (error) {
-      console.error("❌ Error cargando pedidos web:", error);
-      showError("Error cargando tus pedidos: " + error.message);
-      setPedidos([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, userProfile, showError]);
-
+  
   const getStatusBadge = (estado) => {
     const badges = {
       aprobado: {
