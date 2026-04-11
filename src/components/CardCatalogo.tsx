@@ -118,7 +118,7 @@ export default function CardCatalogo({
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 alt={cat.nombre}
               />
-              <div className="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition"></div>
+              <div className="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition" />
               <h3 className="relative z-10 text-white font-black text-lg md:text-xl tracking-wide leading-tight px-3 drop-shadow-lg">
                 {cat.nombre}
               </h3>

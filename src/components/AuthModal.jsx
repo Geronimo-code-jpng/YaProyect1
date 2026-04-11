@@ -1,11 +1,18 @@
 import { useAuth } from "../contexts/AuthContext";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { useState } from "react";
+import PasswordResetModal from "./PasswordResetModal";
 
 export default function AuthModal() {
   const {
     showAuthModal,
+    showPasswordResetModal,
+    user,
+    userProfile,
+    openAuthModal,
     closeAuthModal,
+    openPasswordResetModal,
+    closePasswordResetModal,
     activeTab,
     switchTab,
     authError,
@@ -15,7 +22,7 @@ export default function AuthModal() {
   const [errores, setErrores] = useState([]);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-
+  
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
@@ -24,6 +31,7 @@ export default function AuthModal() {
     password: ""
   });
 
+  
   const handleLoginChange = (e) => {
     const { name, value } = e.target;
     setLoginForm(prev => ({ ...prev, [name]: value }));
@@ -65,7 +73,7 @@ export default function AuthModal() {
     }
 
     try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
+      const { error } = await supabaseClient.auth.signInWithPassword({
         email,
         password,
       });
@@ -295,6 +303,9 @@ export default function AuthModal() {
               >
                 {loginLoading ? "Ingresando..." : "Ingresar"}
               </button>
+              <button onClick={openPasswordResetModal} className="w-full text-black/60 cursor-pointer hover:text-black/80">
+                ¿Olvidaste tu contraseña?
+              </button>
             </form>
 
             <form
@@ -374,6 +385,8 @@ export default function AuthModal() {
           </div>
         </div>
       )}
+
+      {showPasswordResetModal && <PasswordResetModal />}
     </>
   );
 }

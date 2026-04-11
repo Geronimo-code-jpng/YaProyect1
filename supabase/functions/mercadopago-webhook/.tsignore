@@ -1,0 +1,4 @@
+# This file tells TypeScript to ignore this directory
+# Deno functions should not be analyzed by regular TypeScript
+
+*

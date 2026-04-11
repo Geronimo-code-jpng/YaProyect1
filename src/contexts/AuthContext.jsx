@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { supabase as supabaseClient } from "../lib/supabase";
 
@@ -15,6 +16,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
   const [authError, setAuthError] = useState("");
   const [user, setUser] = useState(null);
@@ -40,7 +42,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Track if auth is initializing to prevent multiple concurrent operations
-  const [isInitializing, setIsInitializing] = useState(false);
+  const isInitializingRef = useRef(false);
 
   // Determinar si un error es recuperable
   const isRetriableError = useCallback((error) => {
@@ -82,6 +84,10 @@ export function AuthProvider({ children }) {
         if (error && error.code !== "PGRST116") {
           console.error("Error buscando perfil:", error.message);
           throw error;
+        }
+        
+        if (error && error.code === "PGRST116") {
+          console.error("Usuario no encontrado en tabla perfiles (PGRST116):", error.message);
         }
         
         return profile;
@@ -177,12 +183,12 @@ export function AuthProvider({ children }) {
     // Revisar sesión inicial
     const initializeAuth = async () => {
       // Prevent multiple concurrent initializations
-      if (isInitializing) {
+      if (isInitializingRef.current) {
         console.log("Auth initialization already in progress, skipping...");
         return;
       }
       
-      setIsInitializing(true);
+      isInitializingRef.current = true;
       
       try {
         const {
@@ -232,7 +238,7 @@ export function AuthProvider({ children }) {
           setAuthError("");
         }
       } finally {
-        setIsInitializing(false);
+        isInitializingRef.current = false;
       }
     };
 
@@ -299,7 +305,7 @@ export function AuthProvider({ children }) {
         window.removeEventListener(event, handleActivity, true);
       });
     };
-  }, [getProfileData, extendSession, isInitializing]);
+  }, [getProfileData, extendSession]);
 
   const openAuthModal = () => {
     setShowAuthModal(true);
@@ -309,6 +315,14 @@ export function AuthProvider({ children }) {
   const closeAuthModal = () => {
     setShowAuthModal(false);
     setAuthError("");
+  };
+
+  const openPasswordResetModal = () => {
+    setShowPasswordResetModal(true);
+  };
+
+  const closePasswordResetModal = () => {
+    setShowPasswordResetModal(false);
   };
 
   const switchTab = (tab) => {
@@ -354,12 +368,15 @@ export function AuthProvider({ children }) {
 
   const value = {
     showAuthModal,
+    showPasswordResetModal,
     activeTab,
     authError,
     user,
     userProfile,
     openAuthModal,
     closeAuthModal,
+    openPasswordResetModal,
+    closePasswordResetModal,
     switchTab,
     showError,
     logout,

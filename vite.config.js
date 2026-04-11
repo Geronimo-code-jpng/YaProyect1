@@ -14,7 +14,8 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
     },
     define: {
-      'process.env': env
+      'process.env': env,
+      'import.meta.env': env
     }
   }
 })

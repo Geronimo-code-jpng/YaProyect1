@@ -21,7 +21,7 @@ export default tseslint.config(
 
     languageOptions: {
       parserOptions: {
-        project: true,
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -44,6 +44,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react/prop-types": "off", // TypeScript lo cubre
       "react/self-closing-comp": "warn",
+      "@typescript-eslint/no-unnecessary-template-expression": "error",
 
       // ── Accesibilidad ──────────────────────────────
       ...jsxA11y.configs.recommended.rules,

@@ -47,7 +47,7 @@ export default function Carrusel() {
               {/* Imagen para celulares (máximo 640px) */}
               <source
                 media="(max-width: 640px)"
-                srcset="./Carrusel1-mobile.png"
+                srcSet="./Carrusel1-mobile.png"
               />
               {/* Imagen para computadoras (más de 1024px) */}
               <img
@@ -64,7 +64,7 @@ export default function Carrusel() {
               {/* Imagen para celulares */}
               <source
                 media="(max-width: 640px)"
-                srcset="./Carrusel2-mobile.png"
+                srcSet="./Carrusel2-mobile.png"
               />
               {/* Imagen para computadoras */}
               <img
@@ -81,7 +81,7 @@ export default function Carrusel() {
               {/* Imagen para celulares */}
               <source
                 media="(max-width: 640px)"
-                srcset="./Carrusel3-mobile.png"
+                srcSet="./Carrusel3-mobile.png"
               />
 
               {/* Imagen para computadoras */}
@@ -99,7 +99,7 @@ export default function Carrusel() {
               {/* Imagen para celulares */}
               <source
                 media="(max-width: 640px)"
-                srcset="./Carrusel4-mobile.png"
+                srcSet="./Carrusel4-mobile.png"
               />
 
               {/* Imagen para computadoras */}
