@@ -12,6 +12,9 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Permitir acceso anónimo para recuperación de contraseña
+  console.log('Procesando petición de recuperación de contraseña')
+
   try {
     const { email, token } = await req.json()
 
@@ -26,8 +29,8 @@ serve(async (req) => {
     }
 
     // Debug environment variables
-    console.error('Environment check - RESEND_API_KEY exists:', !!Deno.env.get('RESEND_API_KEY'))
-    console.error('Environment check - API key length:', Deno.env.get('RESEND_API_KEY')?.length)
+    console.log('Environment check - RESEND_API_KEY exists:', !!Deno.env.get('RESEND_API_KEY'))
+    console.log('Environment check - API key length:', Deno.env.get('RESEND_API_KEY')?.length)
     
     const apiKey = Deno.env.get('RESEND_API_KEY')
     if (!apiKey) {
@@ -43,10 +46,10 @@ serve(async (req) => {
 
     const resend = new Resend(apiKey)
 
-    console.error('Attempting to send email to:', email)
+    console.log('Attempting to send email to:', email)
     
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'no-reply@yamayorista.online',
       to: [email],
       subject: 'Recuperación de Contraseña',
       html: `

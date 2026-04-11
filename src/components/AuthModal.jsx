@@ -2,6 +2,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { useState } from "react";
 import PasswordResetModal from "./PasswordResetModal";
+import { verifyPassword } from "../utils/passwordUtils";
 
 export default function AuthModal() {
   const {
@@ -73,29 +74,60 @@ export default function AuthModal() {
     }
 
     try {
-      const { error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Verificar usuario y contraseña en tabla perfiles
+      const { data: profileData, error: profileError } = await supabaseClient
+        .from('perfiles')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-      if (error) {
-        if (error.message === "Invalid login credentials")
-          setLoginError("Correo o contraseña incorrectos.");
-        else if (error.message === "Email not confirmed")
-          setLoginError("Tu cuenta está bloqueada porque falta confirmar el correo.");
-        else
-          setLoginError(error.message);
+      if (profileError || !profileData) {
+        setLoginError("Email o contraseña incorrectos");
         setLoginLoading(false);
         return;
       }
+
+      // Verificar si el usuario tiene contraseña en perfiles
+      if (!profileData.password) {
+        setLoginError("Este usuario no tiene contraseña configurada");
+        setLoginLoading(false);
+        return;
+      }
+
+      // Verificar contraseña con bcrypt
+      const isPasswordValid = await verifyPassword(password, profileData.password);
+      
+      if (!isPasswordValid) {
+        setLoginError("Email o contraseña incorrectos");
+        setLoginLoading(false);
+        return;
+      }
+
+      // Si la contraseña es correcta, crear sesión local sin Supabase Auth
+      const userSession = {
+        id: profileData.id,
+        email: profileData.email,
+        nombre: profileData.nombre,
+        rol: profileData.rol,
+        isLoggedIn: true,
+        loginTime: new Date().toISOString(),
+        aud: 'local',
+        role: 'authenticated',
+        app_metadata: {},
+        user_metadata: {},
+        created_at: profileData.created_at
+      };
+      
+      // Guardar sesión en localStorage
+      localStorage.setItem('userSession', JSON.stringify(userSession));
 
       closeAuthModal();
       setToastMessage("¡Sesión iniciada!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
-
-      // Check for admin role - this should be handled by AuthContext
-      await checkSession();
+      
+      // Recargar página para que AuthContext detecte la sesión local
+      window.location.reload();
     } catch (err) {
       setLoginError(err.message);
     } finally {

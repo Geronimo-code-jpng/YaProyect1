@@ -96,25 +96,6 @@ export default function PedidosModal() {
     return new Date(expira_en) <= new Date();
   };
 
-  // Función de reintentos con exponential backoff
-  const retryWithBackoff = useCallback(async (fn, maxRetries = 3, delay = 1000) => {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        return await fn();
-      } catch (error) {
-        // Si es el último intento o no es un error recuperable, lanzar el error
-        if (i === maxRetries - 1 || !isRetriableError(error)) {
-          throw error;
-        }
-        
-        // Esperar con exponential backoff
-        const waitTime = delay * Math.pow(2, i);
-        console.warn(`Reintentando carga de pedidos (${i + 1}/${maxRetries}) en ${waitTime}ms... Error:`, error.message);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-    }
-  }, []);
-
   // Determinar si un error es recuperable
   const isRetriableError = useCallback((error) => {
     if (!error) return false;
@@ -136,9 +117,28 @@ export default function PedidosModal() {
     );
   }, []);
 
+  // Función de reintentos con exponential backoff
+  const retryWithBackoff = useCallback(async (fn, maxRetries = 3, delay = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        // Si es el último intento o no es un error recuperable, lanzar el error
+        if (i === maxRetries - 1 || !isRetriableError(error)) {
+          throw error;
+        }
+        
+        // Esperar con exponential backoff
+        const waitTime = delay * Math.pow(2, i);
+        console.warn(`Reintentando carga de pedidos (${i + 1}/${maxRetries}) en ${waitTime}ms... Error:`, error.message);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }, [isRetriableError]);
+
   const cargarPedidos = useCallback(async () => {
     if (!user && !userProfile) {
-      console.log("No hay usuario ni perfil, no se pueden cargar pedidos");
+      console.warn("No hay usuario ni perfil, no se pueden cargar pedidos");
       return;
     }
 
@@ -315,7 +315,7 @@ export default function PedidosModal() {
 
       // Usar las credenciales desde variables de entorno
       const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseAnonKey = process.env.SUPBASE_ANON_KEY;
+      const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error("Configuración de Supabase no encontrada");
@@ -363,7 +363,7 @@ export default function PedidosModal() {
         return true;
       });
 
-      console.log("Valid cart items:", payloadCart);
+      console.warn("Valid cart items:", payloadCart);
 
       if (payloadCart.length === 0) {
         throw new Error("El carrito no tiene productos válidos (todos los items fueron filtrados)");
@@ -815,7 +815,7 @@ export default function PedidosModal() {
                                         );
                                       } catch (e) {
                                         carritoAnterior = [];
-                                        console.log("Error: ", e)
+                                        console.error("Error: ", e)
                                       }
                                     } else if (
                                       Array.isArray(

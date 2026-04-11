@@ -180,41 +180,42 @@ export function AuthProvider({ children }) {
     // Crear AbortController para cancelar operaciones si el componente se desmonta
     const abortController = new AbortController();
     
-    // Revisar sesión inicial
+    // Revisar sesión inicial en localStorage
     const initializeAuth = async () => {
       // Prevent multiple concurrent initializations
       if (isInitializingRef.current) {
-        console.log("Auth initialization already in progress, skipping...");
         return;
       }
       
       isInitializingRef.current = true;
       
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
+        // Verificar si hay sesión en localStorage
+        const storedSession = localStorage.getItem('userSession');
+        
         // Si el componente fue desmontado, no continuar
         if (abortController.signal.aborted) return;
 
-        if (session?.user) {
-          try {
-            const { userWithProfile, profile } = await getProfileData(session.user);
-            
+        if (storedSession) {
+          const userSession = JSON.parse(storedSession);
+          
+          // Verificar que la sesión sea válida (no expirada)
+          const loginTime = new Date(userSession.loginTime);
+          const now = new Date();
+          const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
+          
+          if (hoursDiff < 24 && userSession.isLoggedIn) { // Sesión válida por 24 horas
             // Verificar nuevamente si no fue abortado
             if (abortController.signal.aborted) return;
             
-            setUser(userWithProfile);
-            setUserProfile(profile);
-            console.log("Sesión restaurada exitosamente para:", session.user.email);
-          } catch (profileError) {
-            console.error("Error cargando perfil, usando usuario base:", profileError);
-            
-            if (!abortController.signal.aborted) {
-              setUser(session.user);
-              setUserProfile(null);
-            }
+            setUser(userSession);
+            setUserProfile(userSession);
+            console.log("Sesión local restaurada para:", userSession.email);
+          } else {
+            // Sesión expirada, limpiar
+            localStorage.removeItem('userSession');
+            setUser(null);
+            setUserProfile(null);
           }
         } else {
           // No hay sesión, limpiar estado
@@ -226,22 +227,15 @@ export function AuthProvider({ children }) {
       } catch (error) {
         if (!abortController.signal.aborted) {
           console.error("Error inicializando auth:", error);
-          // Limpiar sesión corrupta si existe
-          try {
-            await supabaseClient.auth.signOut();
-          } catch (signOutErr) {
-            console.error("Error limpiando sesión:", signOutErr);
-          }
-          // Forzar limpieza de estado
+          localStorage.removeItem('userSession');
           setUser(null);
           setUserProfile(null);
-          setAuthError("");
         }
       } finally {
         isInitializingRef.current = false;
       }
     };
-
+    
     initializeAuth();
 
     // Escuchar cambios en el estado de autenticación
@@ -336,21 +330,23 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      // Limpiar estado local primero
+      // Limpiar estado local
       setUser(null);
       setUserProfile(null);
       setAuthError("");
       
-      // Luego hacer logout en Supabase
-      await supabaseClient.auth.signOut();
+      // Limpiar localStorage
+      localStorage.removeItem('userSession');
       
-      console.log("Sesión cerrada exitosamente");
+      console.log("Sesión local cerrada exitosamente");
+      
+      // Recargar página para limpiar cualquier estado residual
+      window.location.reload();
     } catch (err) {
       console.error("Error cerrando sesión:", err);
-      // Forzar limpieza de estado aunque falle el logout
-      setUser(null);
-      setUserProfile(null);
-      setAuthError("");
+      // Asegurarse de limpiar localStorage incluso si hay error
+      localStorage.removeItem('userSession');
+      window.location.reload();
     }
   };
 

@@ -1,72 +1,62 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { sendPasswordRecoveryEmail } from "../resend/emailRecovery";
 import { supabase } from "../lib/supabase";
 import { useAlert } from "../contexts/AlertContext";
-import { hashPassword } from "../utils/passwordUtils";
 
-export default function PasswordResetModal() {
+export default function PasswordResetTokenModal() {
   const { showSuccess, showError } = useAlert();
   const [loading, setLoading] = useState(false);
   const { closePasswordResetModal } = useAuth();
+  
+  // Paso 1: Ingresar email y código
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
-  const [showTokenInput, setShowTokenInput] = useState(false);
-  const [showPasswordInputs, setShowPasswordInputs] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [userData, setUserData] = useState(null);
+  
+  // Paso 2: Nueva contraseña
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [userData, setUserData] = useState(null);
 
-  const handleEmailSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // Verificar si el email existe en la base de datos
-      const { data: profileData, error: profileError } = await supabase
-        .from('perfiles')
-        .select('email')
-        .eq('email', email)
-        .single();
-
-      if (profileError || !profileData) {
-        showError('Este email no está registrado en el sistema');
-        return;
-      }
-
-      // Generar token aleatorio
-      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
-      // Usar la función personalizada para enviar email con token
-      await sendPasswordRecoveryEmail(email, token);
-
-      showSuccess("Email de recuperación enviado correctamente. Revisa tu email para obtener el código.");
-      // Mostrar campo para ingresar el código
-      setShowTokenInput(true);
-    } catch (error) {
-      showError("Error enviando email de recuperación");
-    } finally {
-      setLoading(false);
-    }
+  // Validar email
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
   };
 
   // Validar contraseña
   const validatePassword = (password) => {
     if (password.length < 6) {
-      return 'La contraseña debe tener 6 o más caracteres';
+      return 'La contraseña debe tener al menos 6 caracteres';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'La contraseña debe tener al menos una mayúscula';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'La contraseña debe tener al menos una minúscula';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'La contraseña debe tener al menos un número';
     }
     return null;
   };
 
-  const handleTokenVerify = async () => {
-    if (!token.trim()) {
-      showError('El código es requerido');
-      return;
-    }
-
+  const handleTokenSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
 
     try {
+      // Validar email
+      if (!validateEmail(email)) {
+        showError('Email inválido');
+        return;
+      }
+
+      if (!token.trim()) {
+        showError('El código es requerido');
+        return;
+      }
+
       // Verificar token en la base de datos
       const { data: tokenData, error: tokenError } = await supabase
         .from('email_recovery')
@@ -109,23 +99,27 @@ export default function PasswordResetModal() {
         return;
       }
 
-      // Guardar datos del usuario
+      // Guardar datos del usuario para el siguiente paso
       setUserData({
         profileId: profileData.id,
-        email: profileData.email
+        email: profileData.email,
+        tokenId: tokenData.id
       });
 
-      setShowPasswordInputs(true);
+      setShowPasswordForm(true);
       showSuccess('Código verificado. Ahora ingresa tu nueva contraseña.');
 
     } catch (error) {
+      console.error('Error verificando código:', error);
       showError('Error verificando código');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePasswordChange = async () => {
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    
     if (newPassword !== confirmPassword) {
       showError('Las contraseñas no coinciden');
       return;
@@ -140,14 +134,26 @@ export default function PasswordResetModal() {
     setLoading(true);
 
     try {
-      // Hashear la contraseña con bcrypt
-      const hashedPassword = await hashPassword(newPassword);
+      // Buscar usuario en auth.users por email
+      const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (userError) {
+        showError('Error actualizando contraseña');
+        return;
+      }
 
-      // Actualizar contraseña en la tabla perfiles
-      const { error: updateError } = await supabase
-        .from('perfiles')
-        .update({ password: hashedPassword })
-        .eq('email', userData.email);
+      const user = users.find(u => u.email === userData.email);
+      
+      if (!user) {
+        showError('Usuario no encontrado');
+        return;
+      }
+
+      // Actualizar contraseña del usuario
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        user.id,
+        { password: newPassword }
+      );
 
       if (updateError) {
         showError('Error actualizando contraseña');
@@ -171,22 +177,20 @@ export default function PasswordResetModal() {
     }
   };
 
-  
   return (
     <div className="fixed inset-0 bg-black/80 z-9999 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-2xl font-bold text-center mb-4">
-          Recuperar Contraseña
+          {showPasswordForm ? 'Nueva Contraseña' : 'Recuperar Contraseña'}
         </h3>
         
-        {!showTokenInput ? (
+        {!showPasswordForm ? (
           <>
             <p className="text-gray-600 text-center mb-6">
-              Ingresa tu email y te enviaremos las instrucciones para recuperar
-              tu contraseña
+              Ingresa tu email y el código que recibiste
             </p>
 
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <form onSubmit={handleTokenSubmit} className="space-y-4">
               <input
                 type="email"
                 name="email"
@@ -197,31 +201,6 @@ export default function PasswordResetModal() {
                 onChange={(e) => setEmail(e.target.value)}
               />
 
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={closePasswordResetModal}
-                  className="flex-1 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl transition font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 py-3 bg-zinc-900 hover:bg-black disabled:bg-gray-400 text-white font-black rounded-xl transition shadow-lg"
-                >
-                  {loading ? "Enviando..." : "Enviar"}
-                </button>
-              </div>
-            </form>
-          </>
-        ) : !showPasswordInputs ? (
-          <>
-            <p className="text-gray-600 text-center mb-6">
-              Revisa tu email e ingresa el código que recibiste
-            </p>
-
-            <div className="space-y-4">
               <input
                 type="text"
                 name="token"
@@ -241,22 +220,22 @@ export default function PasswordResetModal() {
                   Cancelar
                 </button>
                 <button
-                  onClick={handleTokenVerify}
+                  type="submit"
                   disabled={loading}
                   className="flex-1 py-3 bg-zinc-900 hover:bg-black disabled:bg-gray-400 text-white font-black rounded-xl transition shadow-lg"
                 >
                   {loading ? "Verificando..." : "Verificar Código"}
                 </button>
               </div>
-            </div>
+            </form>
           </>
         ) : (
           <>
             <p className="text-gray-600 text-center mb-6">
-              Ingresa tu nueva contraseña (mínimo 6 caracteres)
+              Ingresa tu nueva contraseña (mínimo 6 caracteres, 1 mayúscula, 1 minúscula, 1 número)
             </p>
 
-            <div className="space-y-4">
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <input
                 type="password"
                 name="newPassword"
@@ -286,14 +265,14 @@ export default function PasswordResetModal() {
                   Cancelar
                 </button>
                 <button
-                  onClick={handlePasswordChange}
+                  type="submit"
                   disabled={loading}
                   className="flex-1 py-3 bg-zinc-900 hover:bg-black disabled:bg-gray-400 text-white font-black rounded-xl transition shadow-lg"
                 >
-                  {loading ? "Actualizando..." : "Cambiar Contraseña"}
+                  {loading ? "Actualizando..." : "Actualizar Contraseña"}
                 </button>
               </div>
-            </div>
+            </form>
           </>
         )}
       </div>
