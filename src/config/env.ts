@@ -1,4 +1,6 @@
+import "dotenv/config"
+
 export const ENV = {
-    SUPABASE_ANON_KEY: import.meta.env.VITE_SUPBASE_ANON_KEY,
-    SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-} as const
+    SUPABASE_ANON_KEY: process.env.SUPBASE_ANON_KEY,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+}
