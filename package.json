@@ -17,6 +17,7 @@
     "@fortawesome/react-fontawesome": "^3.3.0",
     "@supabase/supabase-js": "^2.101.1",
     "@tailwindcss/vite": "^4.2.2",
+    "dotenv": "^17.4.1",
     "lucide-react": "^1.7.0",
     "mercadopago": "^2.0.8",
     "react": "^19.2.4",

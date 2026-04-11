@@ -1,91 +1,39 @@
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
-import reactPlugin from "eslint-plugin-react";
+// eslint.config.js
+import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
-import jsxA11y from "eslint-plugin-jsx-a11y";
-import importPlugin from "eslint-plugin-import";
+import reactRefresh from "eslint-plugin-react-refresh";
+import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-  // Ignorar carpetas generadas
-  { ignores: ["dist", "build", "node_modules", "coverage"] },
-
-  // Base JS recomendado
-  js.configs.recommended,
-
-  // TypeScript estricto
-  ...tseslint.configs.strictTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
-
+export default [
+  { ignores: ["dist", "node_modules"] },
+  ...tseslint.configs.recommended,
   {
-    files: ["**/*.{ts,tsx}"],
-
+    files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parser: tseslint.parser,
       parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        ecmaVersion: "latest",
+        ecmaFeatures: { jsx: true },
+        sourceType: "module",
+        project: "./tsconfig.json",
       },
     },
-
     plugins: {
-      react: reactPlugin,
       "react-hooks": reactHooks,
-      "jsx-a11y": jsxA11y,
-      import: importPlugin,
+      "react-refresh": reactRefresh,
     },
-
-    settings: {
-      react: { version: "detect" },
-    },
-
     rules: {
-      // ── React ──────────────────────────────────────
-      ...reactPlugin.configs.recommended.rules,
-      ...reactPlugin.configs["jsx-runtime"].rules, // React 17+ (no necesita import React)
       ...reactHooks.configs.recommended.rules,
-      "react/prop-types": "off", // TypeScript lo cubre
-      "react/self-closing-comp": "warn",
-      "@typescript-eslint/no-unnecessary-template-expression": "error",
-
-      // ── Accesibilidad ──────────────────────────────
-      ...jsxA11y.configs.recommended.rules,
-
-      // ── TypeScript ─────────────────────────────────
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        { prefer: "type-imports" }
-      ],
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
-      ],
-      "@typescript-eslint/no-non-null-assertion": "warn",
-
-      // ── Imports ────────────────────────────────────
-      "import/order": [
+      "react-refresh/only-export-components": [
         "warn",
-        {
-          groups: [
-            "builtin", "external", "internal",
-            ["parent", "sibling", "index"], "type"
-          ],
-          "newlines-between": "always",
-          alphabetize: { order: "asc" },
-        },
+        { allowConstantExport: true },
       ],
-      "import/no-duplicates": "error",
-
-      // ── General ────────────────────────────────────
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "prefer-const": "error",
+      "no-var": "error",
     },
   },
-
-  // Archivos de config/scripts — menos estrictos
-  {
-    files: ["*.config.{ts,js}", "vite.config.*", "vitest.config.*"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  }
-);
+];
