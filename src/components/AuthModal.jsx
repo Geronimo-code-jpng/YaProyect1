@@ -1,8 +1,7 @@
 import { useAuth } from "../contexts/AuthContext";
-import { supabase as supabaseClient } from "../lib/supabase";
 import { useState } from "react";
 import PasswordResetModal from "./PasswordResetModal";
-import { verifyPassword } from "../utils/passwordUtils";
+import { loginWithDB } from "../utils/authDB";
 
 export default function AuthModal() {
   const {
@@ -74,73 +73,22 @@ export default function AuthModal() {
     }
 
     try {
-      console.log("Iniciando login para email:", email);
+      // Usar sistema de login basado en base de datos
+      const result = await loginWithDB(email, password);
       
-      // Verificar usuario y contraseña en tabla perfiles
-      const { data: profileData, error: profileError } = await supabaseClient
-        .from('perfiles')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      console.log("Resultado de consulta BD:", { profileError, profileData });
-
-      if (profileError || !profileData) {
-        console.log("Usuario no encontrado o error en BD:", profileError);
-        setLoginError("Email o contraseña incorrectos");
-        setLoginLoading(false);
-        return;
+      if (result.success) {
+        closeAuthModal();
+        setToastMessage("¡Sesión iniciada!");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
+        
+        // Recargar página para que AuthContext detecte la sesión local
+        window.location.reload();
+      } else {
+        setLoginError(result.error);
       }
-
-      // Verificar si el usuario tiene contraseña en perfiles
-      if (!profileData.password) {
-        console.log("Usuario sin contraseña configurada");
-        setLoginError("Este usuario no tiene contraseña configurada");
-        setLoginLoading(false);
-        return;
-      }
-
-      console.log("Verificando contraseña...");
-      // Verificar contraseña con bcrypt
-      const isPasswordValid = await verifyPassword(password, profileData.password);
-      console.log("Resultado de verificación de contraseña:", isPasswordValid);
-      
-      if (!isPasswordValid) {
-        console.log("Contraseña incorrecta");
-        setLoginError("Email o contraseña incorrectos");
-        setLoginLoading(false);
-        return;
-      }
-
-      // Si la contraseña es correcta, crear sesión local sin Supabase Auth
-      const userSession = {
-        id: profileData.id,
-        email: profileData.email,
-        nombre: profileData.nombre,
-        rol: profileData.rol,
-        isLoggedIn: true,
-        loginTime: new Date().toISOString(),
-        aud: 'local',
-        role: 'authenticated',
-        app_metadata: {},
-        user_metadata: {},
-        created_at: profileData.created_at
-      };
-      
-      console.log("Creando sesión local:", userSession);
-      // Guardar sesión en localStorage
-      localStorage.setItem('userSession', JSON.stringify(userSession));
-      console.log("Sesión guardada en localStorage");
-
-      closeAuthModal();
-      setToastMessage("¡Sesión iniciada!");
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-      
-      // Recargar página para que AuthContext detecte la sesión local
-      window.location.reload();
     } catch (err) {
-      setLoginError(err.message);
+      setLoginError("Error en el servidor");
     } finally {
       setLoginLoading(false);
     }

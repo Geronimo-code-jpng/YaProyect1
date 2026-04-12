@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
-import { supabase as supabaseClient } from "../lib/supabase";
+import { supabase as supabaseClient, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
 import { setOpenPedidosRef } from "../utils/pedidosUtils";
 
 // Countdown Timer Component
@@ -313,10 +313,7 @@ export default function PedidosModal() {
     try {
       showWarning("🔄 Generando link de pago...");
 
-      // Usar las credenciales desde variables de entorno
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-
+      // Usar las credenciales importadas
       if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error("Configuración de Supabase no encontrada");
       }

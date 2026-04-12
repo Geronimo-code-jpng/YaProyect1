@@ -181,22 +181,33 @@ const AdminPanel = () => {
   useEffect(() => {
     const verificarAdmin = async () => {
       try {
-        const { data, error: sessionError } =
-          await supabaseClient.auth.getSession();
-        if (sessionError) throw sessionError;
-
-        const session = data.session;
-        if (!session) {
+        // Obtener sesión actual del localStorage
+        const storedSession = localStorage.getItem('userSession');
+        if (!storedSession) {
           navigate("/");
           return;
         }
 
-        setCurrentUser(session.user);
+        const userSession = JSON.parse(storedSession);
+        
+        // Verificar que la sesión sea válida (no expirada)
+        const loginTime = new Date(userSession.loginTime);
+        const now = new Date();
+        const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
+        
+        if (hoursDiff > 24 || !userSession.isLoggedIn) {
+          localStorage.removeItem('userSession');
+          navigate("/");
+          return;
+        }
 
+        setCurrentUser(userSession);
+
+        // Verificar rol en la base de datos
         const { data: perfil, error: perfilError } = await supabaseClient
           .from("perfiles")
           .select("rol")
-          .eq("id", session.user.id)
+          .eq("id", userSession.id)
           .single();
 
         if (perfilError) {
