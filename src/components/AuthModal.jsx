@@ -74,6 +74,8 @@ export default function AuthModal() {
     }
 
     try {
+      console.log("Iniciando login para email:", email);
+      
       // Verificar usuario y contraseña en tabla perfiles
       const { data: profileData, error: profileError } = await supabaseClient
         .from('perfiles')
@@ -81,7 +83,10 @@ export default function AuthModal() {
         .eq('email', email)
         .single();
 
+      console.log("Resultado de consulta BD:", { profileError, profileData });
+
       if (profileError || !profileData) {
+        console.log("Usuario no encontrado o error en BD:", profileError);
         setLoginError("Email o contraseña incorrectos");
         setLoginLoading(false);
         return;
@@ -89,15 +94,19 @@ export default function AuthModal() {
 
       // Verificar si el usuario tiene contraseña en perfiles
       if (!profileData.password) {
+        console.log("Usuario sin contraseña configurada");
         setLoginError("Este usuario no tiene contraseña configurada");
         setLoginLoading(false);
         return;
       }
 
+      console.log("Verificando contraseña...");
       // Verificar contraseña con bcrypt
       const isPasswordValid = await verifyPassword(password, profileData.password);
+      console.log("Resultado de verificación de contraseña:", isPasswordValid);
       
       if (!isPasswordValid) {
+        console.log("Contraseña incorrecta");
         setLoginError("Email o contraseña incorrectos");
         setLoginLoading(false);
         return;
@@ -118,8 +127,10 @@ export default function AuthModal() {
         created_at: profileData.created_at
       };
       
+      console.log("Creando sesión local:", userSession);
       // Guardar sesión en localStorage
       localStorage.setItem('userSession', JSON.stringify(userSession));
+      console.log("Sesión guardada en localStorage");
 
       closeAuthModal();
       setToastMessage("¡Sesión iniciada!");
