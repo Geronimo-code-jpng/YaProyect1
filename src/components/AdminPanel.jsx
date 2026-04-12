@@ -762,8 +762,12 @@ const AdminPanel = () => {
       // Crear lista de productos para el mensaje
       const listaProductos = productos
         .map(
-          (p) =>
-            `• ${p.nombre} x${p.cantidad} = $${(p.precio * p.cantidad).toLocaleString("es-AR")}`,
+          (p) => {
+            const subtotal = p.precio * p.cantidad;
+            const impuestos = subtotal * 0.08;
+            const total = subtotal + impuestos;
+            return `• ${p.nombre} x${p.cantidad} = $${subtotal.toLocaleString("es-AR")} +8% impuestos: $${impuestos.toFixed(2)} (Total: $${total.toLocaleString("es-AR")})`;
+          }
         )
         .join("\n");
 

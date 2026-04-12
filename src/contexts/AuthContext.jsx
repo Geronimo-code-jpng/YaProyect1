@@ -208,8 +208,26 @@ export function AuthProvider({ children }) {
             // Verificar nuevamente si no fue abortado
             if (abortController.signal.aborted) return;
             
-            setUser(userSession);
-            setUserProfile(userSession);
+            // setUser con datos de autenticación
+            setUser({
+              id: userSession.id,
+              email: userSession.email,
+              aud: 'local',
+              role: 'authenticated',
+              app_metadata: {},
+              user_metadata: {},
+              created_at: userSession.created_at
+            });
+            
+            // setUserProfile con datos del perfil
+            setUserProfile({
+              id: userSession.id,
+              email: userSession.email,
+              nombre: userSession.nombre,
+              rol: userSession.rol,
+              created_at: userSession.created_at
+            });
+            
             console.log("Sesión local restaurada para:", userSession.email);
           } else {
             // Sesión expirada, limpiar

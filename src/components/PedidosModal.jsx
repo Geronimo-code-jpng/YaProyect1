@@ -736,6 +736,9 @@ export default function PedidosModal() {
                                         (item.precio_unitario || item.precio || 0) * item.cantidad
                                       ).toLocaleString("es-AR")}
                                     </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      +8% impuestos: ${((item.precio_unitario || item.precio || 0) * item.cantidad * 1.08).toFixed(2)}
+                                    </div>
                                   </div>
                                 </div>
                               ))

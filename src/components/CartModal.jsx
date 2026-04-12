@@ -290,6 +290,9 @@ export default function CartModal() {
                   <div className="font-black text-[#FF6600]">
                     ${item.precio.toLocaleString("es-AR")}
                   </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    +8% impuestos: ${(item.precio * 0.08).toFixed(2)}
+                  </div>
                   <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden mt-2 w-max relative">
                     <button
                       onClick={() => changeQty(index, -1)}
