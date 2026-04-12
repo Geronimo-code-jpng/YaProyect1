@@ -2,6 +2,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
 import PasswordResetModal from "./PasswordResetModal";
 import { loginWithDB } from "../utils/authDB";
+import { hashPassword } from "../utils/passwordUtils";
+import { supabase } from "../lib/supabase";
 
 export default function AuthModal() {
   const {
@@ -142,62 +144,60 @@ export default function AuthModal() {
     }
 
     try {
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password: pass,
-      });
+      // Verificar si el email ya existe en la base de datos
+      const { data: existingUser, error: checkError } = await supabase
+        .from('perfiles')
+        .select('email')
+        .eq('email', email)
+        .single();
 
-      if (error) {
-        if (error.message.includes("rate limit"))
-          throw new Error(
-            "Límite de registros alcanzado. Intenta de nuevo más tarde.",
-          );
-        if (error.message.includes("User already registered"))
-          throw new Error(
-            "Este email ya está registrado. Intenta con otro email.",
-          );
-        throw new Error(error.message);
+      if (existingUser) {
+        throw new Error("Este email ya está registrado");
       }
 
-      if (data.user) {
-        const { error: profileErr } = await supabaseClient
-          .from("perfiles")
-          .insert([
-            {
-              id: data.user.id,
-              email: email,
-              nombre: nombre,
-              telefono: tel,
-              tipo_cliente: tipo,
-              direccion: dir || null,
-            },
-          ]);
+      // Hashear la contraseña
+      const hashedPassword = await hashPassword(pass);
 
-        if (profileErr) {
-          console.error("Error al guardar perfil:", profileErr);
-          throw new Error(
-            "Error al guardar los datos del perfil. Intenta nuevamente.",
-          );
-        }
+      // Crear usuario en la base de datos
+      const { error: profileErr } = await supabase
+        .from("perfiles")
+        .insert([
+          {
+            email: email,
+            password: hashedPassword,
+            nombre: nombre,
+            telefono: tel,
+            tipo_cliente: tipo || 'minorista',
+            direccion: dir || null,
+            rol: 'user'
+          },
+        ]);
 
-        if (!data.session) {
-          closeAuthModal();
-          setToastMessage(
-            "¡Cuenta creada! Revisa tu email para confirmar la cuenta.",
-          );
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 4000);
-          return;
-        }
+      if (profileErr) {
+        console.error("Error al guardar perfil:", profileErr);
+        throw new Error(
+          "Error al guardar los datos del perfil. Intenta nuevamente.",
+        );
+      }
 
+      // Iniciar sesión automáticamente después del registro
+      const loginResult = await loginWithDB(email, pass);
+      
+      if (loginResult.success) {
+        closeAuthModal();
+        setToastMessage("¡Cuenta creada y sesión iniciada!");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
+        window.location.reload();
+      } else {
         closeAuthModal();
         setToastMessage("¡Cuenta creada exitosamente!");
         setShowToast(true);
         setTimeout(() => setShowToast(false), 4000);
-        await checkSession();
+        window.location.reload();
       }
     } catch (err) {
-      showError(err.message);
+      setErrores([err.message]);
     } finally {
       setLoading(false);
     }

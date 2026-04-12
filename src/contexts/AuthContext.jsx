@@ -27,8 +27,7 @@ export function AuthProvider({ children }) {
         aud: 'local',
         role: 'authenticated',
         app_metadata: {},
-        user_metadata: {},
-        created_at: currentUser.created_at
+        user_metadata: {}
       });
       
       // setUserProfile con datos del perfil
@@ -36,8 +35,7 @@ export function AuthProvider({ children }) {
         id: currentUser.id,
         email: currentUser.email,
         nombre: currentUser.nombre,
-        rol: currentUser.rol,
-        created_at: currentUser.created_at
+        rol: currentUser.rol
       });
     } else {
       setUser(null);
@@ -58,8 +56,7 @@ export function AuthProvider({ children }) {
             aud: 'local',
             role: 'authenticated',
             app_metadata: {},
-            user_metadata: {},
-            created_at: currentUser.created_at
+            user_metadata: {}
           });
           
           // setUserProfile con datos del perfil
@@ -67,8 +64,7 @@ export function AuthProvider({ children }) {
             id: currentUser.id,
             email: currentUser.email,
             nombre: currentUser.nombre,
-            rol: currentUser.rol,
-            created_at: currentUser.created_at
+            rol: currentUser.rol
           });
         } else {
           setUser(null);

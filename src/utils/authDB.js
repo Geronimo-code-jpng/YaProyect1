@@ -33,8 +33,7 @@ export const loginWithDB = async (email, password) => {
       nombre: user.nombre,
       rol: user.rol,
       isLoggedIn: true,
-      loginTime: new Date().toISOString(),
-      created_at: user.created_at
+      loginTime: new Date().toISOString()
     };
 
     // 5. Guardar en localStorage
