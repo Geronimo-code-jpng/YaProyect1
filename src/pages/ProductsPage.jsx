@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useProducts } from '../contexts/ProductContext';
 import ProductsGrid from '../components/ProductsGrid';
@@ -8,39 +8,39 @@ export default function ProductsPage() {
   const [categoriaActual, setCategoriaActual] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const { addToCart } = useCart();
-  const { products, isLoading, error, refreshProducts } = useProducts();
+  const { products, isLoading } = useProducts();
   const [searchParams] = useSearchParams();
 
   // Obtener parámetros de la URL
-  useEffect(() => {
-    const category = searchParams.get('categoria'); // Cambiado de 'category' a 'categoria'
-    const search = searchParams.get('search');
+  const category = searchParams.get('categoria');
+  const search = searchParams.get('search');
+  
+  // Actualizar estado con los parámetros
+  if (category) {
+    const categoryMap = {
+      'soloofertas': 'SoloOfertas',
+      'todas_filtro': 'Todas_Filtro',
+      'alimento': 'ALIMENTO',
+      'bebidas': 'BEBIDAS',
+      'lacteos': 'LACTEOS',
+      'harina': 'HARINA',
+      'aceite': 'ACEITE',
+      'vinos': 'VINOS',
+      'cervezas': 'CERVEZAS',
+      'yerba': 'YERBA',
+      'aperitivos': 'APERITIVOS',
+      'cigarrillos': 'CIGARRILLOS'
+    };
     
-    if (category) {
-      // Convert category parameter to display format
-      const categoryMap = {
-        'soloofertas': 'SoloOfertas',
-        'todas_filtro': 'Todas_Filtro',
-        'alimento': 'ALIMENTO',
-        'bebidas': 'BEBIDAS',
-        'lacteos': 'LACTEOS',
-        'harina': 'HARINA',
-        'aceite': 'ACEITE',
-        'vinos': 'VINOS',
-        'cervezas': 'CERVEZAS',
-        'yerba': 'YERBA',
-        'aperitivos': 'APERITIVOS',
-        'cigarrillos': 'CIGARRILLOS'
-      };
-      
-      const normalizedCategory = categoryMap[category.toLowerCase()] || category.toUpperCase();
+    const normalizedCategory = categoryMap[category.toLowerCase()] || category.toUpperCase();
+    if (normalizedCategory !== categoriaActual) {
       setCategoriaActual(normalizedCategory);
     }
-    
-    if (search) {
-      setSearchTerm(search);
-    }
-  }, [searchParams]);
+  }
+  
+  if (search && search !== searchTerm) {
+    setSearchTerm(search);
+  }
 
   // Get unique categories
   const categorias = ['Todas', 'SoloOfertas', 'Todas_Filtro', ...new Set(products.map(product => product.Categoria))];

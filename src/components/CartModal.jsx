@@ -612,7 +612,7 @@ export default function CartModal() {
                 )}
 
                 <div className="flex justify-between text-sm font-medium mb-2">
-                  <span>Impuestos:</span>
+                  <span>Impuestos Nacionales (8%):</span>
                   <span className="text-gray-600">
                     ${(cartTotal * 0.08).toLocaleString("es-AR")}
                   </span>
@@ -627,9 +627,6 @@ export default function CartModal() {
                       : (getCartTotalWithDiscount(userProfile) + shippingPrice + getCartTotalWithDiscount(userProfile)* 0.08)    
                     ).toLocaleString("es-AR")}
                   </span>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Incluye 8% de impuestos
-                  </div>
                 </div>
                 <div className="text-xs text-gray-500 font-medium mt-2">
                   {cart.length} {cart.length === 1 ? "producto" : "productos"}

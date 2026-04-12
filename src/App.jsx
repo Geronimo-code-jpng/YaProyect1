@@ -27,6 +27,11 @@ function AppContent() {
   const { openAuthModal, user, userProfile } = useAuth();
   const location = useLocation();
 
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
   // Update document title based on current route
   useEffect(() => {
     const titles = {
