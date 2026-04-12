@@ -140,7 +140,6 @@ export default function CardCatalogo({
                 {/* ACÁ ADENTRO VA TU COMPONENTE DE PRODUCTO */}
                 <p className="font-bold">{producto.nombre}</p>
                 <p className="text-[#FF6600]">${producto.precio}</p>
-                <p className="text-sm text-gray-600">+8% impuestos: ${(producto.precio * 1.08).toFixed(2)}</p>
               </div>
             ))
           ) : (

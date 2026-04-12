@@ -736,9 +736,6 @@ export default function PedidosModal() {
                                         (item.precio_unitario || item.precio || 0) * item.cantidad
                                       ).toLocaleString("es-AR")}
                                     </div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      +8% impuestos: ${((item.precio_unitario || item.precio || 0) * item.cantidad * 1.08).toFixed(2)}
-                                    </div>
                                   </div>
                                 </div>
                               ))
@@ -774,7 +771,7 @@ export default function PedidosModal() {
                           <div className="flex justify-between font-black text-lg border-t pt-2">
                             <span>Total:</span>
                             <span className="text-[#FF6600]">
-                              ${pedido.total?.toLocaleString("es-AR") || "0"}
+                              ${pedido.total?.toLocaleString("es-AR") || "0"} <p className="text-xs text-gray-500">Impuestos incluidos</p>
                             </span>
                           </div>
                         </div>

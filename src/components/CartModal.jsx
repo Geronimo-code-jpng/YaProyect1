@@ -30,22 +30,54 @@ export default function CartModal() {
     notas: "",
     metodoEntrega: "envio", // "envio" o "retiro"
   });
+  const [dbUserData, setDbUserData] = useState(null);
+  const [loadingUserData, setLoadingUserData] = useState(false);
 
-  // Cargar datos del usuario cuando esté disponible
+  // Cargar datos del usuario desde la base de datos
   useEffect(() => {
-    if (!user) return;
-    setOrderData((prev) => ({
-      ...prev,
-      nombre: user.nombre || prev.nombre,
-      telefono: user.telefono || prev.telefono,
-      direccion: user.direccion || prev.direccion,
-    }));
-  }, [user]);
+    if (!user?.email) return;
+    
+    const loadUserData = async () => {
+      try {
+        setLoadingUserData(true);
+        const { data, error } = await supabaseClient
+          .from('perfiles')
+          .select('nombre, telefono, direccion, tipo_cliente')
+          .eq('email', user.email)
+          .single();
+        
+        if (error) {
+          console.error('Error cargando datos del usuario:', error);
+          return;
+        }
+        
+        setDbUserData(data);
+        setOrderData((prev) => ({
+          ...prev,
+          nombre: data.nombre || prev.nombre,
+          telefono: data.telefono || prev.telefono,
+          direccion: data.direccion || prev.direccion,
+        }));
+      } catch (err) {
+        console.error('Error en loadUserData:', err);
+      } finally {
+        setLoadingUserData(false);
+      }
+    };
+    
+    loadUserData();
+  }, [user?.email]);
 
   // Limpiar datos cuando el usuario cierra sesión
   useEffect(() => {
     if (!user) {
-      setOrderData({ nombre: "", telefono: "", direccion: "", notas: "", metodoEntrega: "envio" });
+      setOrderData({
+        nombre: "",
+        telefono: "",
+        direccion: "",
+        notas: "",
+        metodoEntrega: "envio",
+      });
     }
   }, [user]);
 
@@ -55,10 +87,10 @@ export default function CartModal() {
     };
   }, [pedidoTimeout]);
 
-  // Determinar si los campos están bloqueados (usuario logueado con datos)
-  const campoNombreBloqueado = !!(user && user.nombre);
-  const campoTelefonoBloqueado = !!(user && user.telefono);
-  const campoDireccionBloqueado = !!(user && user.direccion);
+  // Determinar si los campos están bloqueados (usuario logueado con datos de BD)
+  const campoNombreBloqueado = !!(user && dbUserData?.nombre);
+  const campoTelefonoBloqueado = !!(user && dbUserData?.telefono);
+  const campoDireccionBloqueado = !!(user && dbUserData?.direccion);
 
   const verificarPedidosVencidos = async () => {
     try {
@@ -113,7 +145,9 @@ export default function CartModal() {
     try {
       // Verificar si el usuario está logueado
       if (!user) {
-        showError("❌ No puedes enviar el pedido. Crea una cuenta o inicia sesión para continuar.");
+        showError(
+          "❌ No puedes enviar el pedido. Crea una cuenta o inicia sesión para continuar.",
+        );
         setIsSubmitting(false);
         openAuthModal(); // Abrir modal de autenticación
         return;
@@ -151,19 +185,25 @@ export default function CartModal() {
       const pedidoData = {
         nombre_cliente: orderData.nombre.trim(),
         telefono: orderData.telefono.trim(),
-        direccion: orderData.metodoEntrega === "retiro" ? "Retiro en local" : orderData.direccion.trim(),
+        direccion:
+          orderData.metodoEntrega === "retiro"
+            ? "Retiro en local"
+            : orderData.direccion.trim(),
         carrito: cart.map((item) => ({
           Id: item.Id,
           nombre: item.nombre,
           cantidad: item.cantidad,
-          precio: item.precio,  // Se guarda como 'precio' en el JSON
-          precio_unitario: item.precio,  // Para compatibilidad con código existente
+          precio: item.precio, // Se guarda como 'precio' en el JSON
+          precio_unitario: item.precio, // Para compatibilidad con código existente
           subtotal: item.precio * item.cantidad,
         })),
-        total: orderData.metodoEntrega === "retiro" 
-          ? getCartTotalWithDiscount(userProfile) 
-          : getCartTotalWithDiscount(userProfile) + 7200,
-        descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile) ? 1000 : 0,
+        total:
+          orderData.metodoEntrega === "retiro"
+            ? (getCartTotalWithDiscount(userProfile) * 1.08)
+            : (getCartTotalWithDiscount(userProfile) + 7200) * 1.08,
+        descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
+          ? 1000
+          : 0,
         estado: "pendiente",
         metodo: orderData.metodoEntrega,
         created_at: new Date().toISOString(),
@@ -186,8 +226,8 @@ export default function CartModal() {
         try {
           await supabaseClient
             .from("perfiles")
-            .update({ 
-              cantidad_pedidos: (userProfile?.cantidad_pedidos || 0) + 1 
+            .update({
+              cantidad_pedidos: (userProfile?.cantidad_pedidos || 0) + 1,
             })
             .eq("id", user.id);
         } catch (updateError) {
@@ -290,9 +330,6 @@ export default function CartModal() {
                   <div className="font-black text-[#FF6600]">
                     ${item.precio.toLocaleString("es-AR")}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    +8% impuestos: ${(item.precio * 0.08).toFixed(2)}
-                  </div>
                   <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden mt-2 w-max relative">
                     <button
                       onClick={() => changeQty(index, -1)}
@@ -388,17 +425,17 @@ export default function CartModal() {
                   <input
                     type="text"
                     name="nombre"
-                    value={orderData.nombre}
+                    value={loadingUserData ? 'Cargando...' : orderData.nombre}
                     onChange={
                       campoNombreBloqueado ? undefined : handleInputChange
                     }
-                    readOnly={campoNombreBloqueado}
+                    readOnly={campoNombreBloqueado || loadingUserData}
                     className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
-                      campoNombreBloqueado
+                      campoNombreBloqueado || loadingUserData
                         ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
                         : "border-gray-200 focus:border-[#FF6600]"
                     }`}
-                    placeholder="Tu nombre completo"
+                    placeholder={loadingUserData ? 'Cargando datos...' : 'Tu nombre completo'}
                   />
                   {campoNombreBloqueado && (
                     <Lock
@@ -424,17 +461,17 @@ export default function CartModal() {
                   <input
                     type="tel"
                     name="telefono"
-                    value={orderData.telefono}
+                    value={loadingUserData ? 'Cargando...' : orderData.telefono}
                     onChange={
                       campoTelefonoBloqueado ? undefined : handleInputChange
                     }
-                    readOnly={campoTelefonoBloqueado}
+                    readOnly={campoTelefonoBloqueado || loadingUserData}
                     className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
-                      campoTelefonoBloqueado
+                      campoTelefonoBloqueado || loadingUserData
                         ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
                         : "border-gray-200 focus:border-[#FF6600]"
                     }`}
-                    placeholder="Tu teléfono"
+                    placeholder={loadingUserData ? 'Cargando datos...' : 'Tu teléfono'}
                   />
                   {campoTelefonoBloqueado && (
                     <Lock
@@ -463,7 +500,9 @@ export default function CartModal() {
                     />
                     <div className="flex-1">
                       <span className="font-medium">Envío a domicilio</span>
-                      <span className="text-sm text-gray-500 ml-2">(+ $7.200)</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        (+ $7.200)
+                      </span>
                     </div>
                   </label>
                   <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
@@ -477,7 +516,9 @@ export default function CartModal() {
                     />
                     <div className="flex-1">
                       <span className="font-medium">Retiro en local</span>
-                      <span className="text-sm text-green-600 ml-2">(Gratis)</span>
+                      <span className="text-sm text-green-600 ml-2">
+                        (Gratis)
+                      </span>
                     </div>
                   </label>
                 </div>
@@ -499,17 +540,17 @@ export default function CartModal() {
                     <input
                       type="text"
                       name="direccion"
-                      value={orderData.direccion}
+                      value={loadingUserData ? 'Cargando...' : orderData.direccion}
                       onChange={
                         campoDireccionBloqueado ? undefined : handleInputChange
                       }
-                      readOnly={campoDireccionBloqueado}
+                      readOnly={campoDireccionBloqueado || loadingUserData}
                       className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
-                        campoDireccionBloqueado
+                        campoDireccionBloqueado || loadingUserData
                           ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
                           : "border-gray-200 focus:border-[#FF6600]"
                       }`}
-                      placeholder="Tu dirección"
+                      placeholder={loadingUserData ? 'Cargando datos...' : 'Tu dirección'}
                     />
                     {campoDireccionBloqueado && (
                       <Lock
@@ -540,41 +581,52 @@ export default function CartModal() {
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex justify-between text-lg font-black mb-2">
                   <span>Subtotal:</span>
-                  <span>
-                    ${cartTotal.toLocaleString("es-AR")}
-                  </span>
+                  <span>${cartTotal.toLocaleString("es-AR")}</span>
                 </div>
-                
+
                 {/* Descuento de primera compra */}
                 {qualifiesForFirstBuyDiscount(userProfile) && (
                   <div className="flex justify-between text-sm font-medium mb-2">
-                    <span className="text-green-600">🎉 Descuento primera compra:</span>
                     <span className="text-green-600">
-                      -$1.000
+                      🎉 Descuento primera compra:
                     </span>
+                    <span className="text-green-600">-$1.000</span>
                   </div>
                 )}
-                
+
                 {orderData.metodoEntrega === "envio" && (
                   <div className="flex justify-between text-sm font-medium mb-2">
                     <span>Costo de envío:</span>
-                    <span className="text-gray-600">
-                      $7.200
-                    </span>
+                    <span className="text-gray-600">$7.200</span>
                   </div>
                 )}
+
+                <div className="flex justify-between text-sm font-medium mb-2">
+                  <span>Impuestos:</span>
+                  <span className="text-gray-600">
+                    ${(cartTotal * 0.08).toLocaleString("es-AR")}
+                  </span>
+                </div>
+
                 <div className="border-t pt-2 flex justify-between text-xl font-black">
                   <span>Total:</span>
                   <span className="text-[#FF6600]">
-                    ${((orderData.metodoEntrega === "retiro" 
-                      ? getCartTotalWithDiscount(userProfile) 
-                      : getCartTotalWithDiscount(userProfile) + 7200)).toLocaleString("es-AR")}
+                    $
+                    {(orderData.metodoEntrega === "retiro"
+                      ? (getCartTotalWithDiscount(userProfile) + getCartTotalWithDiscount(userProfile)* 0.08)
+                      : (getCartTotalWithDiscount(userProfile) + 7200 + getCartTotalWithDiscount(userProfile)* 0.08)    
+                    ).toLocaleString("es-AR")}
                   </span>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Incluye 8% de impuestos
+                  </div>
                 </div>
                 <div className="text-xs text-gray-500 font-medium mt-2">
                   {cart.length} {cart.length === 1 ? "producto" : "productos"}
                   {qualifiesForFirstBuyDiscount(userProfile) && (
-                    <span className="text-green-600 ml-2">✨ ¡$1.000 OFF aplicado!</span>
+                    <span className="text-green-600 ml-2">
+                      ✨ ¡$1.000 OFF aplicado!
+                    </span>
                   )}
                 </div>
               </div>
@@ -594,7 +646,8 @@ export default function CartModal() {
                   isSubmitting ||
                   !orderData.nombre.trim() ||
                   !orderData.telefono.trim() ||
-                  (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
+                  (orderData.metodoEntrega === "envio" &&
+                    !orderData.direccion.trim())
                 }
                 className="flex-1 py-3 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >

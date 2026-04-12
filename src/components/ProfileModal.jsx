@@ -1,18 +1,50 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setOpenProfileRef } from '../utils/profileUtils';
+import { supabase } from '../lib/supabase';
 
 export default function ProfileModal() {
   const { userProfile, logout } = useAuth();
   const [showModal, setShowModal] = useState(false);
+  const [dbUserProfile, setDbUserProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const openProfile = useCallback(() => setShowModal(true), [setShowModal]);
   const closeProfile = () => setShowModal(false);
+  
+  const loadUserDataFromDB = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('perfiles')
+        .select('*')
+        .eq('email', userProfile.email)
+        .single();
+      
+      if (error) {
+        console.error('Error cargando datos del perfil:', error);
+        return;
+      }
+      
+      setDbUserProfile(data);
+    } catch (err) {
+      console.error('Error en loadUserDataFromDB:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userProfile?.email]);
   
   // Store the function in the ref using useEffect
   useEffect(() => {
     setOpenProfileRef(openProfile);
   }, [openProfile]);
+
+  // Cargar datos del usuario desde la base de datos cuando se abre el modal
+  useEffect(() => {
+    if (showModal && userProfile?.email) {
+      loadUserDataFromDB();
+    }
+  }, [showModal, userProfile?.email, loadUserDataFromDB]);
 
   if (!showModal) return null;
 
@@ -41,19 +73,19 @@ export default function ProfileModal() {
                 <div>
                   <label className="text-sm font-bold text-gray-600">Nombre</label>
                   <div className="p-3 bg-white border rounded-lg">
-                    {userProfile?.nombre || 'No especificado'}
+                    {loading ? 'Cargando...' : (dbUserProfile?.nombre || userProfile?.nombre || 'No especificado')}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-bold text-gray-600">Email</label>
                   <div className="p-3 bg-white border rounded-lg">
-                    {userProfile?.email || 'No especificado'}
+                    {loading ? 'Cargando...' : (dbUserProfile?.email || userProfile?.email || 'No especificado')}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-bold text-gray-600">Teléfono</label>
                   <div className="p-3 bg-white border rounded-lg">
-                    {userProfile?.telefono || 'No especificado'}
+                    {loading ? 'Cargando...' : (dbUserProfile?.telefono || userProfile?.telefono || 'No especificado')}
                   </div>
                 </div>
               </div>
@@ -66,13 +98,13 @@ export default function ProfileModal() {
                 <div>
                   <label className="text-sm font-bold text-gray-600">Tipo de Cliente</label>
                   <div className="p-3 bg-white border rounded-lg capitalize">
-                    {userProfile?.tipo_cliente || 'No especificada'}
+                    {loading ? 'Cargando...' : (dbUserProfile?.tipo_cliente || userProfile?.tipo_cliente || 'No especificada')}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-bold text-gray-600">Dirección</label>
                   <div className="p-3 bg-white border rounded-lg min-h-[60px]">
-                    {userProfile?.direccion || 'No especificada'}
+                    {loading ? 'Cargando...' : (dbUserProfile?.direccion || userProfile?.direccion || 'No especificada')}
                   </div>
                 </div>
               </div>
