@@ -10,16 +10,37 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
     Categoria: product?.Categoria || '',
     Imagen: product?.Imagen || '',
     Oferta: product?.Oferta || '',
-    stock: product?.stock || 0,
+    stock: product?.Stock ?? false,
     imageFile: imageFile,
     ...formOverrides
   }), [product, imageFile, formOverrides]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
+    let processedValue = value;
+    
+    // Convertir string a boolean para el campo Stock
+    if (name === 'Stock') {
+      if (value === 'true') {
+        processedValue = true;
+      } else if (value === 'false') {
+        processedValue = false;
+      } else {
+        processedValue = '';
+      }
+      // Guardar como 'stock' (minúscula) para mantener consistencia con formData
+      setFormOverrides(prev => ({
+        ...prev,
+        stock: processedValue
+      }));
+      return;
+    } else if (type === 'number') {
+      processedValue = parseFloat(value) || 0;
+    }
+    
     setFormOverrides(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
+      [name]: processedValue
     }));
   };
 
@@ -77,7 +98,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
       Categoria: formData.Categoria.trim(),
       Imagen: formData.Imagen || '',
       Oferta: formData.Oferta.trim(),
-      stock: parseInt(formData.stock) || 0
+      Stock: Boolean(formData.stock)
     };
 
     // Si hay un archivo de imagen, incluirlo
@@ -145,17 +166,28 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
               {/* Stock */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Stock
+                  Stock *
                 </label>
-                <input
-                  type="number"
-                  name="stock"
+                <select
+                  name="Stock"
                   value={formData.stock}
                   onChange={handleChange}
-                  min="0"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
-                  placeholder="0"
-                />
+                  required
+                >
+                  <option value="">Seleccionar estado de stock</option>
+                  <option value={true}>Hay stock</option>
+                  <option value={false}>No hay stock</option>
+                </select>
+                {formData.stock !== undefined && formData.stock !== null && (
+                  <div className="mt-2">
+                    <span className={`text-sm font-medium ${
+                      formData.stock ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formData.stock ? 'Hay stock' : 'No hay stock'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Categoría */}

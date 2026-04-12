@@ -132,84 +132,77 @@ const AdminPanel = () => {
     setConfirm({ message, onConfirm });
   }, [setConfirm]);
 
-  // Inicializar tabla de configuración si no existe
-  const initializeShippingConfig = useCallback(async () => {
-    try {
-      // Verificar si ya existe configuración
-      const { error: fetchError } = await supabaseClient
-        .from('configuracion')
-        .select('precio_envio')
-        .eq('id', 1)
-        .single();
-      
-      if (fetchError && fetchError.code === 'PGRST116') {
-        // No existe configuración, crearla con valor por defecto
-        const { error: insertError } = await supabaseClient
-          .from('configuracion')
-          .insert({
-            id: 1,
-            precio_envio: 7200,
-            updated_at: new Date().toISOString()
-          });
-        
-        if (insertError) {
-          console.error('Error creando configuración inicial:', insertError);
-        }
-      }
-    } catch (error) {
-      console.error('Error inicializando configuración:', error);
-    }
-  }, []);
-
+  
   // Cargar precio de envío desde la base de datos
   const loadShippingPrice = useCallback(async () => {
+    console.log('=== CARGANDO PRECIO DE ENVÍO ===');
     try {
+      console.log('Buscando configuración en la base de datos...');
       const { data: config, error } = await supabaseClient
         .from('configuracion')
         .select('precio_envio')
         .eq('id', 1)
         .single();
       
+      console.log('Resultado de carga:', { config, error });
+      
       if (error) {
         console.error('Error cargando precio de envío:', error);
         // Fallback a localStorage si hay error
         const savedPrice = localStorage.getItem('shippingPrice');
+        console.log('Fallback a localStorage, precio guardado:', savedPrice);
         if (savedPrice) {
           const price = parseInt(savedPrice, 10);
           setShippingPrice(price);
           setTempShippingPrice(price.toString());
+          console.log('Precio desde localStorage aplicado:', price);
         }
         return;
       }
       
       if (config && config.precio_envio) {
         const price = config.precio_envio;
+        console.log('Precio desde base de datos:', price);
         setShippingPrice(price);
         setTempShippingPrice(price.toString());
         // También guardar en localStorage como backup
         localStorage.setItem('shippingPrice', price.toString());
+        console.log('Precio aplicado y guardado en localStorage:', price);
+      } else {
+        console.log('No se encontró configuración o precio_envio es nulo');
       }
     } catch (error) {
       console.error('Error cargando precio de envío:', error);
     }
+    console.log('=== FIN CARGA PRECIO ENVÍO ===');
   }, []);
 
   // Guardar precio de envío en la base de datos
   const saveShippingPrice = useCallback(async () => {
+    console.log('=== GUARDANDO PRECIO DE ENVÍO ===');
+    console.log('Precio temporal a guardar:', tempShippingPrice);
+    
     const newPrice = parseInt(tempShippingPrice, 10);
+    console.log('Precio parseado:', newPrice);
+    
     if (isNaN(newPrice) || newPrice < 0) {
+      console.error('Precio inválido:', newPrice);
       showToast('Por favor ingresa un precio válido', 'error');
       return;
     }
     
     try {
-      const { error } = await supabaseClient
+      console.log('Actualizando base de datos con precio:', newPrice);
+      const { data: updateData, error } = await supabaseClient
         .from('configuracion')
         .update({
           precio_envio: newPrice,
           updated_at: new Date().toISOString()
         })
-        .eq('id', 1);
+        .eq('id', 1)
+        .select();
+      
+      console.log('Resultado de actualización:', { updateData, error });
       
       if (error) {
         console.error('Error guardando precio de envío:', error);
@@ -217,13 +210,16 @@ const AdminPanel = () => {
         return;
       }
       
+      console.log('Actualización exitosa, actualizando estado...');
       setShippingPrice(newPrice);
       localStorage.setItem('shippingPrice', newPrice.toString()); // Backup
+      console.log('Estado actualizado, precio guardado:', newPrice);
       showToast('Precio de envío actualizado correctamente', 'success');
     } catch (error) {
       console.error('Error guardando precio de envío:', error);
       showToast('Error al guardar el precio de envío', 'error');
     }
+    console.log('=== FIN GUARDADO PRECIO ENVÍO ===');
   }, [tempShippingPrice, showToast]);
 
   // Cargar pedidos (con useCallback para evitar re-renders)
@@ -396,6 +392,19 @@ const AdminPanel = () => {
         .order("nombre");
       
       if (error) throw error;
+      
+      console.log("=== PRODUCTOS CARGADOS ===");
+      console.log("Cantidad de productos:", data?.length || 0);
+      if (data && data.length > 0) {
+        console.log("Campos del primer producto:", Object.keys(data[0]));
+        console.log("Campo Imagen existe:", !!data[0].Imagen);
+        console.log("Campo imagen (minúscula) existe:", !!data[0].imagen);
+        if (data[0].Imagen) {
+          console.log("Tipo de imagen:", data[0].Imagen.startsWith('data:') ? 'Base64' : 'URL');
+          console.log("Longitud de imagen:", data[0].Imagen.length);
+        }
+      }
+      
       setProducts(data || []);
     } catch (err) {
       console.error("Error cargando productos:", err);
@@ -447,13 +456,16 @@ const AdminPanel = () => {
         Categoria: productoData.Categoria,
         Imagen: finalImageUrl,
         Oferta: productoData.Oferta,
-        stock: productoData.stock
+        Stock: productoData.Stock
       };
       
       // Eliminar campos que no existen o son nulos/vacíos
       if (!dataToSave.Imagen) delete dataToSave.Imagen;
       if (!dataToSave.Oferta || dataToSave.Oferta.trim() === '') delete dataToSave.Oferta;
-      if (dataToSave.stock === 0 || !dataToSave.stock) delete dataToSave.stock;
+      // Siempre incluir Stock como booleano (true/false)
+      if (dataToSave.Stock === undefined || dataToSave.Stock === null) {
+        dataToSave.Stock = false; // Valor por defecto
+      }
 
       console.log("Guardando producto:", dataToSave);
       console.log("Editando producto:", editingProduct);
@@ -524,12 +536,39 @@ const AdminPanel = () => {
     );
   };
 
-  // Inicializar y cargar precio de envío al montar el componente
+  // Probar conexión a la base de datos
+  const testDatabaseConnection = useCallback(async () => {
+    console.log('=== PROBANDO CONEXIÓN A BASE DE DATOS ===');
+    try {
+      console.log('Intentando leer tabla configuracion...');
+      const { data, error } = await supabaseClient
+        .from('configuracion')
+        .select('*')
+        .limit(1);
+      
+      console.log('Resultado de prueba de conexión:', { data, error });
+      
+      if (error) {
+        console.error('Error en prueba de conexión:', error);
+        if (error.code === 'PGRST116') {
+          console.error('La tabla no existe o no hay permisos para leerla');
+        } else if (error.code === 'PGRST301') {
+          console.error('Error de permisos RLS - revisa las políticas');
+        }
+      } else {
+        console.log('Conexión exitosa a la base de datos');
+      }
+    } catch (err) {
+      console.error('Error general en prueba de conexión:', err);
+    }
+    console.log('=== FIN PRUEBA CONEXIÓN ===');
+  }, []);
+
+  // Cargar precio de envío al montar el componente
   useEffect(() => {
-    initializeShippingConfig().then(() => {
-      loadShippingPrice();
-    });
-  }, [initializeShippingConfig, loadShippingPrice]);
+    testDatabaseConnection();
+    loadShippingPrice();
+  }, [testDatabaseConnection, loadShippingPrice]);
 
   // Cargar productos cuando se cambia a la pestaña de productos
   useEffect(() => {
@@ -1397,17 +1436,25 @@ const AdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
+                  {products.map((product) => {
+                    const imageUrl = product.Imagen || product.imagen;
+                    const hasImage = !!imageUrl;
+                    
+                    return (
                     <tr key={product.Id} className="border-b hover:bg-gray-50">
                       <td className="p-4 font-medium">{product.Id}</td>
                       <td className="p-4">
-                        {product.Imagen ? (
+                        {hasImage ? (
                           <img
-                            src={product.Imagen}
+                            src={imageUrl}
                             alt={product.nombre}
                             className="w-12 h-12 object-cover rounded-lg"
                             onError={(e) => {
+                              console.error(`Error cargando imagen para producto ${product.Id}`);
                               e.target.src = 'https://via.placeholder.com/48/f3f4f6/a1a1aa?text=';
+                            }}
+                            onLoad={() => {
+                              // Solo loguear errores, no éxitos para reducir ruido
                             }}
                           />
                         ) : (
@@ -1427,11 +1474,11 @@ const AdminPanel = () => {
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-black ${
-                          product.stock > 0 
+                          product.Stock 
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-red-100 text-red-700'
                         }`}>
-                          {product.stock || 0}
+                          {product.Stock ? 'Verdadero' : 'Falso'}
                         </span>
                       </td>
                       <td className="p-4">
@@ -1462,7 +1509,8 @@ const AdminPanel = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1499,6 +1547,13 @@ const AdminPanel = () => {
                     <span className="text-sm text-gray-500 font-medium">
                       (precio vigente)
                     </span>
+                    <button
+                      onClick={testDatabaseConnection}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
+                      title="Probar conexión a base de datos"
+                    >
+                      <i className="fas fa-database">Probar DB</i>
+                    </button>
                   </div>
                 </div>
 

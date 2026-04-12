@@ -37,39 +37,52 @@ export default function CartModal() {
   // Cargar precio de envío desde la base de datos
   useEffect(() => {
     const loadShippingPrice = async () => {
+      console.log('=== CARTMODAL: CARGANDO PRECIO DE ENVÍO ===');
       try {
+        console.log('CARTMODAL: Buscando configuración en base de datos...');
         const { data: config, error } = await supabaseClient
           .from('configuracion')
           .select('precio_envio')
           .eq('id', 1)
           .single();
         
+        console.log('CARTMODAL: Resultado de carga:', { config, error });
+        
         if (error) {
-          console.error('Error cargando precio de envío:', error);
+          console.error('CARTMODAL: Error cargando precio de envío:', error);
           // Fallback a localStorage si hay error
           const savedPrice = localStorage.getItem('shippingPrice');
+          console.log('CARTMODAL: Fallback a localStorage, precio guardado:', savedPrice);
           if (savedPrice) {
             const price = parseInt(savedPrice, 10);
             setShippingPrice(price);
+            console.log('CARTMODAL: Precio desde localStorage aplicado:', price);
           }
           return;
         }
         
         if (config && config.precio_envio) {
           const price = config.precio_envio;
+          console.log('CARTMODAL: Precio desde base de datos:', price);
           setShippingPrice(price);
           // También guardar en localStorage como backup
           localStorage.setItem('shippingPrice', price.toString());
+          console.log('CARTMODAL: Precio aplicado y guardado en localStorage:', price);
+        } else {
+          console.log('CARTMODAL: No se encontró configuración o precio_envio es nulo');
         }
       } catch (error) {
-        console.error('Error cargando precio de envío:', error);
+        console.error('CARTMODAL: Error cargando precio de envío:', error);
         // Fallback a localStorage
         const savedPrice = localStorage.getItem('shippingPrice');
+        console.log('CARTMODAL: Fallback a localStorage por error, precio guardado:', savedPrice);
         if (savedPrice) {
           const price = parseInt(savedPrice, 10);
           setShippingPrice(price);
+          console.log('CARTMODAL: Precio desde localStorage aplicado por error:', price);
         }
       }
+      console.log('=== CARTMODAL: FIN CARGA PRECIO ENVÍO ===');
     };
     
     loadShippingPrice();
@@ -626,6 +639,20 @@ export default function CartModal() {
                   <span>${cartTotal.toLocaleString("es-AR")}</span>
                 </div>
 
+                <div className="flex justify-between text-sm font-medium mb-2">
+                  <span>Impuestos Nacionales (8%):</span>
+                  <span className="text-gray-600">
+                    ${(cartTotal * 0.08).toLocaleString("es-AR")}
+                  </span>
+                </div>
+
+                {orderData.metodoEntrega === "envio" && (
+                  <div className="flex justify-between text-sm font-medium mb-2">
+                    <span>Costo de envío:</span>
+                    <span className="text-gray-600">${shippingPrice.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+
                 {/* Descuento de primera compra */}
                 {qualifiesForFirstBuyDiscount(userProfile) && (
                   <div className="flex justify-between text-sm font-medium mb-2">
@@ -635,20 +662,6 @@ export default function CartModal() {
                     <span className="text-green-600">-$1.000</span>
                   </div>
                 )}
-
-                {orderData.metodoEntrega === "envio" && (
-                  <div className="flex justify-between text-sm font-medium mb-2">
-                    <span>Costo de envío:</span>
-                    <span className="text-gray-600">${shippingPrice.toLocaleString('es-AR')}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between text-sm font-medium mb-2">
-                  <span>Impuestos Nacionales (8%):</span>
-                  <span className="text-gray-600">
-                    ${(cartTotal * 0.08).toLocaleString("es-AR")}
-                  </span>
-                </div>
 
                 <div className="border-t pt-2 flex justify-between text-xl font-black">
                   <span>Total:</span>
