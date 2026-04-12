@@ -108,7 +108,7 @@ const AdminPanel = () => {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('pedidos'); // 'pedidos' o 'productos'
+  const [activeTab, setActiveTab] = useState('pedidos'); // 'pedidos', 'productos', o 'configuracion'
   const [products, setProducts] = useState([]);
   const [productLoading, setProductLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -121,6 +121,8 @@ const AdminPanel = () => {
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const timerRef = useRef(null);
   const [tiempoActual, setTiempoActual] = useState(Date.now());
+  const [shippingPrice, setShippingPrice] = useState(7200);
+  const [tempShippingPrice, setTempShippingPrice] = useState('7200');
 
   const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
@@ -129,6 +131,29 @@ const AdminPanel = () => {
   const showConfirm = useCallback((message, onConfirm) => {
     setConfirm({ message, onConfirm });
   }, [setConfirm]);
+
+  // Cargar precio de envío desde localStorage
+  const loadShippingPrice = useCallback(() => {
+    const savedPrice = localStorage.getItem('shippingPrice');
+    if (savedPrice) {
+      const price = parseInt(savedPrice, 10);
+      setShippingPrice(price);
+      setTempShippingPrice(price.toString());
+    }
+  }, []);
+
+  // Guardar precio de envío
+  const saveShippingPrice = useCallback(() => {
+    const newPrice = parseInt(tempShippingPrice, 10);
+    if (isNaN(newPrice) || newPrice < 0) {
+      showToast('Por favor ingresa un precio válido', 'error');
+      return;
+    }
+    
+    setShippingPrice(newPrice);
+    localStorage.setItem('shippingPrice', newPrice.toString());
+    showToast('Precio de envío actualizado correctamente', 'success');
+  }, [tempShippingPrice, showToast]);
 
   // Cargar pedidos (con useCallback para evitar re-renders)
   const cargarPedidosAdmin = useCallback(async () => {
@@ -427,6 +452,11 @@ const AdminPanel = () => {
       }
     );
   };
+
+  // Cargar precio de envío al montar el componente
+  useEffect(() => {
+    loadShippingPrice();
+  }, [loadShippingPrice]);
 
   // Cargar productos cuando se cambia a la pestaña de productos
   useEffect(() => {
@@ -1058,6 +1088,16 @@ const AdminPanel = () => {
             >
               Productos
             </button>
+            <button
+              onClick={() => setActiveTab('configuracion')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+                activeTab === 'configuracion'
+                  ? 'border-[#FF6600] text-[#FF6600]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Configuración
+            </button>
           </nav>
         </div>
 
@@ -1354,6 +1394,75 @@ const AdminPanel = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Sección de Configuración */}
+      {activeTab === 'configuracion' && (
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-zinc-800 flex items-center gap-2">
+              <i className="fas fa-cog text-[#FF6600]"></i>
+              Configuración
+            </h2>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="max-w-2xl">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i className="fas fa-truck text-[#FF6600]"></i>
+                Precio de Envío
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Precio actual de envío:
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black text-green-600">
+                      ${shippingPrice.toLocaleString('es-AR')}
+                    </span>
+                    <span className="text-sm text-gray-500 font-medium">
+                      (precio vigente)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Nuevo precio de envío:
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1 max-w-xs">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        value={tempShippingPrice}
+                        onChange={(e) => setTempShippingPrice(e.target.value)}
+                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-bold text-lg"
+                        placeholder="7200"
+                        min="0"
+                        step="100"
+                      />
+                    </div>
+                    <button
+                      onClick={saveShippingPrice}
+                      className="bg-[#FF6600] hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md flex items-center gap-2"
+                    >
+                      <i className="fas fa-save"></i>
+                      Actualizar Precio
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    ⚠️ Este cambio afectará todos los pedidos nuevos realizados desde la web
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       </main>

@@ -32,6 +32,16 @@ export default function CartModal() {
   });
   const [dbUserData, setDbUserData] = useState(null);
   const [loadingUserData, setLoadingUserData] = useState(false);
+  const [shippingPrice, setShippingPrice] = useState(7200);
+
+  // Cargar precio de envío desde localStorage
+  useEffect(() => {
+    const savedPrice = localStorage.getItem('shippingPrice');
+    if (savedPrice) {
+      const price = parseInt(savedPrice, 10);
+      setShippingPrice(price);
+    }
+  }, []);
 
   // Cargar datos del usuario desde la base de datos
   useEffect(() => {
@@ -200,7 +210,7 @@ export default function CartModal() {
         total:
           orderData.metodoEntrega === "retiro"
             ? (getCartTotalWithDiscount(userProfile) * 1.08)
-            : (getCartTotalWithDiscount(userProfile) + 7200) * 1.08,
+            : (getCartTotalWithDiscount(userProfile) + shippingPrice) * 1.08,
         descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
           ? 1000
           : 0,
@@ -501,7 +511,7 @@ export default function CartModal() {
                     <div className="flex-1">
                       <span className="font-medium">Envío a domicilio</span>
                       <span className="text-sm text-gray-500 ml-2">
-                        (+ $7.200)
+                        (+ ${shippingPrice.toLocaleString('es-AR')})
                       </span>
                     </div>
                   </label>
@@ -597,7 +607,7 @@ export default function CartModal() {
                 {orderData.metodoEntrega === "envio" && (
                   <div className="flex justify-between text-sm font-medium mb-2">
                     <span>Costo de envío:</span>
-                    <span className="text-gray-600">$7.200</span>
+                    <span className="text-gray-600">${shippingPrice.toLocaleString('es-AR')}</span>
                   </div>
                 )}
 
@@ -614,7 +624,7 @@ export default function CartModal() {
                     $
                     {(orderData.metodoEntrega === "retiro"
                       ? (getCartTotalWithDiscount(userProfile) + getCartTotalWithDiscount(userProfile)* 0.08)
-                      : (getCartTotalWithDiscount(userProfile) + 7200 + getCartTotalWithDiscount(userProfile)* 0.08)    
+                      : (getCartTotalWithDiscount(userProfile) + shippingPrice + getCartTotalWithDiscount(userProfile)* 0.08)    
                     ).toLocaleString("es-AR")}
                   </span>
                   <div className="text-xs text-gray-500 mt-1">
