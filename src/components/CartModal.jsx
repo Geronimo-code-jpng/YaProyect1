@@ -372,14 +372,25 @@ export default function CartModal() {
                 key={`${item.Id}-${index}`}
                 className="flex gap-4 mb-5 pb-5 border-b relative"
               >
-                <img
-                  src={
-                    item.imagen ||
-                    "https://via.placeholder.com/80/f3f4f6/a1a1aa?text=Prod"
-                  }
-                  className="w-20 h-20 object-contain rounded-xl border p-1 bg-white"
-                  alt={item.nombre}
-                />
+                {(() => {
+                    const imageUrl = item.Imagen || item.imagen;
+                    const hasImage = !!imageUrl;
+                    
+                    return hasImage ? (
+                      <img
+                        src={imageUrl}
+                        alt={item.nombre}
+                        className="w-20 h-20 object-cover rounded-lg"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/80/f3f4f6/a1a1aa?text=Prod';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <i className="fas fa-image text-gray-400"></i>
+                      </div>
+                    );
+                  })()}
                 <div className="flex-1">
                   <h4 className="font-bold text-sm pr-6">{item.nombre}</h4>
                   <div className="font-black text-[#FF6600]">

@@ -6,15 +6,35 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem("yaCart");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Restaurar las imágenes desde los productos originales si es necesario
+        return parsed.map(item => ({
+          ...item,
+          Imagen: item.Imagen || item.imagen || null
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error("Error cargando carrito desde localStorage:", error);
       return [];
     }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("yaCart", JSON.stringify(cart));
+    try {
+      // Crear una versión del carrito sin imágenes para guardar en localStorage
+      const cartWithoutImages = cart.map(({ Imagen: _Imagen, imagen: _imagen, ...rest }) => rest);
+      localStorage.setItem("yaCart", JSON.stringify(cartWithoutImages));
+    } catch (error) {
+      console.error("Error guardando carrito en localStorage:", error);
+      // Si hay error de quota, limpiar el localStorage y continuar
+      if (error.name === 'QuotaExceededError') {
+        console.warn("LocalStorage quota exceeded, clearing cart storage");
+        localStorage.removeItem("yaCart");
+      }
+    }
   }, [cart]);
 
   const addToCart = (product) => {
