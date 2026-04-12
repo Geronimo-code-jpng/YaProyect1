@@ -132,27 +132,98 @@ const AdminPanel = () => {
     setConfirm({ message, onConfirm });
   }, [setConfirm]);
 
-  // Cargar precio de envío desde localStorage
-  const loadShippingPrice = useCallback(() => {
-    const savedPrice = localStorage.getItem('shippingPrice');
-    if (savedPrice) {
-      const price = parseInt(savedPrice, 10);
-      setShippingPrice(price);
-      setTempShippingPrice(price.toString());
+  // Inicializar tabla de configuración si no existe
+  const initializeShippingConfig = useCallback(async () => {
+    try {
+      // Verificar si ya existe configuración
+      const { error: fetchError } = await supabaseClient
+        .from('configuracion')
+        .select('precio_envio')
+        .eq('id', 1)
+        .single();
+      
+      if (fetchError && fetchError.code === 'PGRST116') {
+        // No existe configuración, crearla con valor por defecto
+        const { error: insertError } = await supabaseClient
+          .from('configuracion')
+          .insert({
+            id: 1,
+            precio_envio: 7200,
+            updated_at: new Date().toISOString()
+          });
+        
+        if (insertError) {
+          console.error('Error creando configuración inicial:', insertError);
+        }
+      }
+    } catch (error) {
+      console.error('Error inicializando configuración:', error);
     }
   }, []);
 
-  // Guardar precio de envío
-  const saveShippingPrice = useCallback(() => {
+  // Cargar precio de envío desde la base de datos
+  const loadShippingPrice = useCallback(async () => {
+    try {
+      const { data: config, error } = await supabaseClient
+        .from('configuracion')
+        .select('precio_envio')
+        .eq('id', 1)
+        .single();
+      
+      if (error) {
+        console.error('Error cargando precio de envío:', error);
+        // Fallback a localStorage si hay error
+        const savedPrice = localStorage.getItem('shippingPrice');
+        if (savedPrice) {
+          const price = parseInt(savedPrice, 10);
+          setShippingPrice(price);
+          setTempShippingPrice(price.toString());
+        }
+        return;
+      }
+      
+      if (config && config.precio_envio) {
+        const price = config.precio_envio;
+        setShippingPrice(price);
+        setTempShippingPrice(price.toString());
+        // También guardar en localStorage como backup
+        localStorage.setItem('shippingPrice', price.toString());
+      }
+    } catch (error) {
+      console.error('Error cargando precio de envío:', error);
+    }
+  }, []);
+
+  // Guardar precio de envío en la base de datos
+  const saveShippingPrice = useCallback(async () => {
     const newPrice = parseInt(tempShippingPrice, 10);
     if (isNaN(newPrice) || newPrice < 0) {
       showToast('Por favor ingresa un precio válido', 'error');
       return;
     }
     
-    setShippingPrice(newPrice);
-    localStorage.setItem('shippingPrice', newPrice.toString());
-    showToast('Precio de envío actualizado correctamente', 'success');
+    try {
+      const { error } = await supabaseClient
+        .from('configuracion')
+        .update({
+          precio_envio: newPrice,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 1);
+      
+      if (error) {
+        console.error('Error guardando precio de envío:', error);
+        showToast('Error al guardar el precio de envío', 'error');
+        return;
+      }
+      
+      setShippingPrice(newPrice);
+      localStorage.setItem('shippingPrice', newPrice.toString()); // Backup
+      showToast('Precio de envío actualizado correctamente', 'success');
+    } catch (error) {
+      console.error('Error guardando precio de envío:', error);
+      showToast('Error al guardar el precio de envío', 'error');
+    }
   }, [tempShippingPrice, showToast]);
 
   // Cargar pedidos (con useCallback para evitar re-renders)
@@ -453,10 +524,12 @@ const AdminPanel = () => {
     );
   };
 
-  // Cargar precio de envío al montar el componente
+  // Inicializar y cargar precio de envío al montar el componente
   useEffect(() => {
-    loadShippingPrice();
-  }, [loadShippingPrice]);
+    initializeShippingConfig().then(() => {
+      loadShippingPrice();
+    });
+  }, [initializeShippingConfig, loadShippingPrice]);
 
   // Cargar productos cuando se cambia a la pestaña de productos
   useEffect(() => {

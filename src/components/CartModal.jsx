@@ -34,13 +34,45 @@ export default function CartModal() {
   const [loadingUserData, setLoadingUserData] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(7200);
 
-  // Cargar precio de envío desde localStorage
+  // Cargar precio de envío desde la base de datos
   useEffect(() => {
-    const savedPrice = localStorage.getItem('shippingPrice');
-    if (savedPrice) {
-      const price = parseInt(savedPrice, 10);
-      setShippingPrice(price);
-    }
+    const loadShippingPrice = async () => {
+      try {
+        const { data: config, error } = await supabaseClient
+          .from('configuracion')
+          .select('precio_envio')
+          .eq('id', 1)
+          .single();
+        
+        if (error) {
+          console.error('Error cargando precio de envío:', error);
+          // Fallback a localStorage si hay error
+          const savedPrice = localStorage.getItem('shippingPrice');
+          if (savedPrice) {
+            const price = parseInt(savedPrice, 10);
+            setShippingPrice(price);
+          }
+          return;
+        }
+        
+        if (config && config.precio_envio) {
+          const price = config.precio_envio;
+          setShippingPrice(price);
+          // También guardar en localStorage como backup
+          localStorage.setItem('shippingPrice', price.toString());
+        }
+      } catch (error) {
+        console.error('Error cargando precio de envío:', error);
+        // Fallback a localStorage
+        const savedPrice = localStorage.getItem('shippingPrice');
+        if (savedPrice) {
+          const price = parseInt(savedPrice, 10);
+          setShippingPrice(price);
+        }
+      }
+    };
+    
+    loadShippingPrice();
   }, []);
 
   // Cargar datos del usuario desde la base de datos
