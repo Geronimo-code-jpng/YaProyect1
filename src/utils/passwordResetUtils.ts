@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-export async function verifyTokenAndResetPassword(token, newPassword) {
+export async function verifyTokenAndResetPassword(token: string, newPassword: string): Promise<{success: boolean, message?: string, error?: string}> {
   try {
     // Verificar si el token existe y no ha expirado
     const { data: tokenData, error: tokenError } = await supabase
@@ -75,7 +75,7 @@ export async function verifyTokenAndResetPassword(token, newPassword) {
   }
 }
 
-export async function verifyTokenOnly(token) {
+export async function verifyTokenOnly(token: string): Promise<{success: boolean, email?: string, error?: string}> {
   try {
     const { data: tokenData, error: tokenError } = await supabase
       .from('email_recovery')

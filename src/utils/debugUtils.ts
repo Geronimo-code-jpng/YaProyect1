@@ -16,7 +16,7 @@ export const checkPasswordColumn = async () => {
   }
 };
 
-export const testPasswordUpdate = async (email, password) => {
+export const testPasswordUpdate = async (email: string, password: string) => {
   try {
     const { data, error } = await supabase
       .from('perfiles')

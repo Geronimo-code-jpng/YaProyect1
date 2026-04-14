@@ -8,7 +8,6 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
     nombre: product?.nombre || '',
     precio: product?.precio || 0,
     Categoria: product?.Categoria || '',
-    Imagen: product?.Imagen || '',
     Oferta: product?.Oferta || '',
     stock: product?.Stock ?? false,
     imageFile: imageFile,
@@ -59,19 +58,13 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
         return;
       }
 
-      // Crear URL para vista previa
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageFile(file);
-        setFormOverrides(prev => ({
-          ...prev,
-          Imagen: reader.result
-        }));
-      };
-      reader.readAsDataURL(file);
+      // Guardar el archivo para procesarlo en AdminPanel
+      setImageFile(file);
+      console.log('Imagen seleccionada para reemplazo:', file.name);
     }
   };
 
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -96,7 +89,6 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
       nombre: formData.nombre.trim(),
       precio: parseFloat(formData.precio),
       Categoria: formData.Categoria.trim(),
-      Imagen: formData.Imagen || '',
       Oferta: formData.Oferta.trim(),
       Stock: Boolean(formData.stock)
     };
@@ -215,44 +207,48 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                 </select>
               </div>
 
-              {/* Imagen */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Imagen del Producto
-                </label>
-                <div className="space-y-3">
-                  {/* Campo para subir imagen */}
-                  <div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#FF6600] file:text-white hover:file:bg-orange-700"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Formatos: JPG, PNG, GIF. Máximo 5MB
-                    </p>
-                  </div>
-                  
-                  {/* Campo para URL (opcional) */}
-                  <div>
-                    <input
-                      type="text"
-                      name="Imagen"
-                      value={formData.Imagen && !formData.imageFile ? formData.Imagen : ''}
-                      onChange={(e) => {
-                        if (!imageFile) {
-                          handleChange(e);
-                        }
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
-                      placeholder="O ingresa URL de imagen (opcional)"
-                      disabled={imageFile}
-                    />
+              {/* Imagen - Solo para edición */}
+              {product && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Reemplazar Imagen del Producto
+                  </label>
+                  <div className="space-y-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800 mb-2">
+                        <i className="fas fa-cloud mr-2"></i>
+                        <strong>Almacenamiento en Supabase Storage:</strong>
+                      </p>
+                      <div className="text-sm text-blue-700 space-y-2">
+                        <p><strong>Sistema:</strong> La imagen se sube a Supabase Storage (1 GB gratuito).</p>
+                        <p><strong>Proceso:</strong> Subida directa con URL pública automática.</p>
+                        <p><strong>Resultado:</strong> La imagen se almacenará en la nube y será visible inmediatamente.</p>
+                        <p class="text-xs text-blue-600 mt-2">Espacio ilimitado para imágenes. Profesional y escalable. Ideal para Vercel.</p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#FF6600] file:text-white hover:file:bg-orange-700"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Formatos: JPG, PNG, GIF. Máximo 5MB
+                      </p>
+                      {imageFile && (
+                        <div className="mt-2 text-sm text-green-600">
+                          <i className="fas fa-check mr-1"></i>
+                          Archivo seleccionado: {imageFile.name}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
+              
               {/* Oferta */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -269,30 +265,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
               </div>
             </div>
 
-            {/* Vista previa de la imagen */}
-            {formData.Imagen && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Vista Previa de Imagen
-                </label>
-                <div className="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
-                  <img
-                    src={formData.Imagen}
-                    alt="Vista previa"
-                    className="w-full h-48 object-cover rounded-lg"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextElementSibling.style.display = 'block';
-                    }}
-                  />
-                  <div className="hidden text-center text-gray-500 py-8">
-                    <i className="fas fa-image text-4xl mb-2"></i>
-                    <p>No se pudo cargar la imagen</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+            
             {/* Botones */}
             <div className="flex gap-3 pt-4">
               <button

@@ -33,7 +33,7 @@ serve(async (req: Request) => {
       Deno.env.get('SUPBASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: req.headers.get('Authorization') },
         },
       }
     )

@@ -1,8 +1,8 @@
 // Utility functions for PedidosModal
 
-let openPedidosRef = null;
+let openPedidosRef: (() => void) | null = null;
 
-export const setOpenPedidosRef = (ref) => {
+export const setOpenPedidosRef = (ref: () => void) => {
   openPedidosRef = ref;
 };
 

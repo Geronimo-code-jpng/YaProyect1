@@ -49,8 +49,8 @@ const CATEGORIAS = [
 // Reemplazá desde tu "export default function..." hasta el "const filtrados = useMemo..." con esto:
 
 export default function CardCatalogo({
-  allProducts = [],
-  searchTerm = "",
+  allProducts,
+  searchTerm,
 }: CardCatalogoProps) {
   const [categoriaActual, setCategoriaActual] = useState<string>("Todas");
 
@@ -110,7 +110,7 @@ export default function CardCatalogo({
           {CATEGORIAS.map((cat) => (
             <div
               key={cat.id}
-              onClick={() => setCategoriaActual(cat.id)} // <- Así se hace el click en React
+              onClick={() => { setCategoriaActual(cat.id); }} // <- Así se hace el click en React
               className="rounded-2xl cursor-pointer transform transition hover:-translate-y-2 hover:shadow-xl flex flex-col items-center justify-center text-center h-40 relative overflow-hidden group bg-gray-200"
             >
               <img

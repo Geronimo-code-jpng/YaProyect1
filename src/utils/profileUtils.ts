@@ -1,8 +1,8 @@
 // Utility functions for ProfileModal
 
-let openProfileRef = null;
+let openProfileRef: (() => void) | null = null;
 
-export const setOpenProfileRef = (ref) => {
+export const setOpenProfileRef = (ref: () => void) => {
   openProfileRef = ref;
 };
 

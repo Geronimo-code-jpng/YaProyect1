@@ -1,5 +1,5 @@
 const WhatsappIcon = ({
-  size = undefined,
+  size,
   color = '#000000',
   strokeWidth = 2,
   background = 'transparent',

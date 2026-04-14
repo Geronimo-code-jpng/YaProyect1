@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import ProductModal from "./ProductModal";
+import { verTodosLosProductos, eliminarProductoPorId, eliminarTodosLosProductos, exportarProductos } from "../utils/productManager";
+import "../utils/initProductManager";
+import { processProductImageReplacement } from "../utils/imageFileHandler";
 
 // Componente de confirmación con razón personalizada para rechazo
 function RejectDialog({ message, onConfirm, onCancel }) {
@@ -389,7 +392,7 @@ const AdminPanel = () => {
       const { data, error } = await supabaseClient
         .from("productos")
         .select("*")
-        .order("nombre");
+        .order("Id");
       
       if (error) throw error;
       
@@ -397,12 +400,7 @@ const AdminPanel = () => {
       console.log("Cantidad de productos:", data?.length || 0);
       if (data && data.length > 0) {
         console.log("Campos del primer producto:", Object.keys(data[0]));
-        console.log("Campo Imagen existe:", !!data[0].Imagen);
-        console.log("Campo imagen (minúscula) existe:", !!data[0].imagen);
-        if (data[0].Imagen) {
-          console.log("Tipo de imagen:", data[0].Imagen.startsWith('data:') ? 'Base64' : 'URL');
-          console.log("Longitud de imagen:", data[0].Imagen.length);
-        }
+        console.log("Usando imágenes estáticas desde /products/");
       }
       
       setProducts(data || []);
@@ -426,25 +424,34 @@ const AdminPanel = () => {
 
   const guardarProducto = async (productoData) => {
     try {
-      let finalImageUrl = productoData.Imagen;
-      
-      // Si hay un archivo de imagen, procesarlo primero
-      if (productoData.imageFile) {
+      let imageUrl = null;
+
+      // Si hay un archivo de imagen y estamos editando, procesar la subida
+      if (productoData.imageFile && editingProduct) {
+        console.log(`Procesando subida de imagen para producto: ${editingProduct.nombre}`);
+        
         try {
-          // Convertir imagen a base64
-          const reader = new FileReader();
+          const replacementResult = await processProductImageReplacement(
+            productoData.imageFile, 
+            editingProduct
+          );
           
-          // Usar Promise para manejar el FileReader asíncrono
-          const base64Image = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(productoData.imageFile);
-          });
-          
-          finalImageUrl = base64Image;
+          if (replacementResult.success) {
+            imageUrl = replacementResult.imageUrl;
+            console.log(`Imagen subida exitosamente: ${imageUrl}`);
+            
+            // Mostrar notificación de éxito
+            showToast(
+              `Imagen "${replacementResult.fileName}" subida exitosamente a Supabase Storage`, 
+              "success",
+              4000
+            );
+          } else {
+            throw new Error(replacementResult.message);
+          }
         } catch (error) {
-          console.error("Error procesando imagen:", error);
-          showToast("Error procesando la imagen", "error");
+          console.error("Error subiendo imagen:", error);
+          showToast("Error subiendo la imagen: " + error.message, "error");
           return;
         }
       }
@@ -454,13 +461,16 @@ const AdminPanel = () => {
         nombre: productoData.nombre,
         precio: productoData.precio,
         Categoria: productoData.Categoria,
-        Imagen: finalImageUrl,
         Oferta: productoData.Oferta,
         Stock: productoData.Stock
       };
       
+      // Si hay una URL de imagen, agregarla
+      if (imageUrl) {
+        dataToSave.Imagen = imageUrl;
+      }
+      
       // Eliminar campos que no existen o son nulos/vacíos
-      if (!dataToSave.Imagen) delete dataToSave.Imagen;
       if (!dataToSave.Oferta || dataToSave.Oferta.trim() === '') delete dataToSave.Oferta;
       // Siempre incluir Stock como booleano (true/false)
       if (dataToSave.Stock === undefined || dataToSave.Stock === null) {
@@ -1406,6 +1416,49 @@ const AdminPanel = () => {
                 <i className="fas fa-plus"></i>
                 Nuevo Producto
               </button>
+              <button
+                onClick={() => {
+                  if (confirm('¿Ver todos los productos en la consola?')) {
+                    verTodosLosProductos();
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+                title="Ver productos en consola"
+              >
+                <i className="fas fa-list"></i>
+                Ver Productos
+              </button>
+              <button
+                onClick={() => {
+                  const id = prompt('Ingrese ID del producto a eliminar:');
+                  if (id && !isNaN(id)) {
+                    if (confirm(`¿Eliminar producto con ID ${id}?`)) {
+                      eliminarProductoPorId(parseInt(id)).then(success => {
+                        if (success) {
+                          cargarProductos();
+                        }
+                      });
+                    }
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+                title="Eliminar producto por ID"
+              >
+                <i className="fas fa-trash"></i>
+                Eliminar
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('¿Exportar productos a la consola?')) {
+                    exportarProductos();
+                  }
+                }}
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+                title="Exportar productos"
+              >
+                <i className="fas fa-download"></i>
+                Exportar
+              </button>
             </div>
           </div>
 
@@ -1437,31 +1490,21 @@ const AdminPanel = () => {
                 </thead>
                 <tbody>
                   {products.map((product) => {
-                    const imageUrl = product.Imagen || product.imagen;
-                    const hasImage = !!imageUrl;
                     
                     return (
                     <tr key={product.Id} className="border-b hover:bg-gray-50">
                       <td className="p-4 font-medium">{product.Id}</td>
                       <td className="p-4">
-                        {hasImage ? (
-                          <img
-                            src={imageUrl}
-                            alt={product.nombre}
-                            className="w-12 h-12 object-cover rounded-lg"
-                            onError={(e) => {
-                              console.error(`Error cargando imagen para producto ${product.Id}`);
-                              e.target.src = 'https://via.placeholder.com/48/f3f4f6/a1a1aa?text=';
-                            }}
-                            onLoad={() => {
-                              // Solo loguear errores, no éxitos para reducir ruido
-                            }}
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <i className="fas fa-image text-gray-400"></i>
-                          </div>
-                        )}
+                        <img
+                          src={product.Imagen || product.imagen || `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`}
+                          alt={product.nombre}
+                          className="w-12 h-12 object-contain rounded-lg"
+                          onError={(e) => {
+                            console.error(`Error cargando imagen para producto ${product.Id}`);
+                            e.target.src = `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`;
+                          }}
+                          title={product.Imagen || product.imagen ? 'Imagen de Supabase Storage' : 'Sin imagen'}
+                        />
                       </td>
                       <td className="p-4 font-medium">{product.nombre}</td>
                       <td className="p-4">

@@ -1,6 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useCart } from '../contexts/CartContext';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useCart } from "../contexts/CartContext";
+
+// Función para generar URL de imagen por defecto si no hay imagen personalizada
+export const getDefaultProductImage = (productId) => {
+  return `https://via.placeholder.com/300x300/f3f4f6/a1a1aa?text=Producto+${productId}`;
+};
 
 export default function ProductsGrid({ products }) {
   const { addToCart } = useCart();
@@ -9,24 +14,29 @@ export default function ProductsGrid({ products }) {
   const handleAddToCart = (producto, event) => {
     event.preventDefault();
     event.stopPropagation();
-    
-    const nombreSeguro = producto.nombre ? producto.nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, '').trim() : 'Producto';
+
+    const nombreSeguro = producto.nombre
+      ? producto.nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, "").trim()
+      : "Producto";
     const precioNumero = Number(producto.precio) || 0;
-    const imgSrc = producto.Imagen || producto.imagen || 'https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Sin+Foto';
+    const imgSrc =
+      producto.Imagen ||
+      producto.imagen ||
+      getDefaultProductImage(producto.Id);
 
     addToCart({
       Id: producto.Id,
       nombre: nombreSeguro,
       precio: precioNumero,
       imagen: imgSrc,
-      cantidad: 1
+      cantidad: 1,
     });
-    
+
     // Visual feedback using React state
-    setAddedToCart(prev => new Set(prev).add(producto.Id));
-    
+    setAddedToCart((prev) => new Set(prev).add(producto.Id));
+
     setTimeout(() => {
-      setAddedToCart(prev => {
+      setAddedToCart((prev) => {
         const newSet = new Set(prev);
         newSet.delete(producto.Id);
         return newSet;
@@ -43,11 +53,19 @@ export default function ProductsGrid({ products }) {
   }
 
   return (
-    <div id="productsGrid" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+    <div
+      id="productsGrid"
+      className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
+    >
       {products.map((producto) => {
-        const imgSrc = producto.Imagen || producto.imagen || 'https://via.placeholder.com/300/f3f4f6/a1a1aa?text=Sin+Foto';
-        const unidadVenta = producto.Categoria || producto.categoria || 'UNIDAD';
-        const nombreSeguro = producto.nombre ? producto.nombre.replace(/"/g, '&quot;').replace(/'/g, '&#39;').trim() : 'Producto';
+        const unidadVenta =
+          producto.Categoria || producto.categoria || "UNIDAD";
+        const nombreSeguro = producto.nombre
+          ? producto.nombre
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;")
+              .trim()
+          : "Producto";
         const precioNumero = Number(producto.precio) || 0;
 
         return (
@@ -68,11 +86,23 @@ export default function ProductsGrid({ products }) {
 
             {/* Product Image */}
             <div className="relative pt-[100%] bg-white p-4">
-              <img 
-                src={imgSrc} 
-                className="absolute inset-0 w-full h-full object-contain p-5 mix-blend-multiply" 
-                alt={nombreSeguro}
-              />
+              {(() => {
+                // Usar solo imágenes de Supabase Storage o placeholder
+                const imgSrc = producto.Imagen || producto.imagen || getDefaultProductImage(producto.Id);
+                return (
+                  <img
+                    src={imgSrc}
+                    className="absolute inset-0 w-full h-full object-contain p-5 mix-blend-multiply"
+                    alt={nombreSeguro}
+                    onError={(e) => {
+                      // Si falla la imagen, usar placeholder
+                      if (e.target.src !== getDefaultProductImage(producto.Id)) {
+                        e.target.src = getDefaultProductImage(producto.Id);
+                      }
+                    }}
+                  />
+                );
+              })()}
             </div>
 
             {/* Product Info */}
@@ -83,25 +113,27 @@ export default function ProductsGrid({ products }) {
               <div className="mt-auto">
                 {producto.Oferta && (
                   <p className="text-xs text-red-600 font-bold mb-1">
-                    OFERTA: -${Number(producto.Oferta).toLocaleString('es-AR')}
+                    OFERTA: -${Number(producto.Oferta).toLocaleString("es-AR")}
                   </p>
                 )}
                 <p className="text-xs text-gray-500 font-semibold mb-1">
                   Precio x {unidadVenta.toLowerCase()}
                 </p>
                 <p className="text-3xl font-black text-zinc-900 tracking-tight">
-                  ${precioNumero.toLocaleString('es-AR')}
+                  ${precioNumero.toLocaleString("es-AR")}
                 </p>
-                <button 
+                <button
                   onClick={(e) => handleAddToCart(producto, e)}
                   className={`mt-4 w-full border-2 py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700 ${
-                    addedToCart.has(producto.Id) 
-                      ? 'bg-[#FF6600] text-white border-[#FF6600]' 
-                      : 'bg-white text-[#FF6600] border-[#FF6600] hover:bg-[#FF6600] hover:text-white'
+                    addedToCart.has(producto.Id)
+                      ? "bg-[#FF6600] text-white border-[#FF6600]"
+                      : "bg-white text-[#FF6600] border-[#FF6600] hover:bg-[#FF6600] hover:text-white"
                   }`}
                 >
-                  <i className={`fas ${addedToCart.has(producto.Id) ? 'fa-check' : 'fa-cart-plus'}`}></i> 
-                  {addedToCart.has(producto.Id) ? 'AGREGADO' : 'AGREGAR'}
+                  <i
+                    className={`fas ${addedToCart.has(producto.Id) ? "fa-check" : "fa-cart-plus"}`}
+                  ></i>
+                  {addedToCart.has(producto.Id) ? "AGREGADO" : "AGREGAR"}
                 </button>
               </div>
             </div>
