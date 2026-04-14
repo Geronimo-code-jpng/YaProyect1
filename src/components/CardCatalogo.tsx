@@ -58,7 +58,6 @@ export default function CardCatalogo({
     // PARACAÍDAS: (searchTerm || '') asegura que nunca sea undefined
     const term = (searchTerm || "").toLowerCase().trim();
     const estaBuscando = term !== "";
-
     return (allProducts || []).filter((p) => {
       const coincideTexto = (p.nombre || "").toLowerCase().includes(term);
 

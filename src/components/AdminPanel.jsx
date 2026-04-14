@@ -465,10 +465,16 @@ const AdminPanel = () => {
         Stock: productoData.Stock
       };
       
-      // Si hay una URL de imagen, agregarla
+      // Lógica para manejar la imagen:
       if (imageUrl) {
+        // Si se subió una nueva imagen, usar la nueva URL
         dataToSave.Imagen = imageUrl;
+      } else if (editingProduct && (editingProduct.Imagen || editingProduct.imagen)) {
+        // Si estamos editando y no se subió nueva imagen, mantener la existente
+        dataToSave.Imagen = editingProduct.Imagen || editingProduct.imagen;
+        console.log("Manteniendo imagen existente:", dataToSave.Imagen);
       }
+      // Si es un producto nuevo y no se subió imagen, no se incluye el campo Imagen
       
       // Eliminar campos que no existen o son nulos/vacíos
       if (!dataToSave.Oferta || dataToSave.Oferta.trim() === '') delete dataToSave.Oferta;
@@ -491,7 +497,15 @@ const AdminPanel = () => {
           console.error("Error de Supabase actualizando:", error);
           throw error;
         }
-        showToast("Producto actualizado exitosamente", "success");
+        
+        // Mensaje personalizado según si se cambió la imagen o no
+        if (imageUrl) {
+          showToast("Producto actualizado exitosamente con nueva imagen", "success");
+        } else if (editingProduct.Imagen || editingProduct.imagen) {
+          showToast("Producto actualizado exitosamente (imagen mantenida)", "success");
+        } else {
+          showToast("Producto actualizado exitosamente", "success");
+        }
       } else {
         // Crear nuevo producto
         const { error } = await supabaseClient

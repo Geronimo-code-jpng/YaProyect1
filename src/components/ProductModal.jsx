@@ -198,12 +198,13 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                   <option value="ALIMENTO">Alimentos</option>
                   <option value="BEBIDAS">Bebidas</option>
                   <option value="LACTEOS">Lácteos</option>
-                  <option value="HARINA">Harina</option>
-                  <option value="ACEITE">Aceite</option>
+                  <option value="HARINA">Harinas</option>
+                  <option value="ACEITE">Aceites</option>
                   <option value="VINOS">Vinos</option>
                   <option value="CERVEZAS">Cervezas</option>
-                  <option value="YERBA">Yerba</option>
+                  <option value="YERBA">Yerbas</option>
                   <option value="APERITIVOS">Aperitivos</option>
+                  <option value="CIGARRILLOS">Cigarrillos</option>
                 </select>
               </div>
 
