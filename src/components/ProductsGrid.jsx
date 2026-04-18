@@ -103,6 +103,16 @@ export default function ProductsGrid({ products }) {
                   />
                 );
               })()}
+              
+              {/* Barra de SIN STOCK */}
+              {(!producto.Stock && producto.Stock !== undefined) && (
+                <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-20">
+                  <div className="bg-gray-600 text-white px-6 py-3 rounded-lg font-black text-lg shadow-lg transform rotate-12">
+                    <i className="fas fa-times-circle mr-2"></i>
+                    SIN STOCK
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Product Info */}
@@ -117,23 +127,36 @@ export default function ProductsGrid({ products }) {
                   </p>
                 )}
                 <p className="text-xs text-gray-500 font-semibold mb-1">
-                  Precio x {unidadVenta.toLowerCase()}
+                  Precio x Bulto
                 </p>
                 <p className="text-3xl font-black text-zinc-900 tracking-tight">
                   ${precioNumero.toLocaleString("es-AR")}
                 </p>
                 <button
                   onClick={(e) => handleAddToCart(producto, e)}
+                  disabled={!producto.Stock && producto.Stock !== undefined}
                   className={`mt-4 w-full border-2 py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700 ${
-                    addedToCart.has(producto.Id)
+                    (!producto.Stock && producto.Stock !== undefined)
+                      ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed"
+                      : addedToCart.has(producto.Id)
                       ? "bg-[#FF6600] text-white border-[#FF6600]"
                       : "bg-white text-[#FF6600] border-[#FF6600] hover:bg-[#FF6600] hover:text-white"
                   }`}
                 >
                   <i
-                    className={`fas ${addedToCart.has(producto.Id) ? "fa-check" : "fa-cart-plus"}`}
+                    className={`fas ${
+                      (!producto.Stock && producto.Stock !== undefined)
+                        ? "fa-ban"
+                        : addedToCart.has(producto.Id)
+                        ? "fa-check"
+                        : "fa-cart-plus"
+                    }`}
                   ></i>
-                  {addedToCart.has(producto.Id) ? "AGREGADO" : "AGREGAR"}
+                  {(!producto.Stock && producto.Stock !== undefined)
+                    ? "NO DISPONIBLE"
+                    : addedToCart.has(producto.Id)
+                    ? "AGREGADO"
+                    : "AGREGAR"}
                 </button>
               </div>
             </div>

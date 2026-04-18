@@ -106,8 +106,7 @@ function AppContent() {
       </a>
 
       {/* Promo modal - Solo mostrar si no hay sesión iniciada o es primera compra */}
-      {showPromoModal &&
-        (!user || (userProfile?.cantidad_pedidos || 0) === 0) && (
+      {showPromoModal && !user && (
           <div
             id="promoModal"
             className="fixed inset-0 bg-black/60 z-99999 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity"

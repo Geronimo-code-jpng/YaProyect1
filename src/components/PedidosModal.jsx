@@ -713,21 +713,31 @@ export default function PedidosModal() {
                               carritoArray.map((item, index) => (
                                 <div
                                   key={index}
-                                  className="flex justify-between text-sm border-b pb-1"
+                                  className={`flex justify-between text-sm border-b pb-1 ${
+                                    item.cantidad === 0 ? 'opacity-50 line-through' : ''
+                                  }`}
                                 >
                                   <div className="flex-1">
-                                    <span className="font-medium">
+                                    <span className={`font-medium ${
+                                      item.cantidad === 0 ? 'text-gray-400 line-through' : ''
+                                    }`}>
                                       {item.nombre}
                                     </span>
-                                    <span className="text-gray-500 ml-2">
+                                    <span className={`text-gray-500 ml-2 ${
+                                      item.cantidad === 0 ? 'line-through' : ''
+                                    }`}>
                                       x{item.cantidad}
                                     </span>
                                   </div>
                                   <div className="text-right">
-                                    <span className="font-black">
+                                    <span className={`font-black ${
+                                      item.cantidad === 0 ? 'text-gray-400 line-through' : ''
+                                    }`}>
                                       ${(item.precio_unitario || item.precio || 0).toLocaleString("es-AR")} c/u
                                     </span>
-                                    <div className="text-[#FF6600] font-bold">
+                                    <div className={`text-[#FF6600] font-bold ${
+                                      item.cantidad === 0 ? 'text-gray-400 line-through' : ''
+                                    }`}>
                                       $
                                       {(
                                         (item.precio_unitario || item.precio || 0) * item.cantidad
@@ -769,6 +779,12 @@ export default function PedidosModal() {
                             <span>Total:</span>
                             <span className="text-[#FF6600]">
                               ${pedido.total?.toLocaleString("es-AR") || "0"} <p className="text-xs text-gray-500">Impuestos incluidos</p>
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-600 border-t pt-2">
+                            <span>Impuestos (21%):</span>
+                            <span>
+                              ${((pedido.total || 0) * 0.21).toLocaleString("es-AR")}
                             </span>
                           </div>
                         </div>
