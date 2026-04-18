@@ -4,6 +4,7 @@ import { Product } from '../types';
 const PRODUCT_IMAGE_MAP: Record<string, string> = {
   'ACEITE': 'aceite.png',
   'ALIMENTO': 'alimento.png',
+  'AZUCAR': 'azucar.png',
   'BEBIDAS': 'bebidas.png',
   'CERVEZAS': 'cervezas.png',
   'LACTEOS': 'lacteos.png',

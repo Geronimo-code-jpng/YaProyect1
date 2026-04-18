@@ -39,6 +39,9 @@ export default function ProductDetailPage() {
   }, [id]);
 
   const handleAddToCart = () => {
+    if (product && (!product.Stock || product.Stock === undefined)) {
+      return; // No agregar si no hay stock
+    }
     if (product) {
       addToCart({
         ...product,
@@ -148,10 +151,22 @@ export default function ProductDetailPage() {
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}
-            className="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg"
+            disabled={!product.Stock && product.Stock !== undefined}
+            className={`w-full text-lg font-black py-4 rounded-xl transition shadow-lg ${
+              (!product.Stock && product.Stock !== undefined)
+                ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed"
+                : "bg-[#FF6600] text-white hover:bg-orange-700"
+            }`}
           >
-            <i className="fas fa-shopping-cart mr-2"></i>
-            Agregar al Carrito
+            <i className={`fas mr-2 ${
+              (!product.Stock && product.Stock !== undefined)
+                ? "fa-ban"
+                : "fa-shopping-cart"
+            }`}></i>
+            {(!product.Stock && product.Stock !== undefined)
+              ? "NO DISPONIBLE"
+              : "Agregar al Carrito"
+            }
           </button>
 
           {/* Product Features */}
@@ -159,8 +174,17 @@ export default function ProductDetailPage() {
             <h3 className="text-lg font-black text-zinc-900 mb-4">Características</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
-                <i className="fas fa-check-circle text-green-500"></i>
-                <span className="text-gray-600">Stock disponible</span>
+                <i className={`fas ${
+                  (!product.Stock && product.Stock !== undefined)
+                    ? "fa-times-circle text-red-500"
+                    : "fa-check-circle text-green-500"
+                }`}></i>
+                <span className="text-gray-600">
+                  {(!product.Stock && product.Stock !== undefined)
+                    ? "Sin stock"
+                    : "Stock disponible"
+                  }
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <i className="fas fa-truck text-[#FF6600]"></i>

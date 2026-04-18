@@ -36,6 +36,7 @@ const CATEGORIAS = [
   { id: "LACTEOS", nombre: "Lácteos", imagen: "./carpetafotos/lacteos.jpg" },
   { id: "HARINA", nombre: "Harinas", imagen: "./carpetafotos/harinas.jpg" },
   { id: "ACEITE", nombre: "Aceites", imagen: "./carpetafotos/aceites.jpg" },
+  { id: "AZUCAR", nombre: "Azúcares", imagen: "./carpetafotos/azucar.jpg" },
   { id: "VINOS", nombre: "Vinos", imagen: "./carpetafotos/vinos.jpg" },
   { id: "CERVEZAS", nombre: "Cervezas", imagen: "./carpetafotos/cervezas.jpg" },
   { id: "YERBA", nombre: "Yerbas", imagen: "./carpetafotos/yerbas.jpg" },

@@ -200,6 +200,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                   <option value="LACTEOS">Lácteos</option>
                   <option value="HARINA">Harinas</option>
                   <option value="ACEITE">Aceites</option>
+                  <option value="AZUCAR">Azúcares</option>
                   <option value="VINOS">Vinos</option>
                   <option value="CERVEZAS">Cervezas</option>
                   <option value="YERBA">Yerbas</option>

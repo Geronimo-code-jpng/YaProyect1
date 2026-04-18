@@ -44,6 +44,7 @@ export default function CategoriesPage() {
     'ALIMENTO': 'bg-green-100 text-green-800',
     'LACTEOS': 'bg-yellow-100 text-yellow-800',
     'ACEITE': 'bg-amber-100 text-amber-800',
+    'AZUCAR': 'bg-pink-100 text-pink-800',
     'YERBA': 'bg-emerald-100 text-emerald-800',
   };
 
@@ -52,6 +53,7 @@ export default function CategoriesPage() {
     'ALIMENTO': 'fa-utensils',
     'LACTEOS': 'fa-cheese',
     'ACEITE': 'fa-droplet',
+    'AZUCAR': 'fa-cube',
     'YERBA': 'fa-mug-hot',
   };
 

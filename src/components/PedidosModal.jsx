@@ -760,33 +760,61 @@ export default function PedidosModal() {
                           Resumen del Pedido:
                         </h5>
                         <div className="space-y-2 text-sm bg-gray-50 p-3 rounded-lg">
-                          <div className="flex justify-between">
-                            <span>Subtotal:</span>
-                            <span>
-                              ${pedido.total?.toLocaleString("es-AR") || "0"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-green-600">
-                            <span>Envío:</span>
-                            <span>
-                              {pedido.metodo === "retiro" 
-                                ? "Gratis" 
-                                : "$7.300"
+                          {(() => {
+                            // Calcular valores correctamente
+                            let carritoArray = [];
+                            if (typeof pedido.carrito === "string") {
+                              try {
+                                carritoArray = JSON.parse(pedido.carrito);
+                              } catch {
+                                carritoArray = [];
                               }
-                            </span>
-                          </div>
-                          <div className="flex justify-between font-black text-lg border-t pt-2">
-                            <span>Total:</span>
-                            <span className="text-[#FF6600]">
-                              ${pedido.total?.toLocaleString("es-AR") || "0"} <p className="text-xs text-gray-500">Impuestos incluidos</p>
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm text-gray-600 border-t pt-2">
-                            <span>Impuestos (21%):</span>
-                            <span>
-                              ${((pedido.total || 0) * 0.21).toLocaleString("es-AR")}
-                            </span>
-                          </div>
+                            } else if (Array.isArray(pedido.carrito)) {
+                              carritoArray = pedido.carrito;
+                            }
+                            
+                            // Calcular subtotal real de los productos
+                            const subtotal = carritoArray.reduce((total, item) => {
+                              const precioUnitario = item.precio_unitario || item.precio || 0;
+                              return total + (precioUnitario * item.cantidad);
+                            }, 0);
+                            
+                            const envioCosto = pedido.metodo === "retiro" ? 0 : 7300;
+                            const impuestos = Math.round(subtotal * 0.08);
+                            const totalFinal = subtotal + impuestos + envioCosto;
+                            
+                            return (
+                              <>
+                                <div className="flex justify-between">
+                                  <span>Subtotal:</span>
+                                  <span>
+                                    ${subtotal.toLocaleString("es-AR")}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-green-600">
+                                  <span>Envío:</span>
+                                  <span>
+                                    {pedido.metodo === "retiro" 
+                                      ? "Gratis" 
+                                      : `$${envioCosto.toLocaleString("es-AR")}`
+                                    }
+                                  </span>
+                                </div>
+                                <div className="flex justify-between font-black text-lg border-t pt-2">
+                                  <span>Total:</span>
+                                  <span className="text-[#FF6600]">
+                                    ${totalFinal.toLocaleString("es-AR")}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-sm text-gray-600 border-t pt-2">
+                                  <span>Impuestos (8%):</span>
+                                  <span>
+                                    ${impuestos.toLocaleString("es-AR")}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

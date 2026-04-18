@@ -508,9 +508,16 @@ const AdminPanel = () => {
         }
       } else {
         // Crear nuevo producto
+        // Generar un ID numérico único para el nuevo producto (int8)
+        const nuevoId = Date.now(); // Timestamp actual como número entero
+        const dataToInsert = {
+          ...dataToSave,
+          Id: nuevoId
+        };
+        
         const { error } = await supabaseClient
           .from("productos")
-          .insert(dataToSave);
+          .insert(dataToInsert);
         
         if (error) {
           console.error("Error de Supabase insertando:", error);

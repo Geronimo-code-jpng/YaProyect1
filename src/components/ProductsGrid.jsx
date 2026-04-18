@@ -162,7 +162,6 @@ export default function ProductsGrid({ products }) {
             </div>
           </Link>
         );
-      })}
-    </div>
+      })}    </div>
   );
 }

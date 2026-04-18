@@ -21,6 +21,7 @@ const CATEGORIAS = [
   { id: "LACTEOS", nombre: " Lácteos", imagen: "./lacteos.jpg" },
   { id: "HARINA", nombre: " Harinas", imagen: "./harina.jpg" },
   { id: "ACEITE", nombre: " Aceites", imagen: "./aceite.jpg" },
+  { id: "AZUCAR", nombre: " Azúcares", imagen: "./azucar.jpg" },
   { id: "VINOS", nombre: " Vinos", imagen: "./vinos.jpg" },
   {
     id: "CERVEZAS",
