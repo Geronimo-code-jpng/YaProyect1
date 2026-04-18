@@ -9,7 +9,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
     precio: product?.precio || 0,
     Categoria: product?.Categoria || '',
     Oferta: product?.Oferta || '',
-    stock: product?.Stock ?? false,
+    Stock: product?.Stock ?? false,
     imageFile: imageFile,
     ...formOverrides
   }), [product, imageFile, formOverrides]);
@@ -27,10 +27,10 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
       } else {
         processedValue = '';
       }
-      // Guardar como 'stock' (minúscula) para mantener consistencia con formData
+      // Guardar como 'Stock' para mantener consistencia con formData
       setFormOverrides(prev => ({
         ...prev,
-        stock: processedValue
+        Stock: processedValue
       }));
       return;
     } else if (type === 'number') {
@@ -90,7 +90,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
       precio: parseFloat(formData.precio),
       Categoria: formData.Categoria.trim(),
       Oferta: formData.Oferta.trim(),
-      Stock: Boolean(formData.stock)
+      Stock: Boolean(formData.Stock)
     };
 
     // Si hay un archivo de imagen, incluirlo
@@ -162,7 +162,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                 </label>
                 <select
                   name="Stock"
-                  value={formData.stock}
+                  value={formData.Stock}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
                   required
@@ -171,12 +171,12 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                   <option value={true}>Hay stock</option>
                   <option value={false}>No hay stock</option>
                 </select>
-                {formData.stock !== undefined && formData.stock !== null && (
+                {formData.Stock !== undefined && formData.Stock !== null && (
                   <div className="mt-2">
                     <span className={`text-sm font-medium ${
-                      formData.stock ? 'text-green-600' : 'text-red-600'
+                      formData.Stock ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {formData.stock ? 'Hay stock' : 'No hay stock'}
+                      {formData.Stock ? 'Hay stock' : 'No hay stock'}
                     </span>
                   </div>
                 )}
