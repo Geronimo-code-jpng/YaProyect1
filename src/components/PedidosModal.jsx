@@ -4,6 +4,27 @@ import { useAlert } from "../contexts/AlertContext";
 import { supabase as supabaseClient, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
 import { setOpenPedidosRef } from "../utils/pedidosUtils";
 
+// Función para obtener precio de envío desde la base de datos
+const getShippingPriceFromDB = async () => {
+  try {
+    const { data, error } = await supabaseClient
+      .from("configuracion")
+      .select("precio_envio")
+      .eq("id", 1)
+      .single();
+    
+    if (error) {
+      console.error("Error obteniendo precio de envío:", error);
+      return 7300; // Valor por defecto
+    }
+    
+    return data.precio_envio || 7300;
+  } catch (error) {
+    console.error("Error general obteniendo precio de envío:", error);
+    return 7300; // Valor por defecto
+  }
+};
+
 // Countdown Timer Component
 function CountdownTimer({ expira_en, onExpire }) {
   const calculateTimeLeft = useCallback(() => {
@@ -54,6 +75,16 @@ export default function PedidosModal() {
   const [showModal, setShowModal] = useState(false);
   const [pedidos, setPedidos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [shippingPrice, setShippingPrice] = useState(7300); // Estado para precio de envío
+
+  // Cargar precio de envío desde la base de datos
+  useEffect(() => {
+    const loadShippingPrice = async () => {
+      const price = await getShippingPriceFromDB();
+      setShippingPrice(price);
+    };
+    loadShippingPrice();
+  }, []);
 
   const openPedidos = () => {
     setShowModal(true);
@@ -779,7 +810,7 @@ export default function PedidosModal() {
                               return total + (precioUnitario * item.cantidad);
                             }, 0);
                             
-                            const envioCosto = pedido.metodo === "retiro" ? 0 : 7300;
+                            const envioCosto = pedido.metodo === "retiro" ? 0 : shippingPrice;
                             const impuestos = Math.round(subtotal * 0.08);
                             const totalFinal = subtotal + impuestos + envioCosto;
                             

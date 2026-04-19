@@ -6,7 +6,6 @@ import { useProducts } from "../contexts/ProductContext";
 import {
   verTodosLosProductos,
   eliminarProductoPorId,
-  eliminarTodosLosProductos,
   exportarProductos,
 } from "../utils/productManager";
 import "../utils/initProductManager";
@@ -122,7 +121,7 @@ export default function AdminPanel() {
   const [products, setProducts] = useState([]);
   const [product, setProduct] = useState();
   const [productLoading, setProductLoading] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [loadingProductId, setLoadingProductId] = useState(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
@@ -198,6 +197,8 @@ export default function AdminPanel() {
         .select("*")
         .eq("Id", productId)
         .single();
+
+      console.log(data);
       if (error) {
         console.error("Error: ", error);
         return;
@@ -435,9 +436,9 @@ export default function AdminPanel() {
   }, [loadProductsForAdmin, setProducts, showToast]);
 
   const abrirModalProducto = (productoId) => {
-    console.log(productoId)
-    getProductById(productoId)
-    setProductModalOpen(true);
+    console.log(productoId);
+    setProductModalOpen(true); // Abrir modal inmediatamente
+    getProductById(productoId); // Cargar producto en segundo plano
   };
 
   const cerrarModalProducto = () => {
@@ -494,10 +495,7 @@ export default function AdminPanel() {
       if (imageUrl) {
         // Si se subió una nueva imagen, usar la nueva URL
         dataToSave.Imagen = imageUrl;
-      } else if (
-        product &&
-        (product.Imagen || product.imagen)
-      ) {
+      } else if (product && (product.Imagen || product.imagen)) {
         // Si estamos editando y no se subió nueva imagen, mantener la existente
         dataToSave.Imagen = product.Imagen || product.imagen;
         console.log("Manteniendo imagen existente:", dataToSave.Imagen);
@@ -903,11 +901,21 @@ export default function AdminPanel() {
         ? pedidoEditando.carrito
         : JSON.parse(pedidoEditando.carrito || "[]");
 
+      // Calcular el total correcto basado en el carrito actualizado
+      const subtotal = carritoParaGuardar.reduce((total, item) => {
+        const precioUnitario = item.precio_unitario || item.precio || 0;
+        return total + (precioUnitario * item.cantidad);
+      }, 0);
+      
+      const envioCosto = pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
+      const impuestos = subtotal * 0.08;
+      const totalCalculado = subtotal + impuestos + envioCosto;
+
       const { error } = await supabaseClient
         .from("pedidos")
         .update({
           carrito: carritoParaGuardar,
-          total: pedidoEditando.total,
+          total: totalCalculado, // Usar el total calculado
           estado: "modificado",
         })
         .eq("id", pedidoEditando.id);
@@ -1617,17 +1625,20 @@ export default function AdminPanel() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => abrirModalProducto(product.Id)}
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
+                                disabled={loadingProductId === product.Id}
+                                className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Editar"
                               >
-                                <i className="fas fa-edit">Editar</i>
+                                <i className="fas fa-edit mr-1"></i>
+                                Editar
                               </button>
                               <button
                                 onClick={() => eliminarProducto(product.Id)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
+                                className="bg-red-500 cursor-pointer hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
                                 title="Eliminar"
                               >
-                                <i className="fas fa-trash">Eliminar</i>
+                                <i className="fas fa-trash mr-1"></i>
+                                Eliminar
                               </button>
                             </div>
                           </td>
@@ -1672,10 +1683,11 @@ export default function AdminPanel() {
                       </span>
                       <button
                         onClick={testDatabaseConnection}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
+                        className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
                         title="Probar conexión a base de datos"
                       >
-                        <i className="fas fa-database">Probar DB</i>
+                        <i className="fas fa-database mr-1"></i>
+                        Probar DB
                       </button>
                     </div>
                   </div>
@@ -1863,13 +1875,58 @@ export default function AdminPanel() {
             </div>
 
             <div className="p-4 border-t border-gray-200 bg-white">
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold text-gray-600">
-                  Total Modificado:
-                </span>
-                <span className="text-2xl font-black text-[#FF6600]">
-                  ${pedidoEditando.total.toLocaleString("es-AR")}
-                </span>
+              {/* Desglose del pedido */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-bold text-gray-700 mb-3 text-sm">Desglose del Pedido:</h4>
+                <div className="space-y-2 text-sm">
+                  {(() => {
+                    // Calcular desglose del pedido
+                    let carritoArray = [];
+                    if (typeof pedidoEditando.carrito === "string") {
+                      try {
+                        carritoArray = JSON.parse(pedidoEditando.carrito);
+                      } catch {
+                        carritoArray = [];
+                      }
+                    } else if (Array.isArray(pedidoEditando.carrito)) {
+                      carritoArray = pedidoEditando.carrito;
+                    }
+                    
+                    const subtotal = carritoArray.reduce((total, item) => {
+                      const precioUnitario = item.precio_unitario || item.precio || 0;
+                      return total + (precioUnitario * item.cantidad);
+                    }, 0);
+                    
+                    const envioCosto = pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
+                    const impuestos = subtotal * 0.08;
+                    const totalCalculado = subtotal + impuestos + envioCosto;
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Subtotal productos:</span>
+                          <span className="font-medium">${subtotal.toLocaleString("es-AR")}</span>
+                        </div>
+                        {pedidoEditando.metodo !== "retiro" && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Costo de envío:</span>
+                            <span className="font-medium">${envioCosto.toLocaleString("es-AR")}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Impuestos (8%):</span>
+                          <span className="font-medium">${impuestos.toLocaleString("es-AR")}</span>
+                        </div>
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex justify-between">
+                            <span className="font-bold text-gray-700">Total:</span>
+                            <span className="text-2xl font-black text-[#FF6600]">${totalCalculado.toLocaleString("es-AR")}</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
               <button
                 onClick={guardarModificacionPedido}
@@ -1883,13 +1940,15 @@ export default function AdminPanel() {
       )}
 
       {/* Modal de Productos */}
-      <ProductModal
-        key={product?.Id || "new"}
-        isOpen={productModalOpen}
-        onClose={cerrarModalProducto}
-        product={product}
-        onSave={guardarProducto}
-      />
+      {productModalOpen && (
+        <ProductModal
+          key={product?.Id || "new"}
+          isOpen={productModalOpen}
+          onClose={cerrarModalProducto}
+          product={product}
+          onSave={guardarProducto}
+        />
+      )}
     </div>
   );
 }

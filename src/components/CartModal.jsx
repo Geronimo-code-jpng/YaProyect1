@@ -255,8 +255,8 @@ export default function CartModal() {
         })),
         total:
           orderData.metodoEntrega === "retiro"
-            ? (getCartTotalWithDiscount(userProfile) * 1.08)
-            : (getCartTotalWithDiscount(userProfile) + shippingPrice) * 1.08,
+            ? (getCartTotalWithDiscount(userProfile) + (getCartTotalWithDiscount(userProfile) * 0.08))
+            : (getCartTotalWithDiscount(userProfile) + shippingPrice + (getCartTotalWithDiscount(userProfile) * 0.08)),
         descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
           ? 1000
           : 0,
@@ -669,8 +669,8 @@ export default function CartModal() {
                   <span className="text-[#FF6600]">
                     $
                     {(orderData.metodoEntrega === "retiro"
-                      ? (getCartTotalWithDiscount(userProfile) + getCartTotalWithDiscount(userProfile)* 0.08)
-                      : (getCartTotalWithDiscount(userProfile) + shippingPrice + getCartTotalWithDiscount(userProfile)* 0.08)    
+                      ? (getCartTotalWithDiscount(userProfile) + (getCartTotalWithDiscount(userProfile) * 0.08))
+                      : (getCartTotalWithDiscount(userProfile) + shippingPrice + (getCartTotalWithDiscount(userProfile) * 0.08))    
                     ).toLocaleString("es-AR")}
                   </span>
                 </div>
