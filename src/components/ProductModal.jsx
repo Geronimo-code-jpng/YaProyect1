@@ -24,6 +24,7 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
             alert("Error al cargar el producto");
           } else {
             setProductData(data);
+            console.log(productData)
           }
         } catch (err) {
           console.error("Error inesperado:", err);
