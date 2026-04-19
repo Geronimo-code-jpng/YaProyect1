@@ -1,18 +1,54 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
-export default function ProductModal({ isOpen, onClose, product, onSave }) {
+export default function ProductModal({ isOpen, onClose, product, productId, onSave }) {
   const [formOverrides, setFormOverrides] = useState({});
   const [imageFile, setImageFile] = useState(null);
+  const [productData, setProductData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
+  // Si se recibe productId, buscar el producto en la base de datos
+  useEffect(() => {
+    if (productId && isOpen && !product) {
+      const fetchProduct = async () => {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from("productos")
+            .select("*")
+            .eq("Id", productId)
+            .single();
+          
+          if (error) {
+            console.error("Error cargando producto:", error);
+            alert("Error al cargar el producto");
+          } else {
+            setProductData(data);
+          }
+        } catch (err) {
+          console.error("Error inesperado:", err);
+          alert("Error al cargar el producto");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchProduct();
+    }
+  }, [productId, isOpen, product]);
+
+  // Usar product si se pasa directamente, sino usar productData (cargado por ID)
+  const currentProduct = product || productData;
+  
   const formData = useMemo(() => ({
-    nombre: product?.nombre || '',
-    precio: product?.precio || 0,
-    Categoria: product?.Categoria || '',
-    Oferta: product?.Oferta || '',
-    Stock: product?.Stock ?? false,
+    nombre: currentProduct?.nombre || '',
+    precio: currentProduct?.precio || 0,
+    Categoria: currentProduct?.Categoria || '',
+    Oferta: currentProduct?.Oferta || '',
+    Stock: currentProduct?.Stock ?? false,
     imageFile: imageFile,
     ...formOverrides
-  }), [product, imageFile, formOverrides]);
+  }), [currentProduct, imageFile, formOverrides]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -103,13 +139,26 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
 
   if (!isOpen) return null;
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/60 z-9999 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center">
+            <i className="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-4"></i>
+            <p className="text-lg font-bold text-gray-500">Cargando producto...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 z-9999 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-black text-gray-900">
-              {product ? 'Editar Producto' : 'Nuevo Producto'}
+              {currentProduct ? 'Editar Producto' : 'Nuevo Producto'}
             </h2>
             <button
               onClick={onClose}
@@ -210,7 +259,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
               </div>
 
               {/* Imagen - Solo para edición */}
-              {product && (
+              {currentProduct && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Reemplazar Imagen del Producto
@@ -281,7 +330,7 @@ export default function ProductModal({ isOpen, onClose, product, onSave }) {
                 type="submit"
                 className="flex-1 py-3 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition"
               >
-                {product ? 'Actualizar Producto' : 'Crear Producto'}
+                {currentProduct ? 'Actualizar Producto' : 'Crear Producto'}
               </button>
             </div>
           </form>

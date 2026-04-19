@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import ProductModal from "./ProductModal";
+import { useProducts } from "../contexts/ProductContext";
 import { verTodosLosProductos, eliminarProductoPorId, eliminarTodosLosProductos, exportarProductos } from "../utils/productManager";
 import "../utils/initProductManager";
 import { processProductImageReplacement } from "../utils/imageFileHandler";
@@ -105,8 +106,9 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-const AdminPanel = () => {
+export default function AdminPanel() {
   const navigate = useNavigate();
+  const { loadProductsForAdmin } = useProducts();
   const [currentUser, setCurrentUser] = useState(null);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -389,14 +391,9 @@ const AdminPanel = () => {
   const cargarProductos = useCallback(async () => {
     setProductLoading(true);
     try {
-      const { data, error } = await supabaseClient
-        .from("productos")
-        .select("*")
-        .order("Id");
+      const data = await loadProductsForAdmin();
       
-      if (error) throw error;
-      
-      console.log("=== PRODUCTOS CARGADOS ===");
+      console.log("=== PRODUCTOS CARGADOS (SIN CACHE) ===");
       console.log("Cantidad de productos:", data?.length || 0);
       if (data && data.length > 0) {
         console.log("Campos del primer producto:", Object.keys(data[0]));
@@ -410,7 +407,7 @@ const AdminPanel = () => {
     } finally {
       setProductLoading(false);
     }
-  }, [setProductLoading, setProducts, showToast]);
+  }, [loadProductsForAdmin, setProducts, showToast]);
 
   const abrirModalProducto = (producto = null) => {
     setEditingProduct(producto);
@@ -1818,7 +1815,7 @@ const AdminPanel = () => {
 
       {/* Modal de Productos */}
       <ProductModal
-        key={editingProduct?.id || 'new'}
+        key={editingProduct?.Id || 'new'}
         isOpen={productModalOpen}
         onClose={cerrarModalProducto}
         product={editingProduct}
@@ -1827,5 +1824,3 @@ const AdminPanel = () => {
     </div>
   );
 };
-
-export default AdminPanel;
