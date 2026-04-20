@@ -826,7 +826,7 @@ export default function PedidosModal() {
                                   <span>Envío:</span>
                                   <span>
                                     {pedido.metodo === "retiro" 
-                                      ? "Gratis" 
+                                      ? "Retira en sucursal" 
                                       : `$${envioCosto.toLocaleString("es-AR")}`
                                     }
                                   </span>

@@ -571,10 +571,16 @@ export default function CartModal() {
                       className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
                     />
                     <div className="flex-1">
-                      <span className="font-medium">Retiro en local</span>
-                      <span className="text-sm text-green-600 ml-2">
-                        (Gratis)
-                      </span>
+                      <div>
+                        <span className="font-medium">Retiro en local</span>
+                        <span className="text-sm text-green-600 ml-2">
+                          (Sin costo)
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        <i className="fas fa-map-marker-alt mr-1"></i>
+                        Pedro de Vega 3220, S3000 Santa Fe
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -634,7 +640,7 @@ export default function CartModal() {
                 />
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-xl">
+              <div className="bg-gray-50 rounded-xl">
                 <div className="flex justify-between text-lg font-black mb-2">
                   <span>Subtotal:</span>
                   <span>${cartTotal.toLocaleString("es-AR")}</span>
@@ -685,10 +691,10 @@ export default function CartModal() {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex gap-3">
+            <div className="p-2 border-t bg-gray-50 flex gap-3">
               <button
                 onClick={() => setShowCheckout(false)}
-                className="flex-1 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-100 font-black rounded-xl transition"
+                className="flex-1 cursor-pointer py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-100 font-black rounded-xl transition"
                 disabled={isSubmitting}
               >
                 Cancelar
@@ -702,7 +708,7 @@ export default function CartModal() {
                   (orderData.metodoEntrega === "envio" &&
                     !orderData.direccion.trim())
                 }
-                className="flex-1 py-3 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 cursor-pointer bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>

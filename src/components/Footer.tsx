@@ -1,6 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
-import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
@@ -35,20 +34,24 @@ export default function Footer() {
               Nuestras Redes
             </h4>
             <div className="mt-4 justify-center flex flex-col gap-4 text-2xl text-gray-500">
-              <Link
-                to={"https://www.instagram.com/ya.mayorista/"}
+              <a
+                href="https://www.instagram.com/ya.mayorista/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex cursor-pointer items-center hover:text-[#FF6600]"
               >
                 <FontAwesomeIcon icon={faInstagram} className="flex" />
                 <p className="font-serif text-lg">&nbsp;Instagram</p>
-              </Link>
-              <Link
-                to={"https://www.facebook.com/ya.mayoristasf/"}
+              </a>
+              <a
+                href="https://www.facebook.com/ya.mayoristasf/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex cursor-pointer items-center hover:text-[#FF6600]"
               >
                 <FontAwesomeIcon icon={faFacebook} className="flex" />
                 <p className="font-serif text-lg">&nbsp;Facebook</p>
-              </Link>
+              </a>
             </div>
           </div>
 
@@ -61,7 +64,7 @@ export default function Footer() {
                 <p>distribuidorayasf@gmail.com</p>
               </li>
               <li>
-                <p>3425084197</p>
+                <p>(342) 508-4197</p>
               </li>
               <li>
                 <p>Pedro de Vega 3220, S3000 Santa Fe de la Vera Cruz, Santa Fe</p>

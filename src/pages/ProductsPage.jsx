@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useProducts } from '../contexts/ProductContext';
 import ProductsGrid from '../components/ProductsGrid';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function ProductsPage() {
   const [categoriaActual, setCategoriaActual] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const { addToCart } = useCart();
   const { products, isLoading } = useProducts();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Obtener parámetros de la URL
   const category = searchParams.get('categoria');
@@ -19,7 +20,6 @@ export default function ProductsPage() {
   if (category) {
     const categoryMap = {
       'soloofertas': 'SoloOfertas',
-      'todas_filtro': 'Todas_Filtro',
       'alimento': 'ALIMENTO',
       'bebidas': 'BEBIDAS',
       'lacteos': 'LACTEOS',
@@ -36,14 +36,45 @@ export default function ProductsPage() {
     if (normalizedCategory !== categoriaActual) {
       setCategoriaActual(normalizedCategory);
     }
+  } else if (categoriaActual !== 'Todas') {
+    // Si no hay categoría en URL, asegurarse de que esté en 'Todas'
+    setCategoriaActual('Todas');
   }
   
   if (search && search !== searchTerm) {
     setSearchTerm(search);
   }
 
+  // Function to handle category change and update URL
+  const handleCategoryChange = (newCategory) => {
+    setCategoriaActual(newCategory);
+    
+    // Update URL based on category
+    if (newCategory === 'Todas') {
+      navigate('/productos');
+    } else {
+      // Convert category to URL-friendly format
+      const categoryMap = {
+        'SoloOfertas': 'soloofertas',
+        'ALIMENTO': 'alimento',
+        'BEBIDAS': 'bebidas',
+        'LACTEOS': 'lacteos',
+        'HARINA': 'harina',
+        'ACEITE': 'aceite',
+        'VINOS': 'vinos',
+        'CERVEZAS': 'cervezas',
+        'YERBA': 'yerba',
+        'APERITIVOS': 'aperitivos',
+        'CIGARRILLOS': 'cigarrillos'
+      };
+      
+      const urlCategory = categoryMap[newCategory] || newCategory.toLowerCase();
+      navigate(`/productos?categoria=${urlCategory}`);
+    }
+  };
+
   // Get unique categories
-  const categorias = ['Todas', 'SoloOfertas', 'Todas_Filtro', ...new Set(products.map(product => product.Categoria))];
+  const categorias = ['Todas', 'SoloOfertas', ...new Set(products.map(product => product.Categoria))];
 
   // Filter products based on category and search
   const productosFiltrados = products.filter(product => {
@@ -99,7 +130,7 @@ export default function ProductsPage() {
           />
           <select
             value={categoriaActual}
-            onChange={(e) => setCategoriaActual(e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
           >
             {categorias.map(categoria => {

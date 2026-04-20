@@ -94,7 +94,8 @@ export function ProductProvider({ children }) {
         const { data, error } = await supabaseClient
           .from("productos")
           .select("*")
-          .order("Id", { ascending: true });
+          .order("Stock", { ascending: false })
+          .order("nombre", { ascending: true });
 
         if (error) {
           throw error;

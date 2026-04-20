@@ -3,9 +3,10 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
+import react from 'eslint-plugin-react';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'supabase/functions', 'api'] },
+  { ignores: ['dist', 'node_modules', 'supabase/functions', 'api', 'prisma.config.ts'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -30,7 +31,6 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-      // Reglas de TypeScript como advertencias, no errores
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
@@ -46,19 +46,31 @@ export default tseslint.config(
   },
   {
     files: ['**/*.{js,jsx}'],
-    extends: [js.configs.recommended],
+    extends: [js.configs.recommended, 'plugin:react/recommended'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      globals: globals.browser,
+      globals: { ...globals.browser, process: 'readonly' },
       parserOptions: {
         ecmaFeatures: {
           jsx: true,
         },
       },
     },
+    plugins: {
+      'react': react,
+      'react-refresh': reactRefresh,
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react/jsx-uses-vars': 'warn',
+      'react/jsx-uses-react': 'off',
     },
   },
 );

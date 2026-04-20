@@ -8,7 +8,7 @@ const CATEGORIAS = [
     imagen: "./ofertas.jpg",
   },
   {
-    id: "Todas_Filtro",
+    id: "",
     nombre: " Todos Los Productos",
     imagen: "./todos.jpg",
   },

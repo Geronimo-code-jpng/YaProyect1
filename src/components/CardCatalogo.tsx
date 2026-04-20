@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 // 1. Definimos los tipos de datos (TypeScript)
 interface Producto {
@@ -54,6 +55,7 @@ export default function CardCatalogo({
   searchTerm,
 }: CardCatalogoProps) {
   const [categoriaActual, setCategoriaActual] = useState<string>("Todas");
+  const navigate = useNavigate();
 
   const filtrados = useMemo(() => {
     // PARACAÍDAS: (searchTerm || '') asegura que nunca sea undefined
@@ -110,7 +112,14 @@ export default function CardCatalogo({
           {CATEGORIAS.map((cat) => (
             <div
               key={cat.id}
-              onClick={() => { setCategoriaActual(cat.id); }} // <- Así se hace el click en React
+              onClick={() => {
+                // Navigate to products page with category parameter
+                if (cat.id === "Todas_Filtro") {
+                  navigate("/productos");
+                } else {
+                  navigate(`/productos?categoria=${cat.id.toLowerCase()}`);
+                }
+              }}
               className="rounded-2xl cursor-pointer transform transition hover:-translate-y-2 hover:shadow-xl flex flex-col items-center justify-center text-center h-40 relative overflow-hidden group bg-gray-200"
             >
               <img
