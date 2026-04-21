@@ -100,25 +100,29 @@ export default function PedidosModal() {
 
   const handleTiempoExpirado = async (pedidoId) => {
     try {
-      // Actualizar el estado del pedido a 'vencido' en la base de datos
+      // Actualizar el estado del pedido a 'pendiente' y limpiar expira_en
       const { error } = await supabaseClient
         .from("pedidos")
-        .update({ estado: "vencido" })
+        .update({ 
+          estado: "pendiente",
+          expira_en: null, // Limpiar tiempo de expiración
+          horario: "Tiempo de pago expirado - esperando reactivación"
+        })
         .eq("id", pedidoId);
 
       if (error) {
-        console.error("❌ Error actualizando pedido vencido:", error);
+        console.error("Error actualizando pedido expirado:", error);
         return;
       }
 
-      // Recargar los pedidos para actualizar la UI
+      // Recargar los pedidos
       cargarPedidos();
 
       showSuccess(
-        "⏰ El tiempo de pago ha expirado. El pedido ha sido cancelado.",
+        "El tiempo de pago ha expirado. El pedido está pendiente de reactivación.",
       );
     } catch (error) {
-      console.error("❌ Error manejando expiración:", error);
+      console.error("Error manejando expiración:", error);
     }
   };
 

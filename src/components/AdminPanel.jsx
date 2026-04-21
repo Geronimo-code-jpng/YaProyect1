@@ -110,6 +110,10 @@ function Toast({ message, type, onClose }) {
   );
 }
 
+// Configuración para desarrollo - cambiar a false para producción
+const DEV_MODE = false;
+const DEV_TIME_MINUTES = 0.1; // Tiempo en minutos para desarrollo
+
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { loadProductsForAdmin } = useProducts();
@@ -886,6 +890,66 @@ export default function AdminPanel() {
     setPedidoEditando(nuevoPedido);
   };
 
+  const reactivarTemporizador = async (pedidoId) => {
+    try {
+      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
+      const { error } = await supabaseClient
+        .from("pedidos")
+        .update({
+          estado: "configurado",
+          expira_en: new Date(Date.now() + timeMinutes * 60 * 1000).toISOString(),
+          horario: `Temporizador reactivado - ${timeMinutes} minutos para pagar`
+        })
+        .eq("id", pedidoId);
+
+      if (error) throw error;
+
+      showToast(`Temporizador reactivado. El cliente tiene ${timeMinutes} minutos para pagar.`);
+      cargarPedidosAdmin();
+    } catch (err) {
+      showToast("Error reactivando temporizador: " + err.message, "error");
+    }
+  };
+
+  const generarCodigoReactivacion = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const handleSolicitudReactivacion = async (pedidoId, mensaje) => {
+    try {
+      const codigo = generarCodigoReactivacion();
+      
+      // Actualizar pedido con código de reactivación
+      const { error } = await supabaseClient
+        .from("pedidos")
+        .update({
+          codigo_reactivacion: codigo,
+          horario: `Solicitud de reactivación recibida - Código: ${codigo}`
+        })
+        .eq("id", pedidoId);
+
+      if (error) throw error;
+
+      // Enviar respuesta por WhatsApp con el código
+      const telefono = pedidos.find(p => p.id === pedidoId)?.telefono;
+      if (telefono) {
+        const mensajeRespuesta = `*¡Solicitud Recibida!*\n\n` +
+          `Hemos recibido tu solicitud para reactivar el pedido #${pedidoId}\n\n` +
+          `*Tu código de reactivación es:* ${codigo}\n\n` +
+          `Por favor, contacta a nuestro distribuidor y proporciona este código para reactivar tu pedido.\n\n` +
+          `*Visita nuestra web:* https://yamayorista.online/\n\n` +
+          `Gracias por tu paciencia.`;
+        
+        window.open(`https://wa.me/549${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(mensajeRespuesta)}`, '_blank');
+      }
+
+      showToast("Código de reactivación generado y enviado al cliente.");
+      cargarPedidosAdmin();
+    } catch (err) {
+      showToast("Error procesando solicitud: " + err.message, "error");
+    }
+  };
+
   const guardarModificacionPedido = async () => {
     try {
       const { data: pedidoOriginal, error: errorOriginal } =
@@ -911,12 +975,14 @@ export default function AdminPanel() {
       const impuestos = subtotal * 0.08;
       const totalCalculado = subtotal + impuestos + envioCosto;
 
+      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
       const { error } = await supabaseClient
         .from("pedidos")
         .update({
           carrito: carritoParaGuardar,
           total: totalCalculado, // Usar el total calculado
-          estado: "modificado",
+          estado: "configurado", // Se comporta como aceptado pero con tiempo configurable
+          expira_en: new Date(Date.now() + timeMinutes * 60 * 1000).toISOString(),
         })
         .eq("id", pedidoEditando.id);
 
@@ -937,15 +1003,35 @@ export default function AdminPanel() {
 
   const enviarWhatsAppConfiguracion = async (pedido) => {
     try {
+      // Obtener detalles del carrito para mensaje personalizado
+      let carritoArray = [];
+      if (typeof pedido.carrito === "string") {
+        try {
+          carritoArray = JSON.parse(pedido.carrito);
+        } catch {
+          carritoArray = [];
+        }
+      } else if (Array.isArray(pedido.carrito)) {
+        carritoArray = pedido.carrito;
+      }
+
+      const productosTexto = carritoArray.slice(0, 3).map(item => 
+        `*${item.nombre}* x${item.cantidad}`
+      ).join('\n');
+
+      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
       const message =
-        `⏰ *TU PEDIDO ESTÁ LISTO PARA PAGAR*\n\n` +
-        `📦 *Pedido #${pedido.id}*\n` +
-        `👤 *Cliente:* ${pedido.nombre_cliente}\n\n` +
-        `💰 *Total:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
-        `⚡ *¡Tu pedido ha sido aceptado!*\n` +
-        `⏰ Tenés 10 minutos para completar el pago\n` +
-        `💳 Puedes pagar con Mercado Pago o transferencia\n\n` +
-        `📦 Te enviaremos actualizaciones por este medio`;
+        `*¡TU PEDIDO ESTÁ LISTO PARA PAGAR!*\n\n` +
+        `*Pedido #${pedido.id}*\n` +
+        `*Cliente:* ${pedido.nombre_cliente}\n\n` +
+        `*Tus productos:*\n${productosTexto}${carritoArray.length > 3 ? `\n*Y ${carritoArray.length - 3} productos más*` : ''}\n\n` +
+        `*Total a pagar:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
+        `*Metodo de entrega:* ${pedido.metodo === "retiro" ? "Retiro en sucursal" : "Envío a domicilio"}\n\n` +
+        `*Tienes ${timeMinutes} minutos para completar el pago*\n` +
+        `*Paga con Mercado Pago o transferencia bancaria*\n\n` +
+        `*Paga ahora en:* https://yamayorista.online/\n\n` +
+        `*¡Gracias por tu compra!*\n` +
+        `*Te mantendremos informado del estado de tu pedido*`;
 
       const telefonoFormateado = pedido.telefono
         .replace(/\D/g, "")
@@ -1437,6 +1523,16 @@ export default function AdminPanel() {
                                 {p.fuente === "web" &&
                                   p.estado === "pendiente" && (
                                     <>
+                                      <button
+                                        onClick={() =>
+                                          reactivarTemporizador(p.id)
+                                        }
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg shadow text-xs font-bold transition flex items-center gap-1"
+                                        title="Reactivar temporizador"
+                                      >
+                                        <i className="fas fa-clock"></i>{" "}
+                                        Reactivar
+                                      </button>
                                       <button
                                         onClick={() =>
                                           cambiarEstado(p.id, "rechazado")
