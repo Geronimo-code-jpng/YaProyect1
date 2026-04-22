@@ -39,6 +39,8 @@ const CATEGORIAS = [
     nombre: "Cigarrillos",
     imagen: "./cigarrillos.jpg",
   },
+  { id: "LIMPIEZA", nombre: "Limpieza", imagen: "./limpieza.jpg" },
+  { id: "SALES", nombre: "Sales", imagen: "./sales.jpg" },
 ];
 
 export default function CategoriesSection() {

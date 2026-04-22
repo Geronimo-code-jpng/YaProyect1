@@ -16,7 +16,9 @@ const CATEGORIAS = [
   { id: "VINOS", nombre: " Vinos", imagen: "./carpetafotos/vinos.jpg" },
   { id: "CERVEZAS", nombre: " Cervezas", imagen: "./carpetafotos/cervezas.jpg" },
   { id: "YERBA", nombre: " Yerbas", imagen: "./carpetafotos/yerbas.jpg" },
-  { id: "APERITIVOS", nombre: " Aperitivos", imagen: "./carpetafotos/aperitivos.jpg" }
+  { id: "APERITIVOS", nombre: " Aperitivos", imagen: "./carpetafotos/aperitivos.jpg" },
+  { id: "LIMPIEZA", nombre: " Limpieza", imagen: "./carpetafotos/limpieza.jpg" },
+  { id: "SALES", nombre: " Sales", imagen: "./carpetafotos/sales.jpg" }
 ];
 
 export default function ProductCatalog() {

@@ -256,6 +256,8 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                   <option value="YERBA">Yerbas</option>
                   <option value="APERITIVOS">Aperitivos</option>
                   <option value="CIGARRILLOS">Cigarrillos</option>
+                  <option value="LIMPIEZA">Limpieza</option>
+                  <option value="SALES">Sales</option>
                 </select>
               </div>
 

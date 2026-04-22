@@ -46,6 +46,8 @@ const CATEGORIAS = [
     nombre: "Aperitivos",
     imagen: "./carpetafotos/aperitivos.jpg",
   },
+  { id: "LIMPIEZA", nombre: "Limpieza", imagen: "./carpetafotos/limpieza.jpg" },
+  { id: "SALES", nombre: "Sales", imagen: "./carpetafotos/sales.jpg" },
 ];
 
 // Reemplazá desde tu "export default function..." hasta el "const filtrados = useMemo..." con esto:

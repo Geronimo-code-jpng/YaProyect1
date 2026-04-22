@@ -1110,40 +1110,11 @@ export default function AdminPanel() {
     pedidoOriginal,
   ) => {
     try {
-      let mensajeCambios = "";
-
-      if (pedidoOriginal.total !== pedidoModificado.total) {
-        const diferencia = pedidoModificado.total - pedidoOriginal.total;
-        mensajeCambios += `💰 *Total modificado:* $${Number(pedidoOriginal.total)?.toLocaleString("es-AR")} → $${pedidoModificado.total?.toLocaleString("es-AR")} (${diferencia > 0 ? "+" : ""}$${diferencia.toLocaleString("es-AR")})\n`;
-      }
-
-      const productosOriginales =
-        typeof pedidoOriginal.carrito === "string"
-          ? JSON.parse(pedidoOriginal.carrito)
-          : pedidoOriginal.carrito || [];
-
-      mensajeCambios += "\n📦 *Cambios en productos:*\n";
-      pedidoModificado.carrito.forEach((productoNuevo) => {
-        const productoOriginal = productosOriginales.find(
-          (p) => p.Id === productoNuevo.Id,
-        );
-        if (
-          productoOriginal &&
-          productoOriginal.cantidad !== productoNuevo.cantidad
-        ) {
-          mensajeCambios += `• ${productoNuevo.nombre}: ${productoOriginal.cantidad} → ${productoNuevo.cantidad} unidades\n`;
-        }
-      });
-
+      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
+      
       const message =
-        `🔄 *TU PEDIDO FUE MODIFICADO* #${pedidoModificado.id}\n\n` +
-        `👤 *Cliente:* ${pedidoModificado.nombre_cliente}\n\n` +
-        `⚠️ *Ajustes realizados:*\n\n${mensajeCambios}\n` +
-        `📋 *Nuevo total:* $${pedidoModificado.total?.toLocaleString("es-AR")}\n\n` +
-        `❓ *¿Aceptás los cambios?*\n` +
-        `• Respondé "ACEPTO" para confirmar\n` +
-        `• Respondé "RECHAZO" para cancelar\n\n` +
-        `⏰ Tenés 10 minutos para responder`;
+        `TU PEDIDO FUE MODIFICADO #${pedidoModificado.id} Cliente: ${pedidoModificado.nombre_cliente} Ajustes realizados: Cambios en productos: Nuevo total: $${pedidoModificado.total?.toLocaleString("es-AR")} ` +
+        `Si aceptas los cambios tenés ${timeMinutes} minutos para abonarlo en la Web. Hace click en el link para terminar tu pedido! https://yamayorista.online/`;
 
       const telefonoFormateado = pedidoModificado.telefono
         .replace(/\D/g, "")
