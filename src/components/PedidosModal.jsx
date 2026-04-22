@@ -3,6 +3,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { supabase as supabaseClient, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
 import { setOpenPedidosRef } from "../utils/pedidosUtils";
+import CheckoutSuccess from "../metaPixel/CheckoutSuccess";
+
 
 // Función para obtener precio de envío desde la base de datos
 const getShippingPriceFromDB = async () => {
@@ -76,6 +78,7 @@ export default function PedidosModal() {
   const [pedidos, setPedidos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(7300); // Estado para precio de envío
+  const [checkoutSuccessData, setCheckoutSuccessData] = useState(null);
 
   // Cargar precio de envío desde la base de datos
   useEffect(() => {
@@ -316,6 +319,25 @@ export default function PedidosModal() {
       }
 
       if (pedido.estado === "pagado") {
+        // Preparar datos para el pixel de Facebook
+        let carritoArray = [];
+        if (typeof pedido.carrito === "string") {
+          try {
+            carritoArray = JSON.parse(pedido.carrito);
+          } catch (e) {
+            carritoArray = [];
+          }
+        } else if (Array.isArray(pedido.carrito)) {
+          carritoArray = pedido.carrito;
+        }
+
+        const ids = carritoArray.map(item => item.id || item.nombre).filter(Boolean);
+        const orderDetails = {
+          total: pedido.total,
+          ids: ids,
+        };
+        setCheckoutSuccessData(orderDetails);
+
         showSuccess("✅ ¡Pago confirmado! Tu pedido está siendo procesado.");
         await cargarPedidos();
       } else {
@@ -588,6 +610,12 @@ export default function PedidosModal() {
             </button>
           </div>
         </div>
+
+        {checkoutSuccessData && (
+          <div className="px-6 py-4 bg-green-50 border-b">
+            <CheckoutSuccess orderDetails={checkoutSuccessData} />
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
