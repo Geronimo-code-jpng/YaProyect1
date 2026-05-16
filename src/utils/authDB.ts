@@ -16,7 +16,7 @@ export const loginWithDB = async (email: string, password: string): Promise<{suc
     }
 
     // Type assertion para TypeScript
-    const userTyped = user as any;
+    const userTyped = user;
 
     // 2. Verificar si tiene contraseña
     if (!userTyped.password) {

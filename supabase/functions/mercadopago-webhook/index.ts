@@ -1,73 +1,74 @@
 // Deno Supabase Edge Function - TypeScript analysis disabled
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-
-// @ts-ignore - Deno environment variables
-declare const Deno: any;
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const body = await req.json()
-    const { action, data } = body
+    const body = await req.json();
+    const { action, data } = body;
 
-    console.log('Webhook recibido:', { action, data })
+    console.log("Webhook recibido:", { action, data });
 
     // Crear cliente de Supabase
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
     // Procesar diferentes tipos de notificaciones
-    if (action === 'payment.created' || action === 'payment.updated') {
-      const paymentId = data.id
-      
+    if (action === "payment.created" || action === "payment.updated") {
+      const paymentId = data.id;
+
       // Obtener detalles del pago desde Mercado Pago
-      const accessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN')
+      const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
       if (!accessToken) {
-        throw new Error('Access token de Mercado Pago no configurado')
+        throw new Error("Access token de Mercado Pago no configurado");
       }
 
-      const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      })
+      const paymentResponse = await fetch(
+        `https://api.mercadopago.com/v1/payments/${paymentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
 
       if (!paymentResponse.ok) {
-        throw new Error('Error obteniendo detalles del pago')
+        throw new Error("Error obteniendo detalles del pago");
       }
 
-      const paymentData: MercadoPagoPayment = await paymentResponse.json()
-      console.log('Datos del pago:', paymentData)
+      const paymentData: MercadoPagoPayment = await paymentResponse.json();
+      console.log("Datos del pago:", paymentData);
 
       // Obtener el external_reference (ID del pedido)
-      const pedidoId = paymentData.external_reference
+      const pedidoId = paymentData.external_reference;
       if (!pedidoId) {
-        throw new Error('External reference no encontrado en el pago')
+        throw new Error("External reference no encontrado en el pago");
       }
 
       // Determinar el nuevo estado del pedido
-      let nuevoEstado = 'pendiente'
-      
-      if (paymentData.status === 'approved') {
-        nuevoEstado = 'pagado'
-      } else if (paymentData.status === 'rejected') {
-        nuevoEstado = 'rechazado'
-      } else if (paymentData.status === 'cancelled') {
-        nuevoEstado = 'cancelado'
-      } else if (paymentData.status === 'in_process') {
-        nuevoEstado = 'configurado' // Mantener en configurado mientras procesa
+      let nuevoEstado = "pendiente";
+
+      if (paymentData.status === "approved") {
+        nuevoEstado = "pagado";
+      } else if (paymentData.status === "rejected") {
+        nuevoEstado = "rechazado";
+      } else if (paymentData.status === "cancelled") {
+        nuevoEstado = "cancelado";
+      } else if (paymentData.status === "in_process") {
+        nuevoEstado = "configurado"; // Mantener en configurado mientras procesa
       }
 
       // Actualizar el pedido en la base de datos
@@ -76,7 +77,7 @@ serve(async (req: Request) => {
         pago_mp_id: paymentId,
         pago_mp_status: paymentData.status,
         pago_mp_date: new Date().toISOString(),
-        metodo_pago: 'mercadopago',
+        metodo_pago: "mercadopago",
         payment_details: {
           status: paymentData.status,
           status_detail: paymentData.status_detail,
@@ -84,85 +85,97 @@ serve(async (req: Request) => {
           payment_type: paymentData.payment_type,
           transaction_amount: paymentData.transaction_amount,
           installments: paymentData.installments,
-          issuer_id: paymentData.issuer_id
-        }
-      }
+          issuer_id: paymentData.issuer_id,
+        },
+      };
 
       const { error } = await supabaseClient
-        .from('pedidos')
+        .from("pedidos")
         .update(updateData)
-        .eq('id', pedidoId)
+        .eq("id", pedidoId);
 
       if (error) {
-        throw new Error(`Error actualizando pedido: ${error.message}`)
+        throw new Error(`Error actualizando pedido: ${error.message}`);
       }
 
-      console.log(`✅ Pedido #${pedidoId} actualizado a estado: ${nuevoEstado}`)
+      console.log(
+        `✅ Pedido #${pedidoId} actualizado a estado: ${nuevoEstado}`,
+      );
 
       // Si el pago fue aprobado, enviar notificación WhatsApp
-      if (nuevoEstado === 'pagado') {
+      if (nuevoEstado === "pagado") {
         // Obtener datos completos del pedido
         const { data: pedido } = await supabaseClient
-          .from('pedidos')
-          .select('*')
-          .eq('id', pedidoId)
-          .single()
+          .from("pedidos")
+          .select("*")
+          .eq("id", pedidoId)
+          .single();
 
         if (pedido) {
-          await enviarWhatsAppConfirmacionPago(pedido, paymentData)
+          await enviarWhatsAppConfirmacionPago(pedido, paymentData);
         }
       }
 
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Pedido #${pedidoId} actualizado a ${nuevoEstado}` 
+        JSON.stringify({
+          success: true,
+          message: `Pedido #${pedidoId} actualizado a ${nuevoEstado}`,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Webhook procesado' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
+      JSON.stringify({ success: true, message: "Webhook procesado" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
-    console.error('❌ Error en webhook:', error)
+    console.error("❌ Error en webhook:", error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Error procesando webhook', 
-        details: error instanceof Error ? error.message : 'Unknown error'
+      JSON.stringify({
+        error: "Error procesando webhook",
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    )
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
-})
+});
 
 // Función para enviar WhatsApp de confirmación de pago
-async function enviarWhatsAppConfirmacionPago(pedido: any, pagoData: any) {
+async function enviarWhatsAppConfirmacionPago(
+  pedido: { carrito: string; nombre: string; telefono: string },
+  pagoData: { status: string; external_reference: string; payment_method_id: string; transaction_amount: number; installments: number; payer: { email: string } },
+) {
   try {
     // Obtener lista de productos del carrito
-    let productos = []
-    if (typeof pedido.carrito === 'string') {
+    let productos = [];
+    if (typeof pedido.carrito === "string") {
       try {
-        productos = JSON.parse(pedido.carrito)
+        productos = JSON.parse(pedido.carrito);
       } catch (e) {
-        productos = []
+        console.error(e)
+        productos = [];
       }
     } else if (Array.isArray(pedido.carrito)) {
-      productos = pedido.carrito
+      productos = pedido.carrito;
+    }
+
+    interface ListaProductos {
+      nombre: string;
+      precio: number;
+      cantidad: number;
     }
 
     // Crear lista de productos para el mensaje
     const listaProductos = productos
-      .map((p: any) =>
-        `• ${p.nombre} x${p.cantidad} = $${(p.precio * p.cantidad).toLocaleString("es-AR")}`
+      .map(
+        (p: ListaProductos) =>
+          `• ${p.nombre} x${p.cantidad} = $${(p.precio * p.cantidad).toLocaleString("es-AR")}`,
       )
-      .join("\n")
+      .join("\n");
 
     const message =
       `✅ *PAGO RECIBIDO - MERCADO PAGO*\n\n` +
@@ -177,18 +190,20 @@ async function enviarWhatsAppConfirmacionPago(pedido: any, pagoData: any) {
       `💰 *Total:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
       `🎉 *¡Pago confirmado con éxito!*\n` +
       `📦 Tu pedido está siendo preparado para envío\n` +
-      `🚚 Te contactaremos para coordinar la entrega`
+      `🚚 Te contactaremos para coordinar la entrega`;
 
     const telefonoFormateado = pedido.telefono
       .replace(/\D/g, "")
-      .replace(/^0/, "")
-    const whatsappUrl = `https://wa.me/549${telefonoFormateado}?text=${encodeURIComponent(message)}`
-    
+      .replace(/^0/, "");
+    const whatsappUrl = `https://wa.me/549${telefonoFormateado}?text=${encodeURIComponent(message)}`;
+
     // Enviar notificación (esto abrirá WhatsApp en el navegador del servidor)
     // En producción, podrías usar una API de WhatsApp como Twilio
-    console.log('📱 WhatsApp URL generada:', whatsappUrl)
-    
+    console.log("📱 WhatsApp URL generada:", whatsappUrl);
   } catch (error) {
-    console.error("Error enviando WhatsApp de confirmación de pago:", error instanceof Error ? error.message : 'Unknown error')
+    console.error(
+      "Error enviando WhatsApp de confirmación de pago:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
   }
 }

@@ -1,13 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import PropTypes from "prop-types";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import ProductModal from "./ProductModal";
 import { useProducts } from "../contexts/ProductContext";
-import {
-  verTodosLosProductos,
-  eliminarProductoPorId,
-  exportarProductos,
-} from "../utils/productManager";
+
 import "../utils/initProductManager";
 import { processProductImageReplacement } from "../utils/imageFileHandler";
 
@@ -57,6 +54,12 @@ function RejectDialog({ message, onConfirm, onCancel }) {
   );
 }
 
+RejectDialog.propTypes = {
+  message: PropTypes.string.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+};
+
 // Componente de confirmación inline (reemplaza alert/confirm nativos)
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
@@ -81,6 +84,12 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     </div>
   );
 }
+
+ConfirmDialog.propTypes = {
+  message: PropTypes.string.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+};
 
 // Toast de notificación inline
 function Toast({ message, type, onClose }) {
@@ -110,9 +119,11 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-// Configuración para desarrollo - cambiar a false para producción
-const DEV_MODE = false;
-const DEV_TIME_MINUTES = 0.1; // Tiempo en minutos para desarrollo
+Toast.propTypes = {
+  message: PropTypes.string.isRequired,
+  type: PropTypes.oneOf(["success", "error", "info"]),
+  onClose: PropTypes.func.isRequired,
+};
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -125,7 +136,7 @@ export default function AdminPanel() {
   const [products, setProducts] = useState([]);
   const [product, setProduct] = useState();
   const [productLoading, setProductLoading] = useState(false);
-  const [loadingProductId, setLoadingProductId] = useState(null);
+  const [loadingProductId] = useState(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
@@ -137,6 +148,12 @@ export default function AdminPanel() {
   const [tiempoActual, setTiempoActual] = useState(Date.now());
   const [shippingPrice, setShippingPrice] = useState(7200);
   const [tempShippingPrice, setTempShippingPrice] = useState("7200");
+  const [bancoInfo, setBancoInfo] = useState({
+    banco: "",
+    titular: "",
+    alias: "",
+    cbu: "",
+  });
 
   const showToast = useCallback(
     (message, type = "success") => {
@@ -208,6 +225,9 @@ export default function AdminPanel() {
         return;
       }
       setProduct(data);
+
+      // Set quantity per bundle from productos table
+      // setProductQuantityPerBundle(data.quantity || 1);
     } catch (error) {
       console.error(error);
     }
@@ -256,6 +276,52 @@ export default function AdminPanel() {
     }
     console.log("=== FIN GUARDADO PRECIO ENVÍO ===");
   }, [tempShippingPrice, showToast]);
+
+  // Cargar datos bancarios
+  const loadBankConfig = useCallback(async () => {
+    try {
+      const { data: config, error } = await supabaseClient
+        .from("configuracion")
+        .select("banco, titular, alias, cbu")
+        .eq("id", 1)
+        .single();
+      if (!error && config) {
+        setBancoInfo({
+          banco: config.banco || "",
+          titular: config.titular || "",
+          alias: config.alias || "",
+          cbu: config.cbu || "",
+        });
+      }
+    } catch (err) {
+      console.error("Error cargando datos bancarios:", err);
+    }
+  }, []);
+
+  // Guardar datos bancarios
+  const saveBankConfig = useCallback(async () => {
+    try {
+      const { error } = await supabaseClient
+        .from("configuracion")
+        .update({
+          banco: bancoInfo.banco,
+          titular: bancoInfo.titular,
+          alias: bancoInfo.alias,
+          cbu: bancoInfo.cbu,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", 1);
+
+      if (error) {
+        showToast("Error al guardar datos bancarios", "error");
+        return;
+      }
+      showToast("Datos bancarios guardados correctamente", "success");
+    } catch (err) {
+      console.error("Error guardando datos bancarios:", err);
+      showToast("Error al guardar datos bancarios", "error");
+    }
+  }, [bancoInfo, showToast]);
 
   // Cargar pedidos (con useCallback para evitar re-renders)
   const cargarPedidosAdmin = useCallback(async () => {
@@ -421,32 +487,86 @@ export default function AdminPanel() {
   const cargarProductos = useCallback(async () => {
     setProductLoading(true);
     try {
-      const data = await loadProductsForAdmin();
-
-      console.log("=== PRODUCTOS CARGADOS (SIN CACHE) ===");
-      console.log("Cantidad de productos:", data?.length || 0);
-      if (data && data.length > 0) {
-        console.log("Campos del primer producto:", Object.keys(data[0]));
-        console.log("Usando imágenes estáticas desde /products/");
-      }
-
-      setProducts(data || []);
-    } catch (err) {
-      console.error("Error cargando productos:", err);
-      showToast("Error cargando productos", "error");
+      const productos = await loadProductsForAdmin();
+      setProducts(productos);
+    } catch (error) {
+      console.error("Error cargando productos:", error);
+      showToast("Error al cargar productos", "error");
     } finally {
       setProductLoading(false);
     }
-  }, [loadProductsForAdmin, setProducts, showToast]);
+  }, [loadProductsForAdmin]);
 
-  const abrirModalProducto = (productoId) => {
-    console.log(productoId);
-    setProductModalOpen(true); // Abrir modal inmediatamente
-    getProductById(productoId); // Cargar producto en segundo plano
+  const updateProductFlag = async (productId, field, value) => {
+    try {
+      const { error } = await supabaseClient
+        .from("productos")
+        .update({ [field]: value })
+        .eq("Id", productId);
+
+      if (error) throw error;
+
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.Id === productId ? { ...product, [field]: value } : product,
+        ),
+      );
+    } catch (error) {
+      console.error(`Error actualizando ${field}:`, error);
+      showToast(`Error al actualizar`, "error");
+    }
+  };
+
+  const updateProductQuantity = async (productId, quantity) => {
+    try {
+      console.log("=== DEBUG: Actualizando cantidad ===");
+      console.log("productId:", productId);
+      console.log("quantity:", quantity);
+
+      // Update quantity directly in productos table
+      const { error } = await supabaseClient
+        .from("productos")
+        .update({ quantity: quantity })
+        .eq("Id", productId);
+
+      if (error) {
+        console.error("Error en update de quantity:", error);
+        throw error;
+      }
+
+      console.log("✅ Quantity actualizado en DB correctamente");
+
+      // Update local state in products array
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.Id === productId
+            ? { ...product, quantity: quantity }
+            : product,
+        ),
+      );
+
+      showToast("Cantidad por bulto actualizada", "success");
+    } catch (error) {
+      console.error("Error actualizando cantidad:", error);
+      showToast("Error al actualizar cantidad", "error");
+    }
+  };
+
+  const abrirModalProducto = (productId = null) => {
+    if (productId) {
+      // Editar producto existente
+      getProductById(productId);
+    } else {
+      // Crear nuevo producto
+      setProduct(null);
+      // setProductQuantityPerBundle(1);
+    }
+    setProductModalOpen(true);
   };
 
   const cerrarModalProducto = () => {
     setProduct(null);
+    // setProductQuantityPerBundle(1);
     setProductModalOpen(false);
   };
 
@@ -493,7 +613,16 @@ export default function AdminPanel() {
         Categoria: productoData.Categoria,
         Oferta: productoData.Oferta,
         Stock: productoData.Stock,
+        quantity: productoData.quantity || 1,
+        oferta_express: productoData.oferta_express || false,
+        mas_vendido: productoData.mas_vendido || false,
+        solo_bulto: productoData.solo_bulto || false,
       };
+
+      console.log("=== DEBUG: Guardando producto ===");
+      console.log("productoData.quantity:", productoData.quantity);
+      console.log("dataToSave.quantity:", dataToSave.quantity);
+      console.log("dataToSave completo:", dataToSave);
 
       // Lógica para manejar la imagen:
       if (imageUrl) {
@@ -525,24 +654,14 @@ export default function AdminPanel() {
           .eq("Id", product.Id);
 
         if (error) {
-          console.error("Error de Supabase actualizando:", error);
+          console.error("Error de Supabase:", error);
           throw error;
         }
 
-        // Mensaje personalizado según si se cambió la imagen o no
-        if (imageUrl) {
-          showToast(
-            "Producto actualizado exitosamente con nueva imagen",
-            "success",
-          );
-        } else if (product.Imagen || product.imagen) {
-          showToast(
-            "Producto actualizado exitosamente (imagen mantenida)",
-            "success",
-          );
-        } else {
-          showToast("Producto actualizado exitosamente", "success");
-        }
+        // Update quantity per bundle
+        await updateProductQuantity(product.Id, productoData.quantity || 1);
+
+        showToast("Producto actualizado exitosamente", "success");
       } else {
         // Crear nuevo producto
         // Generar un ID numérico único para el nuevo producto (int8)
@@ -604,39 +723,11 @@ export default function AdminPanel() {
     );
   };
 
-  // Probar conexión a la base de datos
-  const testDatabaseConnection = useCallback(async () => {
-    console.log("=== PROBANDO CONEXIÓN A BASE DE DATOS ===");
-    try {
-      console.log("Intentando leer tabla configuracion...");
-      const { data, error } = await supabaseClient
-        .from("configuracion")
-        .select("*")
-        .limit(1);
-
-      console.log("Resultado de prueba de conexión:", { data, error });
-
-      if (error) {
-        console.error("Error en prueba de conexión:", error);
-        if (error.code === "PGRST116") {
-          console.error("La tabla no existe o no hay permisos para leerla");
-        } else if (error.code === "PGRST301") {
-          console.error("Error de permisos RLS - revisa las políticas");
-        }
-      } else {
-        console.log("Conexión exitosa a la base de datos");
-      }
-    } catch (err) {
-      console.error("Error general en prueba de conexión:", err);
-    }
-    console.log("=== FIN PRUEBA CONEXIÓN ===");
-  }, []);
-
-  // Cargar precio de envío al montar el componente
+  // Cargar configuración al montar el componente
   useEffect(() => {
-    testDatabaseConnection();
     loadShippingPrice();
-  }, [testDatabaseConnection, loadShippingPrice]);
+    loadBankConfig();
+  }, [loadShippingPrice, loadBankConfig]);
 
   // Cargar productos cuando se cambia a la pestaña de productos
   useEffect(() => {
@@ -892,72 +983,36 @@ export default function AdminPanel() {
 
   const reactivarTemporizador = async (pedidoId) => {
     try {
-      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
+      const timeMinutes = 15;
       const { error } = await supabaseClient
         .from("pedidos")
         .update({
           estado: "configurado",
-          expira_en: new Date(Date.now() + timeMinutes * 60 * 1000).toISOString(),
-          horario: `Temporizador reactivado - ${timeMinutes} minutos para pagar`
+          expira_en: new Date(
+            Date.now() + timeMinutes * 60 * 1000,
+          ).toISOString(),
+          horario: `Temporizador reactivado - ${timeMinutes} minutos para pagar`,
         })
         .eq("id", pedidoId);
 
       if (error) throw error;
 
-      showToast(`Temporizador reactivado. El cliente tiene ${timeMinutes} minutos para pagar.`);
+      showToast(
+        `Temporizador reactivado. El cliente tiene ${timeMinutes} minutos para pagar.`,
+      );
       cargarPedidosAdmin();
     } catch (err) {
       showToast("Error reactivando temporizador: " + err.message, "error");
     }
   };
 
-  const generarCodigoReactivacion = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
-  const handleSolicitudReactivacion = async (pedidoId, mensaje) => {
-    try {
-      const codigo = generarCodigoReactivacion();
-      
-      // Actualizar pedido con código de reactivación
-      const { error } = await supabaseClient
-        .from("pedidos")
-        .update({
-          codigo_reactivacion: codigo,
-          horario: `Solicitud de reactivación recibida - Código: ${codigo}`
-        })
-        .eq("id", pedidoId);
-
-      if (error) throw error;
-
-      // Enviar respuesta por WhatsApp con el código
-      const telefono = pedidos.find(p => p.id === pedidoId)?.telefono;
-      if (telefono) {
-        const mensajeRespuesta = `*¡Solicitud Recibida!*\n\n` +
-          `Hemos recibido tu solicitud para reactivar el pedido #${pedidoId}\n\n` +
-          `*Tu código de reactivación es:* ${codigo}\n\n` +
-          `Por favor, contacta a nuestro distribuidor y proporciona este código para reactivar tu pedido.\n\n` +
-          `*Visita nuestra web:* https://yamayorista.online/\n\n` +
-          `Gracias por tu paciencia.`;
-        
-        window.open(`https://wa.me/549${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(mensajeRespuesta)}`, '_blank');
-      }
-
-      showToast("Código de reactivación generado y enviado al cliente.");
-      cargarPedidosAdmin();
-    } catch (err) {
-      showToast("Error procesando solicitud: " + err.message, "error");
-    }
-  };
-
   const guardarModificacionPedido = async () => {
     try {
-      const { data: pedidoOriginal, error: errorOriginal } =
-        await supabaseClient
-          .from("pedidos")
-          .select("*")
-          .eq("id", pedidoEditando.id)
-          .single();
+      const { error: errorOriginal } = await supabaseClient
+        .from("pedidos")
+        .select("*")
+        .eq("id", pedidoEditando.id)
+        .single();
 
       if (errorOriginal) throw errorOriginal;
 
@@ -968,28 +1023,28 @@ export default function AdminPanel() {
       // Calcular el total correcto basado en el carrito actualizado
       const subtotal = carritoParaGuardar.reduce((total, item) => {
         const precioUnitario = item.precio_unitario || item.precio || 0;
-        return total + (precioUnitario * item.cantidad);
+        return total + precioUnitario * item.cantidad;
       }, 0);
-      
-      const envioCosto = pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
-      const impuestos = subtotal * 0.08;
-      const totalCalculado = subtotal + impuestos + envioCosto;
 
-      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
+      const envioCosto = pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
+      const mpFee =
+        pedidoEditando.metodo_pago === "mercadopago" ? subtotal * 0.08 : 0;
+      const totalCalculado = subtotal + mpFee + envioCosto;
+
+      const timeMinutes = 15;
       const { error } = await supabaseClient
         .from("pedidos")
         .update({
           carrito: carritoParaGuardar,
           total: totalCalculado, // Usar el total calculado
           estado: "configurado", // Se comporta como aceptado pero con tiempo configurable
-          expira_en: new Date(Date.now() + timeMinutes * 60 * 1000).toISOString(),
+          expira_en: new Date(
+            Date.now() + timeMinutes * 60 * 1000,
+          ).toISOString(),
         })
         .eq("id", pedidoEditando.id);
 
       if (error) throw error;
-
-      // Abrir WhatsApp con el mensaje de modificación
-      await enviarWhatsAppModificacion(pedidoEditando, pedidoOriginal);
 
       showToast(
         "Pedido modificado. Se abrirá WhatsApp para notificar al cliente.",
@@ -1015,21 +1070,31 @@ export default function AdminPanel() {
         carritoArray = pedido.carrito;
       }
 
-      const productosTexto = carritoArray.slice(0, 3).map(item => 
-        `*${item.nombre}* x${item.cantidad}`
-      ).join('\n');
+      const productosTexto = carritoArray
+        .slice(0, 3)
+        .map((item) => `*${item.nombre}* x${item.cantidad}`)
+        .join("\n");
 
-      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
+      const timeMinutes = 15;
+      const instruccionesPago =
+        pedido.metodo_pago === "mercadopago"
+          ? `*Paga con Mercado Pago:* https://yamayorista.online/\n`
+          : pedido.metodo_pago === "transferencia"
+            ? `*Paga por transferencia bancaria al alias:* ${bancoInfo.alias || "consultar"}\n`
+            : `*Pagas en efectivo al ${pedido.metodo === "retiro" ? "retirar" : "recibir"} el pedido*\n`;
+
       const message =
-        `*¡TU PEDIDO ESTÁ LISTO PARA PAGAR!*\n\n` +
+        `*¡TU PEDIDO ESTÁ LISTO!*\n\n` +
         `*Pedido #${pedido.id}*\n` +
         `*Cliente:* ${pedido.nombre_cliente}\n\n` +
-        `*Tus productos:*\n${productosTexto}${carritoArray.length > 3 ? `\n*Y ${carritoArray.length - 3} productos más*` : ''}\n\n` +
+        `*Tus productos:*\n${productosTexto}${carritoArray.length > 3 ? `\n*Y ${carritoArray.length - 3} productos más*` : ""}\n\n` +
         `*Total a pagar:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
         `*Metodo de entrega:* ${pedido.metodo === "retiro" ? "Retiro en sucursal" : "Envío a domicilio"}\n\n` +
-        `*Tienes ${timeMinutes} minutos para completar el pago*\n` +
-        `*Paga con Mercado Pago o transferencia bancaria*\n\n` +
-        `*Paga ahora en:* https://yamayorista.online/\n\n` +
+        (pedido.metodo_pago !== "efectivo"
+          ? `*Tienes ${timeMinutes} minutos para completar el pago*\n`
+          : "") +
+        instruccionesPago +
+        `\n` +
         `*¡Gracias por tu compra!*\n` +
         `*Te mantendremos informado del estado de tu pedido*`;
 
@@ -1079,9 +1144,7 @@ export default function AdminPanel() {
       const listaProductos = productos
         .map((p) => {
           const subtotal = p.precio * p.cantidad;
-          const impuestos = subtotal * 0.08;
-          const total = subtotal + impuestos;
-          return `• ${p.nombre} x${p.cantidad} = $${subtotal.toLocaleString("es-AR")} +8% impuestos: $${impuestos.toFixed(2)} (Total: $${total.toLocaleString("es-AR")})`;
+          return `• ${p.nombre} x${p.cantidad} = $${subtotal.toLocaleString("es-AR")}`;
         })
         .join("\n");
 
@@ -1102,27 +1165,6 @@ export default function AdminPanel() {
       window.open(whatsappUrl, "_blank");
     } catch (error) {
       console.error("Error enviando WhatsApp de confirmación:", error);
-    }
-  };
-
-  const enviarWhatsAppModificacion = async (
-    pedidoModificado,
-    pedidoOriginal,
-  ) => {
-    try {
-      const timeMinutes = DEV_MODE ? DEV_TIME_MINUTES : 15;
-      
-      const message =
-        `TU PEDIDO FUE MODIFICADO #${pedidoModificado.id} Cliente: ${pedidoModificado.nombre_cliente} Ajustes realizados: Cambios en productos: Nuevo total: $${pedidoModificado.total?.toLocaleString("es-AR")} ` +
-        `Si aceptas los cambios tenés ${timeMinutes} minutos para abonarlo en la Web. Hace click en el link para terminar tu pedido! https://yamayorista.online/`;
-
-      const telefonoFormateado = pedidoModificado.telefono
-        .replace(/\D/g, "")
-        .replace(/^0/, "");
-      const whatsappUrl = `https://wa.me/549${telefonoFormateado}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, "_blank");
-    } catch (error) {
-      console.error("Error enviando WhatsApp:", error);
     }
   };
 
@@ -1259,7 +1301,7 @@ export default function AdminPanel() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-400 mx-auto px-4 py-8">
         {/* Estadísticas rápidas */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
@@ -1460,8 +1502,18 @@ export default function AdminPanel() {
                               <div className="font-black text-[#FF6600] text-base">
                                 ${Number(p.total).toLocaleString("es-AR")}
                               </div>
-                              <div className="text-xs font-bold text-gray-500 uppercase mt-0.5">
-                                {p.metodo || "envio"}
+                              <div className="text-xs font-bold text-gray-500 mt-0.5">
+                                <span className="uppercase">
+                                  {p.metodo || "envio"}
+                                </span>
+                                {p.metodo_pago && (
+                                  <span className="ml-2 text-gray-400">
+                                    ·{" "}
+                                    {p.metodo_pago === "mercadopago"
+                                      ? "MP"
+                                      : p.metodo_pago}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="p-4">{getEstadoBadge(p.estado)}</td>
@@ -1553,49 +1605,6 @@ export default function AdminPanel() {
                   <i className="fas fa-plus"></i>
                   Nuevo Producto
                 </button>
-                <button
-                  onClick={() => {
-                    if (confirm("¿Ver todos los productos en la consola?")) {
-                      verTodosLosProductos();
-                    }
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
-                  title="Ver productos en consola"
-                >
-                  <i className="fas fa-list"></i>
-                  Ver Productos
-                </button>
-                <button
-                  onClick={() => {
-                    const id = prompt("Ingrese ID del producto a eliminar:");
-                    if (id && !isNaN(id)) {
-                      if (confirm(`¿Eliminar producto con ID ${id}?`)) {
-                        eliminarProductoPorId(parseInt(id)).then((success) => {
-                          if (success) {
-                            cargarProductos();
-                          }
-                        });
-                      }
-                    }
-                  }}
-                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
-                  title="Eliminar producto por ID"
-                >
-                  <i className="fas fa-trash"></i>
-                  Eliminar
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm("¿Exportar productos a la consola?")) {
-                      exportarProductos();
-                    }
-                  }}
-                  className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
-                  title="Exportar productos"
-                >
-                  <i className="fas fa-download"></i>
-                  Exportar
-                </button>
               </div>
             </div>
 
@@ -1616,16 +1625,20 @@ export default function AdminPanel() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
+                <table className="w-full text-left border-collapse min-w-[900px]">
+                  <thead className="z-2">
                     <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
                       <th className="p-4 font-black">ID</th>
                       <th className="p-4 font-black">Imagen</th>
                       <th className="p-4 font-black">Nombre</th>
                       <th className="p-4 font-black">Categoría</th>
                       <th className="p-4 font-black">Precio</th>
+                      <th className="p-4 font-black">Cantidad por bulto</th>
                       <th className="p-4 font-black">Stock</th>
                       <th className="p-4 font-black">Oferta</th>
+                      <th className="p-4 font-black">Oferta Express</th>
+                      <th className="p-4 font-black">Más Vendido</th>
+                      <th className="p-4 font-black">Solo Bulto</th>
                       <th className="p-4 font-black">Acciones</th>
                     </tr>
                   </thead>
@@ -1668,6 +1681,20 @@ export default function AdminPanel() {
                           <td className="p-4 font-black text-green-600">
                             ${product.precio?.toLocaleString("es-AR")}
                           </td>
+                          <td>
+                            <input
+                              className="rounded-xl text-center border border-gray-300 px-2 py-1 w-20"
+                              type="number"
+                              min="1"
+                              value={product.quantity || 1}
+                              onChange={(e) =>
+                                updateProductQuantity(
+                                  product.Id,
+                                  parseInt(e.target.value) || 1,
+                                )
+                              }
+                            />
+                          </td>
                           <td className="p-4">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-black ${
@@ -1687,6 +1714,78 @@ export default function AdminPanel() {
                             ) : (
                               <span className="text-gray-400 text-xs">-</span>
                             )}
+                          </td>
+                          <td className="p-4">
+                            <button
+                              onClick={() =>
+                                updateProductFlag(
+                                  product.Id,
+                                  "oferta_express",
+                                  !product.oferta_express,
+                                )
+                              }
+                              className={`w-14 h-7 rounded-full transition relative ${
+                                product.oferta_express
+                                  ? "bg-green-500"
+                                  : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                  product.oferta_express
+                                    ? "-translate-x-7"
+                                    : "translate-x-0.5"
+                                }`}
+                              />
+                            </button>
+                          </td>
+                          <td className="p-4">
+                            <button
+                              onClick={() =>
+                                updateProductFlag(
+                                  product.Id,
+                                  "mas_vendido",
+                                  !product.mas_vendido,
+                                )
+                              }
+                              className={`w-14 h-7 rounded-full transition relative ${
+                                product.mas_vendido
+                                  ? "bg-yellow-500"
+                                  : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                  product.mas_vendido
+                                    ? "-translate-x-7"
+                                    : "translate-x-0.5"
+                                }`}
+                              />
+                            </button>
+                          </td>
+                          <td>
+                            <button
+                              onClick={() =>
+                                updateProductFlag(
+                                  product.Id,
+                                  "solo_bulto",
+                                  !product.solo_bulto,
+                                )
+                              }
+                              className={`w-14 h-7 rounded-full transition relative ${
+                                product.solo_bulto
+                                  ? "bg-yellow-500"
+                                  : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                  product.solo_bulto
+                                    ? "-translate-x-7"
+                                    : "translate-x-0.5"
+                                }`}
+                              />
+                            </button>
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
@@ -1730,65 +1829,136 @@ export default function AdminPanel() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <div className="max-w-2xl">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <i className="fas fa-truck text-[#FF6600]"></i>
-                  Precio de Envío
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Precio actual de envío:
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl font-black text-green-600">
-                        ${shippingPrice.toLocaleString("es-AR")}
-                      </span>
-                      <span className="text-sm text-gray-500 font-medium">
-                        (precio vigente)
-                      </span>
-                      <button
-                        onClick={testDatabaseConnection}
-                        className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
-                        title="Probar conexión a base de datos"
-                      >
-                        <i className="fas fa-database mr-1"></i>
-                        Probar DB
-                      </button>
+              <div className="max-w-2xl space-y-8">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="fas fa-truck text-[#FF6600]"></i>
+                    Precio de Envío
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Precio actual de envío:
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-black text-green-600">
+                          ${shippingPrice.toLocaleString("es-AR")}
+                        </span>
+                        <span className="text-sm text-gray-500 font-medium">
+                          (precio vigente)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Nuevo precio de envío:
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1 max-w-xs">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            value={tempShippingPrice}
+                            onChange={(e) =>
+                              setTempShippingPrice(e.target.value)
+                            }
+                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-bold text-lg"
+                            placeholder="7200"
+                            min="0"
+                            step="100"
+                          />
+                        </div>
+                        <button
+                          onClick={saveShippingPrice}
+                          className="bg-[#FF6600] hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md flex items-center gap-2"
+                        >
+                          <i className="fas fa-save"></i> Actualizar Precio
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        ⚠️ Este cambio afectará todos los pedidos nuevos
+                        realizados desde la web
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  <div className="border-t pt-4">
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Nuevo precio de envío:
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <div className="relative flex-1 max-w-xs">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          value={tempShippingPrice}
-                          onChange={(e) => setTempShippingPrice(e.target.value)}
-                          className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-bold text-lg"
-                          placeholder="7200"
-                          min="0"
-                          step="100"
-                        />
-                      </div>
-                      <button
-                        onClick={saveShippingPrice}
-                        className="bg-[#FF6600] hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md flex items-center gap-2"
-                      >
-                        <i className="fas fa-save"></i>
-                        Actualizar Precio
-                      </button>
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="fas fa-building-columns text-[#FF6600]"></i>
+                    Datos de Transferencia Bancaria
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Banco
+                      </label>
+                      <input
+                        type="text"
+                        value={bancoInfo.banco}
+                        onChange={(e) =>
+                          setBancoInfo({ ...bancoInfo, banco: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                        placeholder="ej: Banco Nación"
+                      />
                     </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Titular de la cuenta
+                      </label>
+                      <input
+                        type="text"
+                        value={bancoInfo.titular}
+                        onChange={(e) =>
+                          setBancoInfo({
+                            ...bancoInfo,
+                            titular: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                        placeholder="Nombre y apellido"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Alias
+                      </label>
+                      <input
+                        type="text"
+                        value={bancoInfo.alias}
+                        onChange={(e) =>
+                          setBancoInfo({ ...bancoInfo, alias: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                        placeholder="ej: tienda.mp"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        CBU
+                      </label>
+                      <input
+                        type="text"
+                        value={bancoInfo.cbu}
+                        onChange={(e) =>
+                          setBancoInfo({ ...bancoInfo, cbu: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                        placeholder="0000000000000000000000"
+                      />
+                    </div>
+                    <button
+                      onClick={saveBankConfig}
+                      className="bg-[#FF6600] hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md flex items-center gap-2"
+                    >
+                      <i className="fas fa-save"></i> Guardar Datos Bancarios
+                    </button>
                     <p className="text-xs text-gray-500 mt-2">
-                      ⚠️ Este cambio afectará todos los pedidos nuevos
-                      realizados desde la web
+                      Estos datos se mostrarán a los clientes que elijan
+                      &lsquo;Transferencia bancaria&lsquo; como método de pago.
                     </p>
                   </div>
                 </div>
@@ -1882,6 +2052,17 @@ export default function AdminPanel() {
                       <div className="flex-1">
                         <h4 className="font-bold text-gray-800 text-sm leading-tight">
                           {estaEliminado ? <s>{item.nombre}</s> : item.nombre}
+                          {!estaEliminado && (
+                            <span
+                              className={`inline-block ml-2 px-2 py-0.5 rounded text-xs font-black ${
+                                (item.tipo || "Bulto") === "Bulto"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {item.tipo || "Bulto"}
+                            </span>
+                          )}
                           {estaEliminado && (
                             <span className="text-red-500 ml-1 text-xs">
                               (Eliminado)
@@ -1944,7 +2125,9 @@ export default function AdminPanel() {
             <div className="p-4 border-t border-gray-200 bg-white">
               {/* Desglose del pedido */}
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-bold text-gray-700 mb-3 text-sm">Desglose del Pedido:</h4>
+                <h4 className="font-bold text-gray-700 mb-3 text-sm">
+                  Desglose del Pedido:
+                </h4>
                 <div className="space-y-2 text-sm">
                   {(() => {
                     // Calcular desglose del pedido
@@ -1958,38 +2141,73 @@ export default function AdminPanel() {
                     } else if (Array.isArray(pedidoEditando.carrito)) {
                       carritoArray = pedidoEditando.carrito;
                     }
-                    
+
                     const subtotal = carritoArray.reduce((total, item) => {
-                      const precioUnitario = item.precio_unitario || item.precio || 0;
-                      return total + (precioUnitario * item.cantidad);
+                      const precioUnitario =
+                        item.precio_unitario || item.precio || 0;
+                      return total + precioUnitario * item.cantidad;
                     }, 0);
-                    
-                    const envioCosto = pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
-                    const impuestos = subtotal * 0.08;
-                    const totalCalculado = subtotal + impuestos + envioCosto;
-                    
+
+                    const envioCosto =
+                      pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
+                    const mpFee =
+                      pedidoEditando.metodo_pago === "mercadopago"
+                        ? subtotal * 0.08
+                        : 0;
+                    const totalCalculado = subtotal + mpFee + envioCosto;
+
                     return (
                       <>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Subtotal productos:</span>
-                          <span className="font-medium">${subtotal.toLocaleString("es-AR")}</span>
+                          <span className="text-gray-600">
+                            Subtotal productos:
+                          </span>
+                          <span className="font-medium">
+                            ${subtotal.toLocaleString("es-AR")}
+                          </span>
                         </div>
                         {pedidoEditando.metodo !== "retiro" && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Costo de envío:</span>
-                            <span className="font-medium">${envioCosto.toLocaleString("es-AR")}</span>
+                            <span className="text-gray-600">
+                              Costo de envío:
+                            </span>
+                            <span className="font-medium">
+                              ${envioCosto.toLocaleString("es-AR")}
+                            </span>
                           </div>
                         )}
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Impuestos (8%):</span>
-                          <span className="font-medium">${impuestos.toLocaleString("es-AR")}</span>
-                        </div>
+                        {mpFee > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">
+                              Recargo Mercado Pago (8%):
+                            </span>
+                            <span className="font-medium">
+                              ${mpFee.toLocaleString("es-AR")}
+                            </span>
+                          </div>
+                        )}
                         <div className="border-t pt-2 mt-2">
                           <div className="flex justify-between">
-                            <span className="font-bold text-gray-700">Total:</span>
-                            <span className="text-2xl font-black text-[#FF6600]">${totalCalculado.toLocaleString("es-AR")}</span>
+                            <span className="font-bold text-gray-700">
+                              Total:
+                            </span>
+                            <span className="text-2xl font-black text-[#FF6600]">
+                              ${totalCalculado.toLocaleString("es-AR")}
+                            </span>
                           </div>
                         </div>
+                        {pedidoEditando.metodo_pago && (
+                          <div className="mt-2 pt-2 border-t text-xs text-gray-500 font-medium">
+                            <span className="uppercase">
+                              Pago:{" "}
+                              {pedidoEditando.metodo_pago === "mercadopago"
+                                ? "Mercado Pago"
+                                : pedidoEditando.metodo_pago === "transferencia"
+                                  ? "Transferencia bancaria"
+                                  : "Efectivo"}
+                            </span>
+                          </div>
+                        )}
                       </>
                     );
                   })()}

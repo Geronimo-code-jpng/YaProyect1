@@ -56,7 +56,7 @@ export default function CardCatalogo({
   allProducts,
   searchTerm,
 }: CardCatalogoProps) {
-  const [categoriaActual, setCategoriaActual] = useState<string>("Todas");
+  const [categoriaActual] = useState<string>("Todas");
   const navigate = useNavigate();
 
   const filtrados = useMemo(() => {

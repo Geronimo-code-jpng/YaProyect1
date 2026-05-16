@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useCart } from '../contexts/CartContext';
 import { supabase as supabaseClient } from '../lib/supabase';
 
 export default function CategoriesPage() {
   const [allProducts, setAllProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { addToCart } = useCart();
 
   // Load products from Supabase
   useEffect(() => {

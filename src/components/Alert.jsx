@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, {  useState, useEffect  } from 'react';
+import PropTypes from 'prop-types';
 
 export default function Alert({ type = 'success', message, duration = 4000, onClose }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -65,3 +66,10 @@ export default function Alert({ type = 'success', message, duration = 4000, onCl
     </div>
   );
 }
+
+Alert.propTypes = {
+  type: PropTypes.oneOf(['success', 'error', 'warning', 'info']),
+  message: PropTypes.string.isRequired,
+  duration: PropTypes.number,
+  onClose: PropTypes.func
+};

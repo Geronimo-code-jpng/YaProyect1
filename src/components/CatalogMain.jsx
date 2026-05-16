@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {  useState, useEffect, useMemo, useCallback  } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useProducts } from '../contexts/ProductContext';
 import CategoriesGrid from './CategoriesGrid';

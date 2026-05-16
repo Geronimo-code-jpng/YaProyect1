@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, {  useState, useMemo, useEffect  } from 'react';
+import PropTypes from 'prop-types';
 import { supabase } from '../lib/supabase';
 
 export default function ProductModal({ isOpen, onClose, product, productId, onSave }) {
@@ -47,6 +48,10 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
     Categoria: currentProduct?.Categoria || '',
     Oferta: currentProduct?.Oferta || '',
     Stock: currentProduct?.Stock ?? false,
+    quantity: currentProduct?.quantity || 1,
+    oferta_express: currentProduct?.oferta_express ?? false,
+    mas_vendido: currentProduct?.mas_vendido ?? false,
+    solo_bulto: currentProduct?.solo_bulto ?? false,
     imageFile: imageFile,
     ...formOverrides
   }), [currentProduct, imageFile, formOverrides]);
@@ -54,6 +59,11 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     let processedValue = value;
+    
+    console.log("=== DEBUG: handleChange ===");
+    console.log("name:", name);
+    console.log("value:", value);
+    console.log("type:", type);
     
     // Convertir string a boolean para el campo Stock
     if (name === 'Stock') {
@@ -72,7 +82,12 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
       return;
     } else if (type === 'number') {
       processedValue = parseFloat(value) || 0;
+      if (name === 'quantity') {
+        processedValue = parseInt(value) || 1; // Para quantity usar entero
+      }
     }
+    
+    console.log("processedValue:", processedValue);
     
     setFormOverrides(prev => ({
       ...prev,
@@ -121,13 +136,15 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
       return;
     }
 
-    // Preparar datos para guardar
     const productData = {
       nombre: formData.nombre.trim(),
       precio: parseFloat(formData.precio),
       Categoria: formData.Categoria.trim(),
       Oferta: formData.Oferta.trim(),
-      Stock: Boolean(formData.Stock)
+      Stock: Boolean(formData.Stock),
+      oferta_express: Boolean(formData.oferta_express),
+      mas_vendido: Boolean(formData.mas_vendido),
+      solo_bulto: Boolean(formData.solo_bulto),
     };
 
     // Si hay un archivo de imagen, incluirlo
@@ -205,6 +222,26 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                 />
               </div>
 
+              {/* Cantidad por Bulto */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Cantidad por Bulto *
+                </label>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  min="1"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                  placeholder="1"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ¿Cuántas unidades trae el bulto de este producto?
+                </p>
+              </div>
+
               {/* Stock */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -277,7 +314,7 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                         <p><strong>Sistema:</strong> La imagen se sube a Supabase Storage (1 GB gratuito).</p>
                         <p><strong>Proceso:</strong> Subida directa con URL pública automática.</p>
                         <p><strong>Resultado:</strong> La imagen se almacenará en la nube y será visible inmediatamente.</p>
-                        <p class="text-xs text-blue-600 mt-2">Espacio ilimitado para imágenes. Profesional y escalable. Ideal para Vercel.</p>
+                        <p className="text-xs text-blue-600 mt-2">Espacio ilimitado para imágenes. Profesional y escalable. Ideal para Vercel.</p>
                       </div>
                     </div>
                     
@@ -317,6 +354,66 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                   placeholder="Ej: 20% OFF, 2x1, Llévate 3 paga 2"
                 />
               </div>
+
+              {/* Oferta Express */}
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setFormOverrides(prev => ({ ...prev, oferta_express: !formData.oferta_express }))}
+                    className={`w-14 h-7 rounded-full transition relative ${
+                      formData.oferta_express ? "bg-green-500" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                        formData.oferta_express ? "translate-x-7" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm font-bold text-gray-700">Oferta Express</span>
+                </label>
+              </div>
+
+              {/* Más Vendido */}
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setFormOverrides(prev => ({ ...prev, mas_vendido: !formData.mas_vendido }))}
+                    className={`w-14 h-7 rounded-full transition relative ${
+                      formData.mas_vendido ? "bg-yellow-500" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                        formData.mas_vendido ? "translate-x-7" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm font-bold text-gray-700">Más Vendido</span>
+                </label>
+              </div>
+
+              {/* Solo Bulto */}
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setFormOverrides(prev => ({ ...prev, solo_bulto: !formData.solo_bulto }))}
+                    className={`w-14 h-7 rounded-full transition relative ${
+                      formData.solo_bulto ? "bg-blue-500" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                        formData.solo_bulto ? "translate-x-7" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm font-bold text-gray-700">Solo Bulto</span>
+                </label>
+              </div>
             </div>
 
             
@@ -342,3 +439,11 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
     </div>
   );
 }
+
+ProductModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  product: PropTypes.object,
+  productId: PropTypes.string,
+  onSave: PropTypes.func.isRequired
+};

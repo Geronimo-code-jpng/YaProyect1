@@ -1,0 +1,16 @@
+aparece siempre bulto en pedido
+enviar al iniciodespues de hacer orden
+agregar metodo de pago en el carrito
+paginade mi pedidos
+conexinde ofertas expres y ms vendidos a db
+  {
+    "Id": "42",
+    "nombre": "AGUA MINERAL KALANTA 500ml X12U",
+    "precio": 500,
+    "cantidad": 2,
+    "subtotal": 1000,
+    "precio_unitario": 500
+  },
+  eniar astadodebulto o unidad a db
+
+  mejorar navbar con despliegedecategorias\

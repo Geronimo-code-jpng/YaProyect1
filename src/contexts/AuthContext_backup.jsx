@@ -63,7 +63,10 @@ export function AuthProvider({ children }) {
       'stole it',
       'NavigatorLockAcquireTimeoutError'
     ];
-  // Obtener y combinar datos del perfil con los del auth
+
+    return retriableErrors.some(err => errorMessage.includes(err));
+  }, []);
+
   const getProfileData = useCallback(async (authUser) => {
     if (!authUser) return { userWithProfile: null, profile: null };
 

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, {  useState, useEffect, useRef, useCallback  } from "react";
+import PropTypes from 'prop-types';
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { supabase as supabaseClient, supabaseUrl, supabaseAnonKey } from "../lib/supabase";
@@ -68,6 +69,11 @@ function CountdownTimer({ expira_en, onExpire }) {
     </span>
   );
 }
+
+CountdownTimer.propTypes = {
+  expira_en: PropTypes.string.isRequired,
+  onExpire: PropTypes.func.isRequired
+};
 
 export default function PedidosModal() {
   const { user, userProfile } = useAuth();
@@ -574,11 +580,10 @@ export default function PedidosModal() {
           <div className="flex items-center gap-2">
             <button
               onClick={cargarPedidos}
-              className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+              className="px-3 scale-135 mr-6 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
               title="Refrescar pedidos"
             >
               <i className="fas fa-sync-alt"></i>
-              Refrescar
             </button>
             <button
               onClick={closePedidos}
@@ -753,22 +758,37 @@ export default function PedidosModal() {
                                   }`}
                                 >
                                   <div className="flex-1">
-                                    <span className={`font-medium ${
-                                      item.cantidad === 0 ? 'text-gray-400 line-through' : ''
-                                    }`}>
-                                      {item.nombre}
-                                    </span>
-                                    <span className={`text-gray-500 ml-2 ${
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`font-medium ${
+                                        item.cantidad === 0 ? 'text-gray-400 line-through' : ''
+                                      }`}>
+                                        {item.nombre}
+                                      </span>
+                                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-black ${
+                                        (item.tipo || "Bulto") === "Bulto" 
+                                          ? "bg-blue-100 text-blue-700" 
+                                          : "bg-green-100 text-green-700"
+                                      }`}>
+                                        {(item.tipo || "Bulto") === "Bulto" ? "Bulto" : "Unidad"}
+                                      </span>
+                                    </div>
+                                    <span className={`text-gray-500 text-xs ${
                                       item.cantidad === 0 ? 'line-through' : ''
                                     }`}>
-                                      x{item.cantidad}
+                                      x{item.cantidad} {(item.tipo || "Bulto") === "Bulto" && item.quantity_per_bundle > 1 ? 
+                                        `(${item.cantidad * item.quantity_per_bundle} unidades)` : 
+                                        "unidades"
+                                      }
                                     </span>
                                   </div>
                                   <div className="text-right">
-                                    <span className={`font-black ${
+                                    <span className={`font-black text-sm ${
                                       item.cantidad === 0 ? 'text-gray-400 line-through' : ''
                                     }`}>
-                                      ${(item.precio_unitario || item.precio || 0).toLocaleString("es-AR")} c/u
+                                      ${(item.precio_unitario || item.precio || 0).toLocaleString("es-AR")} 
+                                      <span className="text-xs text-gray-500 font-normal">
+                                        /{(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
+                                      </span>
                                     </span>
                                     <div className={`text-[#FF6600] font-bold ${
                                       item.cantidad === 0 ? 'text-gray-400 line-through' : ''
@@ -815,8 +835,7 @@ export default function PedidosModal() {
                             }, 0);
                             
                             const envioCosto = pedido.metodo === "retiro" ? 0 : shippingPrice;
-                            const impuestos = Math.round(subtotal * 0.08);
-                            const totalFinal = subtotal + impuestos + envioCosto;
+                            const totalFinal = subtotal + envioCosto;
                             
                             return (
                               <>
@@ -839,12 +858,6 @@ export default function PedidosModal() {
                                   <span>Total:</span>
                                   <span className="text-[#FF6600]">
                                     ${totalFinal.toLocaleString("es-AR")}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-sm text-gray-600 border-t pt-2">
-                                  <span>Impuestos (8%):</span>
-                                  <span>
-                                    ${impuestos.toLocaleString("es-AR")}
                                   </span>
                                 </div>
                               </>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, {  useState, useEffect  } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -19,6 +19,11 @@ import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import HomePage from "./pages/HomePage";
 import AdminPanel from "./components/AdminPanel";
+import CartPage from "./pages/CartPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import OrdersPage from "./pages/OrdersPage";
+import ProfilePage from "./pages/ProfilePage";
 import { useAuth } from "./contexts/AuthContext";
 
 function AppContent() {
@@ -38,6 +43,11 @@ function AppContent() {
       "/": "YA MAYORISTA! | Página Principal",
       "/productos": "YA MAYORISTA! | Catálogo Oficial",
       "/admin": "YA MAYORISTA! | Panel Administración",
+      "/cart": "YA MAYORISTA! | Mi Carrito",
+      "/login": "YA MAYORISTA! | Iniciar Sesión",
+      "/register": "YA MAYORISTA! | Crear Cuenta",
+      "/pedidos": "YA MAYORISTA! | Mis Pedidos",
+      "/perfil": "YA MAYORISTA! | Mi Perfil",
     };
 
     // Handle dynamic routes
@@ -100,6 +110,7 @@ function AppContent() {
         id="floatingWa"
         href="https://wa.me/3425084197"
         target="_blank"
+        rel="noreferrer"
         className="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110"
       >
         <FontAwesomeIcon icon={faWhatsapp} />
@@ -150,6 +161,11 @@ function AppContent() {
         <Route path="/productos" element={<ProductsPage />} />
         <Route path="/producto/:id" element={<ProductDetailPage />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/pedidos" element={<OrdersPage />} />
+        <Route path="/perfil" element={<ProfilePage />} />
       </Routes>
 
       <Footer />

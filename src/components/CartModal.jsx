@@ -2,12 +2,14 @@ import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { Trash, User, Phone, MessageSquare, Lock } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, {  useState, useEffect  } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase as supabaseClient } from "../lib/supabase";
-import { openPedidos } from "../utils/pedidosUtils";
+// import { openPedidos } from "../utils/pedidosUtils";
 import { getProductImageUrl } from "../utils/productImageUtils";
 
 export default function CartModal() {
+  const navigate = useNavigate();
   const {
     cart,
     removeFromCart,
@@ -19,7 +21,7 @@ export default function CartModal() {
     getCartTotalWithDiscount,
     qualifiesForFirstBuyDiscount,
   } = useCart();
-  const { user, userProfile, openAuthModal, switchTab } = useAuth();
+  const { user, userProfile, openAuthModal } = useAuth();
   const { showSuccess, showError } = useAlert();
   const [showCheckout, setShowCheckout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,7 +31,8 @@ export default function CartModal() {
     telefono: "",
     direccion: "",
     notas: "",
-    metodoEntrega: "envio", // "envio" o "retiro"
+    metodoEntrega: "envio",
+    metodoPago: "efectivo",
   });
   const [dbUserData, setDbUserData] = useState(null);
   const [loadingUserData, setLoadingUserData] = useState(false);
@@ -133,6 +136,7 @@ export default function CartModal() {
         direccion: "",
         notas: "",
         metodoEntrega: "envio",
+        metodoPago: "efectivo",
       });
     }
   }, [user]);
@@ -175,16 +179,16 @@ export default function CartModal() {
   const changeQty = (index, delta) => {
     const item = cart[index];
     const newCantidad = Math.max(1, item.cantidad + delta);
-    updateQuantity(item.Id, newCantidad);
+    updateQuantity(item.Id, newCantidad, item.tipo || "Bulto");
   };
 
   const setQty = (index, valorIngresado) => {
-    let nuevaCantidad = parseInt(valorIngresado);
-    if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
+    let nuevaCantidad = parseInt(valorIngresado) || 1;
+    if (nuevaCantidad < 1) {
       nuevaCantidad = 1;
     }
     const item = cart[index];
-    updateQuantity(item.Id, nuevaCantidad);
+    updateQuantity(item.Id, nuevaCantidad, item.tipo || "Bulto");
   };
 
   const handleInputChange = (e) => {
@@ -206,6 +210,7 @@ export default function CartModal() {
         );
         setIsSubmitting(false);
         openAuthModal(); // Abrir modal de autenticación
+        // switchTab('login'); // Uncomment if needed to switch to login tab
         return;
       }
 
@@ -238,6 +243,10 @@ export default function CartModal() {
 
       await verificarPedidosVencidos();
 
+      const baseTotal = getCartTotalWithDiscount(userProfile);
+      const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
+      const mpFee = orderData.metodoPago === "mercadopago" ? baseTotal * 0.08 : 0;
+
       const pedidoData = {
         nombre_cliente: orderData.nombre.trim(),
         telefono: orderData.telefono.trim(),
@@ -245,25 +254,26 @@ export default function CartModal() {
           orderData.metodoEntrega === "retiro"
             ? "Retiro en local"
             : orderData.direccion.trim(),
+        metodo_pago: orderData.metodoPago,
         carrito: cart.map((item) => ({
           Id: item.Id,
           nombre: item.nombre,
           cantidad: item.cantidad,
-          precio: item.precio, // Se guarda como 'precio' en el JSON
-          precio_unitario: item.precio, // Para compatibilidad con código existente
+          precio: item.precio,
+          precio_unitario: item.precio,
           subtotal: item.precio * item.cantidad,
+          tipo: item.tipo || "Bulto",
         })),
-        total:
-          orderData.metodoEntrega === "retiro"
-            ? (getCartTotalWithDiscount(userProfile) + (getCartTotalWithDiscount(userProfile) * 0.08))
-            : (getCartTotalWithDiscount(userProfile) + shippingPrice + (getCartTotalWithDiscount(userProfile) * 0.08)),
+        total: baseTotal + shipping + mpFee,
         descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
           ? 1000
           : 0,
         estado: "pendiente",
         metodo: orderData.metodoEntrega,
         created_at: new Date().toISOString(),
-        expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        ...(orderData.metodoPago !== "efectivo" && {
+          expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        }),
         fuente: "web",
         horario: orderData.notas.trim() || "Sin notas",
         user_id: user?.id || null,
@@ -321,21 +331,9 @@ export default function CartModal() {
       showSuccess("¡Pedido enviado! Lo revisaremos a la brevedad.");
 
       setTimeout(() => {
-        if (!user) {
-          if (
-            confirm(
-              "Para ver el estado de tu pedido, necesitas una cuenta. ¿Querés crear una cuenta gratuita ahora?",
-            )
-          ) {
-            switchTab("register");
-            openAuthModal();
-          }
-        } else {
-          if (confirm("¿Querés ver el estado de tu pedido en 'Mis Pedidos'?")) {
-            openPedidos();
-          }
-        }
-      }, 1000);
+        navigate("/");
+        window.scrollTo(0, 0);
+      }, 1500);
     } catch (error) {
       console.error("Error sending order:", error);
       showError("❌ Error al enviar el pedido. Por favor intenta nuevamente.");
@@ -348,7 +346,7 @@ export default function CartModal() {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-9000 flex justify-end transition-opacity">
-      <div className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl">
+      <div className="bg-white w-full max-w-md lg:max-w-xl h-full flex flex-col shadow-2xl">
         <div className="px-6 py-5 border-b flex justify-between items-center bg-gray-50">
           <h3 className="text-2xl font-black flex items-center gap-3">
             <i className="fas fa-shopping-cart text-[#FF6600]"></i> Mi Pedido
@@ -376,15 +374,32 @@ export default function CartModal() {
                 <img
                   src={getProductImageUrl(item)}
                   alt={item.nombre}
-                  className="w-20 h-20 object-cover rounded-lg"
+                  className="w-20 h-20 lg:w-28 lg:h-28 object-cover rounded-lg"
                   onError={(e) => {
                     e.target.src = 'https://via.placeholder.com/80/f3f4f6/a1a1aa?text=Prod';
                   }}
                 />
-                <div className="flex-1">
-                  <h4 className="font-bold text-sm pr-6">{item.nombre}</h4>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-sm lg:text-base pr-6 truncate">{item.nombre}</h4>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-black ${
+                      (item.tipo || "Bulto") === "Bulto" 
+                        ? "bg-blue-100 text-blue-700" 
+                        : "bg-green-100 text-green-700"
+                    }`}>
+                      {(item.tipo || "Bulto") === "Bulto" ? "📦 Bulto" : "📦 Unidad"}
+                    </span>
+                    {(item.tipo || "Bulto") === "Bulto" && item.quantity_per_bundle > 1 && (
+                      <span className="text-xs text-gray-500">
+                        ({item.quantity_per_bundle} unidades)
+                      </span>
+                    )}
+                  </div>
                   <div className="font-black text-[#FF6600]">
                     ${item.precio.toLocaleString("es-AR")}
+                    <span className="text-xs text-gray-500 font-normal ml-1">
+                      por {(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
+                    </span>
                   </div>
                   <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden mt-2 w-max relative">
                     <button
@@ -443,7 +458,7 @@ export default function CartModal() {
       {/* Checkout Modal */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-md lg:max-w-xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
               <h3 className="text-2xl font-black flex items-center gap-3">
                 <i className="fas fa-clipboard-list text-[#FF6600]"></i>
@@ -465,7 +480,7 @@ export default function CartModal() {
               </div>
             )}
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:space-y-0">
               {/* Nombre */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -539,7 +554,7 @@ export default function CartModal() {
               </div>
 
               {/* Método de Entrega */}
-              <div>
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   <i className="fas fa-truck mr-2"></i>
                   Método de entrega
@@ -586,9 +601,67 @@ export default function CartModal() {
                 </div>
               </div>
 
+              {/* Método de Pago */}
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <i className="fas fa-credit-card mr-2"></i>
+                  Método de pago
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="metodoPago"
+                      value="efectivo"
+                      checked={orderData.metodoPago === "efectivo"}
+                      onChange={handleInputChange}
+                      className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Efectivo</span>
+                      <span className="text-sm text-gray-500 ml-2">Pago al recibir</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="metodoPago"
+                      value="transferencia"
+                      checked={orderData.metodoPago === "transferencia"}
+                      onChange={handleInputChange}
+                      className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Transferencia bancaria</span>
+                      <span className="text-sm text-gray-500 ml-2">Pagás cuando aceptemos el pedido</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="metodoPago"
+                      value="mercadopago"
+                      checked={orderData.metodoPago === "mercadopago"}
+                      onChange={handleInputChange}
+                      className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Mercado Pago</span>
+                      <span className="text-sm text-gray-500 ml-2">Pago online con QR o link</span>
+                    </div>
+                  </label>
+                </div>
+                {orderData.metodoPago === "mercadopago" && (
+                  <div className="mt-2 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-xs font-medium text-yellow-800">
+                    <i className="fas fa-info-circle"></i>
+                    Mercado Pago aplica un recargo del 8% sobre el total del pedido
+                  </div>
+                )}
+              </div>
+
               {/* Dirección - solo mostrar si es envío */}
               {orderData.metodoEntrega === "envio" && (
-                <div>
+                <div className="lg:col-span-2">
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     <i className="fas fa-map-marker-alt mr-2"></i>
                     Dirección de entrega
@@ -625,7 +698,7 @@ export default function CartModal() {
               )}
 
               {/* Notas */}
-              <div>
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   <MessageSquare size={16} className="inline mr-2" />
                   Notas (opcional)
@@ -640,32 +713,31 @@ export default function CartModal() {
                 />
               </div>
 
-              <div className="bg-gray-50 rounded-xl">
+              <div className="bg-gray-50 rounded-xl lg:col-span-2">
                 <div className="flex justify-between text-lg font-black mb-2">
                   <span>Subtotal:</span>
                   <span>${cartTotal.toLocaleString("es-AR")}</span>
                 </div>
 
-                <div className="flex justify-between text-sm font-medium mb-2">
-                  <span>Impuestos Nacionales (8%):</span>
-                  <span className="text-gray-600">
-                    ${(cartTotal * 0.08).toLocaleString("es-AR")}
-                  </span>
-                </div>
+                {orderData.metodoPago === "mercadopago" && (
+                  <div className="flex justify-between text-sm font-medium mb-2">
+                    <span className="text-yellow-700">Recargo Mercado Pago (8%):</span>
+                    <span className="text-yellow-700">
+                      ${(getCartTotalWithDiscount(userProfile) * 0.08).toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                )}
 
                 {orderData.metodoEntrega === "envio" && (
                   <div className="flex justify-between text-sm font-medium mb-2">
                     <span>Costo de envío:</span>
-                    <span className="text-gray-600">${shippingPrice.toLocaleString('es-AR')}</span>
+                    <span className="text-gray-600">${shippingPrice.toLocaleString("es-AR")}</span>
                   </div>
                 )}
 
-                {/* Descuento de primera compra */}
                 {qualifiesForFirstBuyDiscount(userProfile) && (
                   <div className="flex justify-between text-sm font-medium mb-2">
-                    <span className="text-green-600">
-                      🎉 Descuento primera compra:
-                    </span>
+                    <span className="text-green-600">🎉 Descuento primera compra:</span>
                     <span className="text-green-600">-$1.000</span>
                   </div>
                 )}
@@ -673,19 +745,17 @@ export default function CartModal() {
                 <div className="border-t pt-2 flex justify-between text-xl font-black">
                   <span>Total:</span>
                   <span className="text-[#FF6600]">
-                    $
-                    {(orderData.metodoEntrega === "retiro"
-                      ? (getCartTotalWithDiscount(userProfile) + (getCartTotalWithDiscount(userProfile) * 0.08))
-                      : (getCartTotalWithDiscount(userProfile) + shippingPrice + (getCartTotalWithDiscount(userProfile) * 0.08))    
+                    ${(
+                      orderData.metodoEntrega === "retiro"
+                        ? (getCartTotalWithDiscount(userProfile) + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile) * 0.08 : 0))
+                        : (getCartTotalWithDiscount(userProfile) + shippingPrice + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile) * 0.08 : 0))
                     ).toLocaleString("es-AR")}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 font-medium mt-2">
                   {cart.length} {cart.length === 1 ? "producto" : "productos"}
                   {qualifiesForFirstBuyDiscount(userProfile) && (
-                    <span className="text-green-600 ml-2">
-                      ✨ ¡$1.000 OFF aplicado!
-                    </span>
+                    <span className="text-green-600 ml-2">✨ ¡$1.000 OFF aplicado!</span>
                   )}
                 </div>
               </div>

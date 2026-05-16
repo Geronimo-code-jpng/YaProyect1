@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, {  useState  } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { sendPasswordRecoveryEmail } from "../resend/emailRecovery";
 import { supabase } from "../lib/supabase";
@@ -43,7 +43,7 @@ export default function PasswordResetModal() {
       showSuccess("Email de recuperación enviado correctamente. Revisa tu email para obtener el código.");
       // Mostrar campo para ingresar el código
       setShowTokenInput(true);
-    } catch (error) {
+    } catch {
       showError("Error enviando email de recuperación");
     } finally {
       setLoading(false);
@@ -118,7 +118,7 @@ export default function PasswordResetModal() {
       setShowPasswordInputs(true);
       showSuccess('Código verificado. Ahora ingresa tu nueva contraseña.');
 
-    } catch (error) {
+    } catch {
       showError('Error verificando código');
     } finally {
       setLoading(false);

@@ -1,10 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, createContext, useContext, useEffect, useCallback } from "react";
+import PropTypes from "prop-types";
 import { supabase as supabaseClient } from "../lib/supabase";
 
 const ProductContext = createContext();
@@ -244,3 +239,7 @@ export function ProductProvider({ children }) {
     <ProductContext.Provider value={value}>{children}</ProductContext.Provider>
   );
 }
+
+ProductProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

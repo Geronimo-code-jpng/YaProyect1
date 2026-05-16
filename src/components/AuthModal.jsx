@@ -1,5 +1,5 @@
 import { useAuth } from "../contexts/AuthContext";
-import { useState } from "react";
+import React, {  useState  } from "react";
 import PasswordResetModal from "./PasswordResetModal";
 import { loginWithDB } from "../utils/authDB";
 import { hashPassword } from "../utils/passwordUtils";
@@ -9,16 +9,16 @@ export default function AuthModal() {
   const {
     showAuthModal,
     showPasswordResetModal,
-    user,
-    userProfile,
-    openAuthModal,
+    // user,
+    // userProfile,
+    // openAuthModal,
     closeAuthModal,
     openPasswordResetModal,
-    closePasswordResetModal,
+    // closePasswordResetModal,
     activeTab,
     switchTab,
     authError,
-    showError,
+    // showError,
   } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errores, setErrores] = useState([]);
@@ -39,17 +39,17 @@ export default function AuthModal() {
     setLoginForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const checkSession = async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      return session;
-    } catch (err) {
-      console.error("Error sesión:", err);
-      return null;
-    }
-  };
+  // const checkSession = async () => {
+  //   try {
+  //     const {
+  //       data: { session },
+  //     } = await supabaseClient.auth.getSession();
+  //     return session;
+  //   } catch (err) {
+  //     console.error("Error sesión:", err);
+  //     return null;
+  //   }
+  // };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -89,7 +89,7 @@ export default function AuthModal() {
       } else {
         setLoginError(result.error);
       }
-    } catch (err) {
+    } catch {
       setLoginError("Error en el servidor");
     } finally {
       setLoginLoading(false);
@@ -145,7 +145,7 @@ export default function AuthModal() {
 
     try {
       // Verificar si el email ya existe en la base de datos
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUser } = await supabase
         .from('perfiles')
         .select('email')
         .eq('email', email)

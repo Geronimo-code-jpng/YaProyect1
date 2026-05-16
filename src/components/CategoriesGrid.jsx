@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 export default function CategoriesGrid({ categories, onCategoryClick }) {
   return (
@@ -23,3 +24,14 @@ export default function CategoriesGrid({ categories, onCategoryClick }) {
     </div>
   );
 }
+
+CategoriesGrid.propTypes = {
+  categories: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      nombre: PropTypes.string.isRequired,
+      imagen: PropTypes.string.isRequired
+    })
+  ).isRequired,
+  onCategoryClick: PropTypes.func.isRequired
+};

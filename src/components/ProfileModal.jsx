@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, {  useState, useEffect, useCallback  } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setOpenProfileRef } from '../utils/profileUtils';
 import { supabase } from '../lib/supabase';

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, createContext, useContext, useEffect } from "react";
+import PropTypes from "prop-types";
 
 const CartContext = createContext();
 
@@ -7,12 +8,7 @@ export const CartProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem("yaCart");
       if (saved) {
-        const parsed = JSON.parse(saved);
-        // Restaurar las imágenes desde los productos originales si es necesario
-        return parsed.map(item => ({
-          ...item,
-          Imagen: item.Imagen || item.imagen || null
-        }));
+        return JSON.parse(saved);
       }
       return [];
     } catch (error) {
@@ -24,12 +20,9 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      // Crear una versión del carrito sin imágenes para guardar en localStorage
-      const cartWithoutImages = cart.map(({ Imagen: _Imagen, imagen: _imagen, ...rest }) => rest);
-      localStorage.setItem("yaCart", JSON.stringify(cartWithoutImages));
+      localStorage.setItem("yaCart", JSON.stringify(cart));
     } catch (error) {
       console.error("Error guardando carrito en localStorage:", error);
-      // Si hay error de quota, limpiar el localStorage y continuar
       if (error.name === 'QuotaExceededError') {
         console.warn("LocalStorage quota exceeded, clearing cart storage");
         localStorage.removeItem("yaCart");
@@ -45,32 +38,56 @@ export const CartProvider = ({ children }) => {
 
     setCart((prev) => {
       const productId = String(product.Id);
-      const exists = prev.find((item) => String(item.Id) === productId);
+      const productType = product.tipo || "Bulto"; // "Unidad" o "Bulto"
+      
+      const exists = prev.find((item) => 
+        String(item.Id) === productId && (item.tipo || "Bulto") === productType
+      );
 
       if (exists) {
         return prev.map((item) =>
-          String(item.Id) === productId
+          (String(item.Id) === productId && (item.tipo || "Bulto") === productType)
             ? { ...item, cantidad: item.cantidad + (product.cantidad || 1) }
             : item,
         );
       }
       return [
         ...prev,
-        { ...product, Id: productId, cantidad: product.cantidad || 1 },
+        { 
+          ...product, 
+          Id: productId, 
+          cantidad: product.cantidad || 1,
+          tipo: productType,
+          precio_unitario: product.precio_unitario || product.precio,
+          quantity_per_bundle: product.quantity_per_bundle || 1
+        },
       ];
     });
   };
 
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => String(item.Id) !== String(id)));
+  const removeFromCart = (id, tipo = null) => {
+    setCart((prev) => {
+      if (tipo) {
+        // Remove specific item with tipo
+        return prev.filter((item) => 
+          String(item.Id) !== String(id) || (item.tipo || "Bulto") !== tipo
+        );
+      } else {
+        // Remove all items with this ID (both unit and bundle)
+        return prev.filter((item) => String(item.Id) !== String(id));
+      }
+    });
   };
 
-  const updateQuantity = (id, cantidad) => {
+  const updateQuantity = (id, cantidad, tipo = null) => {
     if (cantidad < 1) return;
     setCart((prev) =>
-      prev.map((item) =>
-        String(item.Id) === String(id) ? { ...item, cantidad } : item,
-      ),
+      prev.map((item) => {
+        const matchesId = String(item.Id) === String(id);
+        const matchesType = !tipo || (item.tipo || "Bulto") === tipo;
+        
+        return matchesId && matchesType ? { ...item, cantidad } : item;
+      }),
     );
   };
 
@@ -124,3 +141,7 @@ export const CartProvider = ({ children }) => {
 };
 
 export const useCart = () => useContext(CartContext);
+
+CartProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

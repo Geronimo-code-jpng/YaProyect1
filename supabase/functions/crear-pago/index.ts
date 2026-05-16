@@ -77,8 +77,16 @@ serve(async (req: Request) => {
       )
     }
 
+    interface Item {
+      title: string;
+      quantity: number;
+      unit_price: number;
+      currency_id: string;
+      picture_url:string;
+    }
+
     // Preparar items para Mercado Pago
-    const items = cart.map((item: any) => ({
+    const items = cart.map((item: Item) => ({
       title: item.nombre,
       quantity: item.cantidad,
       unit_price: Number(item.precio),
@@ -155,7 +163,7 @@ serve(async (req: Request) => {
       }
     )
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en crear-pago:', error)
     return new Response(
       JSON.stringify({ error: 'Error interno del servidor', details: error.message }),
