@@ -10,6 +10,7 @@ import { useCart } from '../contexts/CartContext';
  */
 export default function HomeProductCard({ product, compact = false }) {
   const [quantity, setQuantity] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
   const { addToCart } = useCart();
 
   const handleAddToCart = () => {
@@ -29,14 +30,22 @@ export default function HomeProductCard({ product, compact = false }) {
     };
 
     addToCart(productForCart);
+
+    setAddedToCart(true);
     
+    setTimeout(() => setAddedToCart(false), 1500);
     // Resetear cantidad a 1 después de agregar
     setQuantity(1);
   };
 
   if (compact) {
     return (
-      <div className="flex flex-col bg-white rounded-xl h-full shadow-md hover:shadow-lg transition-shadow p-3 sm:p-4">
+      <div className="flex flex-col bg-white rounded-xl h-full shadow-md hover:shadow-lg transition-shadow p-3 sm:p-4 relative">
+        {product.discount > 0 && (
+          <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded shadow-md uppercase animate-pulse">
+            <i className="fas fa-fire mr-1"></i> OFERTA
+          </div>
+        )}
         <div className="h-40 sm:h-52 bg-gray-100 rounded-xl mb-3 overflow-hidden">
           <img
             src={product.image}
@@ -65,9 +74,14 @@ export default function HomeProductCard({ product, compact = false }) {
         
         <button
           onClick={handleAddToCart}
-          className="w-full bg-orange-500 mt-auto hover:bg-orange-600 text-white py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-2 shadow-sm"
+          className={`w-full mt-auto py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-2 shadow-sm ${
+            addedToCart
+              ? 'bg-green-500 text-white'
+              : 'bg-orange-500 hover:bg-orange-600 text-white'
+          }`}
         >
-          Agregar
+          <i className={`fas ${addedToCart ? 'fa-check' : 'fa-cart-plus'}`}></i>
+          {addedToCart ? 'AGREGADO' : 'Agregar'}
         </button>
       </div>
     );

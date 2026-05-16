@@ -1423,7 +1423,7 @@ export default function AdminPanel() {
                     <thead>
                       <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
                         <th className="p-4 font-black">ID</th>
-                        <th className="p-4 font-black">Cliente / Teléfono</th>
+                        <th className="p-4 font-black">Fecha</th>
                         <th className="p-4 font-black">Monto / Método</th>
                         <th className="p-4 font-black">Estado</th>
                         <th className="p-4 font-black text-right">Acciones</th>
@@ -1431,6 +1431,7 @@ export default function AdminPanel() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 text-sm">
                       {pedidosFiltrados.map((p) => {
+                        const fecha = p.created_at.split("T")[0]
                         const tiempoRestante =
                           p.fuente === "web" &&
                           p.estado === "configurado" &&
@@ -1458,6 +1459,9 @@ export default function AdminPanel() {
                               <div className="text-xs text-gray-500 mt-0.5">
                                 <i className="fas fa-phone mr-1"></i>
                                 {p.telefono}
+                              </div>
+                              <div className="font-bold text-gray-900">
+                                {fecha}
                               </div>
                               {p.email && (
                                 <div className="text-xs text-gray-400 mt-0.5">

@@ -26,19 +26,18 @@ export default function ProductosMasVendidos() {
             const discount = parseInt(p.Oferta) || 0;
             const validDiscount =
               discount > 0 && discount < Number(p.precio) ? discount : 0;
-            const salePrice =
-              validDiscount > 0
-                ? Number(p.precio) - validDiscount
-                : Number(p.precio);
+            const mainPrice = Number(p.precio);
+            const crossedPrice =
+              validDiscount > 0 ? mainPrice + validDiscount : null;
             return {
               id: p.Id,
               name: p.nombre,
-              price: salePrice,
+              price: mainPrice,
               image:
                 p.Imagen ||
                 p.imagen ||
                 `https://via.placeholder.com/300/f3f4f6/a1a1aa?text=${p.Id}`,
-              originalPrice: validDiscount > 0 ? Number(p.precio) : null,
+              originalPrice: crossedPrice,
               discount: validDiscount,
             };
           });
@@ -92,7 +91,6 @@ export default function ProductosMasVendidos() {
               key={producto.id}
               product={producto}
               compact={true}
-              showOriginalPrice={true}
             />
           ))}
         </div>

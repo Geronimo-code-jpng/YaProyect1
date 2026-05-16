@@ -1,5 +1,5 @@
-import React from 'react';
-import { Star, Quote } from 'lucide-react';
+import React from "react";
+import { Star, Quote } from "lucide-react";
 
 const reviews = [
   {
@@ -8,7 +8,7 @@ const reviews = [
     initial: "M",
     rating: 5,
     comment:
-      "Excelente servicio y calidad de productos. Siempre encuentro lo que necesito y los precios son muy competitivos. ¡Recomendado!",
+      "Excelente servicio y calidad de productos. Siempre encuentro lo que necesito y los precios son muy competitivos",
   },
   {
     id: 2,
@@ -16,7 +16,7 @@ const reviews = [
     initial: "J",
     rating: 5,
     comment:
-      "La atención al cliente es increíble. Me ayudaron a encontrar productos específicos que no conseguía en otros lugares. Muy agradecido.",
+      "La atención al cliente es increíble. Me ayudaron a encontrar productos específicos que no conseguía en otros lugares",
   },
   {
     id: 3,
@@ -24,7 +24,7 @@ const reviews = [
     initial: "A",
     rating: 5,
     comment:
-      "Variedad increíble y siempre con las mejores ofertas. El delivery es rápido y los productos llegan en perfectas condiciones. ¡Sigo comprando aquí!",
+      "Variedad increíble y siempre con las mejores ofertas. El delivery es rápido y los productos llegan en perfectas condiciones",
   },
 ];
 
@@ -39,7 +39,6 @@ export default function ReviewsSection() {
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-
         {/* Encabezado */}
         <div className="text-center mb-10 lg:mb-14">
           <div className="inline-flex items-center justify-center w-14 h-14 lg:w-16 lg:h-16 bg-yellow-100 rounded-2xl mb-5">
@@ -67,8 +66,8 @@ export default function ReviewsSection() {
                     key={i}
                     className={`w-5 h-5 ${
                       i < review.rating
-                        ? 'text-yellow-400 fill-current'
-                        : 'text-gray-300'
+                        ? "text-yellow-400 fill-current"
+                        : "text-gray-300"
                     }`}
                   />
                 ))}
@@ -104,7 +103,6 @@ export default function ReviewsSection() {
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );
