@@ -216,13 +216,13 @@ export default function ProductsGrid({ products }) {
                     <div className="mb-1">
                       <div className="flex items-baseline gap-2">
                         <p
-                          className={`text-2xl font-black tracking-tight ${applyDiscount ? "text-red-600" : "text-zinc-900"}`}
+                          className={`text-2xl font-black tracking-tight ${applyDiscount && isBulto ? "text-red-600" : "text-zinc-900"}`}
                         >
-                          ${displayOriginal.toLocaleString("es-AR")}
+                          ${displayPrice.toLocaleString("es-AR")}
                         </p>
                         {displayOriginal && (
                           <span className="text-sm text-gray-400 line-through">
-                            ${displayPrice.toLocaleString("es-AR")}
+                            ${displayOriginal.toLocaleString("es-AR")}
                           </span>
                         )}
                       </div>
