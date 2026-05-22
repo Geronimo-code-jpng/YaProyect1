@@ -817,7 +817,6 @@ export default function AdminPanel() {
               estado: "pagado",
               pagado_manualmente: true,
               fecha_pago: new Date().toISOString(),
-              pagado_por: currentUser?.email,
             })
             .eq("id", idPedido);
 
