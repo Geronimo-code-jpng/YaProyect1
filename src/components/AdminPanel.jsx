@@ -154,6 +154,8 @@ export default function AdminPanel() {
     alias: "",
     cbu: "",
   });
+  const [categorias, setCategorias] = useState([]);
+  const [nuevaCategoria, setNuevaCategoria] = useState("");
 
   const showToast = useCallback(
     (message, type = "success") => {
@@ -322,6 +324,63 @@ export default function AdminPanel() {
       showToast("Error al guardar datos bancarios", "error");
     }
   }, [bancoInfo, showToast]);
+
+  const loadCategorias = useCallback(async () => {
+    try {
+      const { data, error } = await supabaseClient
+        .from("categorias")
+        .select("*")
+        .order("categoria", { ascending: true });
+      if (!error && data) setCategorias(data);
+    } catch (err) {
+      console.error("Error cargando categorías:", err);
+    }
+  }, []);
+
+  const agregarCategoria = async () => {
+    const nombre = nuevaCategoria.trim();
+    if (!nombre) {
+      showToast("Ingresá un nombre para la categoría", "error");
+      return;
+    }
+    try {
+      const { error } = await supabaseClient
+        .from("categorias")
+        .insert({ categoria: nombre });
+      if (error) {
+        showToast("Error al agregar categoría: " + error.message, "error");
+        return;
+      }
+      setNuevaCategoria("");
+      await loadCategorias();
+      showToast(`Categoría "${nombre}" agregada`, "success");
+    } catch (err) {
+      showToast("Error al agregar categoría", "error");
+    }
+  };
+
+  const eliminarCategoria = async (id, nombre) => {
+    showConfirm(
+      `¿Eliminar la categoría "${nombre}"?`,
+      async () => {
+        setConfirm(null);
+        try {
+          const { error } = await supabaseClient
+            .from("categorias")
+            .delete()
+            .eq("id", id);
+          if (error) {
+            showToast("Error al eliminar categoría", "error");
+            return;
+          }
+          await loadCategorias();
+          showToast(`Categoría "${nombre}" eliminada`, "success");
+        } catch (err) {
+          showToast("Error al eliminar categoría", "error");
+        }
+      },
+    );
+  };
 
   // Cargar pedidos (con useCallback para evitar re-renders)
   const cargarPedidosAdmin = useCallback(async () => {
@@ -727,7 +786,8 @@ export default function AdminPanel() {
   useEffect(() => {
     loadShippingPrice();
     loadBankConfig();
-  }, [loadShippingPrice, loadBankConfig]);
+    loadCategorias();
+  }, [loadShippingPrice, loadBankConfig, loadCategorias]);
 
   // Cargar productos cuando se cambia a la pestaña de productos
   useEffect(() => {
@@ -1433,7 +1493,7 @@ export default function AdminPanel() {
                         const fecha = p.created_at.split("T")[0]
                         const tiempoRestante =
                           p.fuente === "web" &&
-                          p.estado === "configurado" &&
+                          (p.estado === "configurado" || p.estado === "vencido") &&
                           p.expira_en
                             ? calcularTiempoRestante(p.expira_en)
                             : 0;
@@ -1480,7 +1540,7 @@ export default function AdminPanel() {
                                 </p>
                               )}
                               {p.fuente === "web" &&
-                                p.estado === "configurado" &&
+                                (p.estado === "configurado" || p.estado === "vencido") &&
                                 p.expira_en && (
                                   <div className="text-xs font-bold mt-1">
                                     {tiempoRestante > 0 ? (
@@ -1532,7 +1592,7 @@ export default function AdminPanel() {
                                     </button>
                                   )}
                                 {p.fuente === "web" &&
-                                  p.estado === "configurado" && (
+                                  (p.estado === "configurado" || p.estado === "vencido") && (
                                     <button
                                       onClick={() => marcarPagado(p.id)}
                                       className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg shadow text-xs font-black transition flex items-center gap-1"
@@ -1963,6 +2023,50 @@ export default function AdminPanel() {
                       Estos datos se mostrarán a los clientes que elijan
                       &lsquo;Transferencia bancaria&lsquo; como método de pago.
                     </p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="fas fa-tags text-[#FF6600]"></i>
+                    Categorías
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={nuevaCategoria}
+                        onChange={(e) => setNuevaCategoria(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && agregarCategoria()}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                        placeholder="Nueva categoría..."
+                      />
+                      <button
+                        onClick={agregarCategoria}
+                        className="bg-[#FF6600] hover:bg-orange-700 text-white px-5 py-3 rounded-xl font-bold transition shadow-md flex items-center gap-2"
+                      >
+                        <i className="fas fa-plus"></i> Agregar
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {categorias.length === 0 && (
+                        <p className="text-sm text-gray-400 font-medium">No hay categorías todavía</p>
+                      )}
+                      {categorias.map((cat) => (
+                        <div
+                          key={cat.id}
+                          className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg"
+                        >
+                          <span className="text-sm font-bold text-gray-700">{cat.categoria}</span>
+                          <button
+                            onClick={() => eliminarCategoria(cat.id, cat.categoria)}
+                            className="text-red-400 hover:text-red-600 transition"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

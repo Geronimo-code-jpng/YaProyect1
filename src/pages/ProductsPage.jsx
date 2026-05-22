@@ -3,6 +3,7 @@ import { useCart } from "../contexts/CartContext";
 import { useProducts } from "../contexts/ProductContext";
 import ProductsGrid from "../components/ProductsGrid";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 export default function ProductsPage() {
   const { addToCart } = useCart();
@@ -16,6 +17,17 @@ export default function ProductsPage() {
 
   const [searchTerm, setSearchTerm] = useState(searchFromUrl);
   const [categoriaActual, setCategoriaActual] = useState("Todas");
+  const [categoriasDb, setCategoriasDb] = useState([]);
+
+  useEffect(() => {
+    supabase
+      .from("categorias")
+      .select("categoria")
+      .order("categoria", { ascending: true })
+      .then(({ data }) => {
+        if (data) setCategoriasDb(data.map((c) => c.categoria));
+      });
+  }, []);
 
   const normalizeCategory = (cat) => {
     const map = {
@@ -84,7 +96,7 @@ export default function ProductsPage() {
   const categorias = [
     "Todas",
     "SoloOfertas",
-    ...new Set((products || []).map((product) => product.Categoria)),
+    ...categoriasDb,
   ];
 
   const productosFiltrados = (products || []).filter((product) => {

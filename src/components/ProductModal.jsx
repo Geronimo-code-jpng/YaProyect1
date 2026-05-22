@@ -7,6 +7,19 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
   const [imageFile, setImageFile] = useState(null);
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [categorias, setCategorias] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      supabase
+        .from("categorias")
+        .select("*")
+        .order("categoria", { ascending: true })
+        .then(({ data }) => {
+          if (data) setCategorias(data);
+        });
+    }
+  }, [isOpen]);
 
   // Si se recibe productId, buscar el producto en la base de datos
   useEffect(() => {
@@ -282,19 +295,11 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                   required
                 >
                   <option value="">Seleccionar categoría</option>
-                  <option value="ALIMENTO">Alimentos</option>
-                  <option value="BEBIDAS">Bebidas</option>
-                  <option value="LACTEOS">Lácteos</option>
-                  <option value="HARINA">Harinas</option>
-                  <option value="ACEITE">Aceites</option>
-                  <option value="AZUCAR">Azúcares</option>
-                  <option value="VINOS">Vinos</option>
-                  <option value="CERVEZAS">Cervezas</option>
-                  <option value="YERBA">Yerbas</option>
-                  <option value="APERITIVOS">Aperitivos</option>
-                  <option value="CIGARRILLOS">Cigarrillos</option>
-                  <option value="LIMPIEZA">Limpieza</option>
-                  <option value="SALES">Sales</option>
+                  {categorias.map((cat) => (
+                    <option key={cat.id} value={cat.categoria}>
+                      {cat.categoria}
+                    </option>
+                  ))}
                 </select>
               </div>
 
