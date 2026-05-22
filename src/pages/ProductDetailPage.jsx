@@ -58,7 +58,7 @@ export default function ProductDetailPage() {
     const quantityPerBundle = product.quantity || 1;
     const discount = getDiscountAmount();
     const isBulto = typeOfQuantity === "Bulto";
-    const bundlePrice = isBulto && discount > 0 ? bundleOriginal - discount : bundleOriginal;
+    const bundlePrice = isBulto && discount > 0 ? bundleOriginal : bundleOriginal;
     const unitPrice = Math.ceil((bundleOriginal / quantityPerBundle) * 1.20 / 10) * 10;
 
     return isBulto ? bundlePrice : unitPrice;
@@ -169,8 +169,10 @@ export default function ProductDetailPage() {
               {product.nombre}
             </h1>
             {(() => {
+              const discount = getDiscountAmount()
               const currentPrice = calculatePrice();
               const originalPrice = calculateOriginalPrice();
+              const originalPriceForBulto = calculateOriginalPrice() + discount;
               return (
                 <>
                   <div className="flex items-baseline gap-3 mb-2">
@@ -179,7 +181,7 @@ export default function ProductDetailPage() {
                     </p>
                     {originalPrice && (
                       <p className="text-xl text-gray-400 diagonal-strike font-medium">
-                        ${originalPrice.toLocaleString("es-AR")}
+                        $${typeOfQuantity == "Bulto" ? originalPriceForBulto.toLocaleString("es-AR") : currentPrice.toLocaleString("es-AR")}
                       </p>
                     )}
                   </div>

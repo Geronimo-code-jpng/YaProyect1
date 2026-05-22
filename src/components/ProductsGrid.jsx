@@ -208,7 +208,7 @@ export default function ProductsGrid({ products }) {
                   const applyDiscount = discount > 0;
                   const bundleSale = bundleOriginal + discount;
                   const displayPrice = isBulto
-                    ? bundleSale
+                    ? bundleOriginal
                     : unitOriginal;
                   const displayOriginal = isBulto ? bundleOriginal : null;
 
@@ -220,9 +220,9 @@ export default function ProductsGrid({ products }) {
                         >
                           ${displayPrice.toLocaleString("es-AR")}
                         </p>
-                        {displayOriginal && (
+                        {(displayOriginal && applyDiscount) && (
                           <span className="text-sm text-gray-400 line-through">
-                            ${displayOriginal.toLocaleString("es-AR")}
+                            ${bundleSale.toLocaleString("es-AR")}
                           </span>
                         )}
                       </div>
