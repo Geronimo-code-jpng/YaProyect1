@@ -156,6 +156,7 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
       Oferta: formData.Oferta.trim(),
       Stock: Boolean(formData.Stock),
       oferta_express: Boolean(formData.oferta_express),
+      quantity: formData.quantity,
       mas_vendido: Boolean(formData.mas_vendido),
       solo_bulto: Boolean(formData.solo_bulto),
     };
@@ -372,7 +373,7 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                   >
                     <span
                       className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                        formData.oferta_express ? "translate-x-7" : "translate-x-0.5"
+                        formData.oferta_express ? "-translate-x-7" : "translate-x-0.5"
                       }`}
                     />
                   </button>
@@ -392,7 +393,7 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                   >
                     <span
                       className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                        formData.mas_vendido ? "translate-x-7" : "translate-x-0.5"
+                        formData.mas_vendido ? "-translate-x-7" : "translate-x-0.5"
                       }`}
                     />
                   </button>
@@ -412,7 +413,7 @@ export default function ProductModal({ isOpen, onClose, product, productId, onSa
                   >
                     <span
                       className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                        formData.solo_bulto ? "translate-x-7" : "translate-x-0.5"
+                        formData.solo_bulto ? "-translate-x-7" : "translate-x-0.5"
                       }`}
                     />
                   </button>
