@@ -1,7 +1,14 @@
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
-import { Trash, User, Phone, MessageSquare, Lock, ArrowLeft } from "lucide-react";
+import {
+  Trash,
+  User,
+  Phone,
+  MessageSquare,
+  Lock,
+  ArrowLeft,
+} from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase as supabaseClient } from "../lib/supabase";
@@ -39,49 +46,49 @@ export default function CartPage() {
     const loadShippingPrice = async () => {
       try {
         const { data: config, error } = await supabaseClient
-          .from('configuracion')
-          .select('precio_envio')
-          .eq('id', 1)
+          .from("configuracion")
+          .select("precio_envio")
+          .eq("id", 1)
           .single();
-        
+
         if (error) {
-          const savedPrice = localStorage.getItem('shippingPrice');
+          const savedPrice = localStorage.getItem("shippingPrice");
           if (savedPrice) {
             setShippingPrice(parseInt(savedPrice, 10));
           }
           return;
         }
-        
+
         if (config && config.precio_envio) {
           setShippingPrice(config.precio_envio);
-          localStorage.setItem('shippingPrice', config.precio_envio.toString());
+          localStorage.setItem("shippingPrice", config.precio_envio.toString());
         }
       } catch (error) {
-        console.error('Error cargando precio de envío:', error);
+        console.error("Error cargando precio de envío:", error);
       }
     };
-    
+
     loadShippingPrice();
   }, []);
 
   // Cargar datos del usuario desde la base de datos
   useEffect(() => {
     if (!user?.email) return;
-    
+
     const loadUserData = async () => {
       try {
         setLoadingUserData(true);
         const { data, error } = await supabaseClient
-          .from('perfiles')
-          .select('nombre, telefono, direccion, tipo_cliente')
-          .eq('email', user.email)
+          .from("perfiles")
+          .select("nombre, telefono, direccion, tipo_cliente")
+          .eq("email", user.email)
           .single();
-        
+
         if (error) {
-          console.error('Error cargando datos del usuario:', error);
+          console.error("Error cargando datos del usuario:", error);
           return;
         }
-        
+
         setDbUserData(data);
         setOrderData((prev) => ({
           ...prev,
@@ -90,12 +97,12 @@ export default function CartPage() {
           direccion: data.direccion || prev.direccion,
         }));
       } catch (err) {
-        console.error('Error en loadUserData:', err);
+        console.error("Error en loadUserData:", err);
       } finally {
         setLoadingUserData(false);
       }
     };
-    
+
     loadUserData();
   }, [user?.email]);
 
@@ -156,7 +163,7 @@ export default function CartPage() {
           "❌ No puedes enviar el pedido. Crea una cuenta o inicia sesión para continuar.",
         );
         setIsSubmitting(false);
-        navigate('/login');
+        navigate("/login");
         return;
       }
 
@@ -189,7 +196,6 @@ export default function CartPage() {
 
       const baseTotal = getCartTotalWithDiscount(userProfile);
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
-      const mpFee = orderData.metodoPago === "mercadopago" ? baseTotal * 0.08 : 0;
 
       const pedidoData = {
         nombre_cliente: orderData.nombre.trim(),
@@ -207,8 +213,9 @@ export default function CartPage() {
           precio_unitario: item.precio,
           subtotal: item.precio * item.cantidad,
           tipo: item.tipo || "Bulto",
+          oferta: item.descuento || 0,
         })),
-        total: baseTotal + shipping + mpFee,
+        total: baseTotal + shipping,
         descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
           ? 1000
           : 0,
@@ -253,7 +260,8 @@ export default function CartPage() {
               .from("pedidos")
               .update({
                 estado: "cancelado",
-                horario: "Pedido cancelado automáticamente por timeout de 10 minutos",
+                horario:
+                  "Pedido cancelado automáticamente por timeout de 10 minutos",
               })
               .eq("id", data.id)
               .eq("estado", "pendiente");
@@ -271,7 +279,7 @@ export default function CartPage() {
       showSuccess("¡Pedido enviado! Lo revisaremos a la brevedad.");
 
       setTimeout(() => {
-        navigate('/');
+        navigate("/");
         window.scrollTo(0, 0);
       }, 1500);
     } catch (error) {
@@ -288,14 +296,16 @@ export default function CartPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Volver a la tienda
           </button>
           <h1 className="text-4xl font-black text-gray-900">Mi Carrito</h1>
-          <p className="text-gray-600 mt-2">Revisá tus productos antes de finalizar la compra</p>
+          <p className="text-gray-600 mt-2">
+            Revisá tus productos antes de finalizar la compra
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -307,10 +317,14 @@ export default function CartPage() {
                   <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Trash className="w-12 h-12 text-gray-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Tu carrito está vacío</h3>
-                  <p className="text-gray-600 mb-6">No hay productos en tu carrito de compras</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    Tu carrito está vacío
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    No hay productos en tu carrito de compras
+                  </p>
                   <button
-                    onClick={() => navigate('/productos')}
+                    onClick={() => navigate("/productos")}
                     className="bg-[#FF6600] text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-700 transition"
                   >
                     Ver Productos
@@ -326,33 +340,75 @@ export default function CartPage() {
                       <img
                         src={getProductImageUrl(item)}
                         alt={item.nombre}
-                        className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-xl bg-gray-50"
+                        className="w-24 h-24 sm:w-28 hidden sm:block sm:h-28 object-contain rounded-xl bg-gray-50"
                         onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod';
+                          e.target.src =
+                            "https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod";
                         }}
                       />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-lg mb-2">{item.nombre}</h4>
+                      <div className="sm:flex-1 flex flex-col items-center sm:items-baseline">
+                        <img
+                          src={getProductImageUrl(item)}
+                          alt={item.nombre}
+                          className="w-50 h-50 sm:hidden object-contain rounded-xl bg-gray-50"
+                          onError={(e) => {
+                            e.target.src =
+                              "https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod";
+                          }}
+                        />
+                        <h4 className="font-bold text-lg mb-2">
+                          {item.nombre}
+                        </h4>
                         <div className="flex items-center gap-2 mb-2">
-                          <span className={`inline-block px-3 py-1 rounded-lg text-sm font-black ${
-                            (item.tipo || "Bulto") === "Bulto" 
-                              ? "bg-blue-100 text-blue-700" 
-                              : "bg-green-100 text-green-700"
-                          }`}>
-                            {(item.tipo || "Bulto") === "Bulto" ? "Bulto" : "Unidad"}
+                          <span
+                            className={`inline-block px-3 py-1 rounded-lg text-sm font-black ${
+                              (item.tipo || "Bulto") === "Bulto"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {(item.tipo || "Bulto") === "Bulto"
+                              ? "Bulto"
+                              : "Unidad"}
                           </span>
-                          {(item.tipo || "Bulto") === "Bulto" && item.quantity_per_bundle > 1 && (
-                            <span className="text-sm text-gray-500">
-                              ({item.quantity_per_bundle} unidades)
+                          {(item.tipo || "Bulto") === "Bulto" &&
+                            item.quantity_per_bundle > 1 && (
+                              <span className="text-sm text-gray-500">
+                                ({item.quantity_per_bundle} unidades)
+                              </span>
+                            )}
+                        </div>
+                        {item.oferta &&
+                        parseInt(item.oferta) > 0 &&
+                        parseInt(item.oferta) < Number(item.precio) ? (
+                          <div className="flex items-baseline gap-2 mb-3">
+                            <div className="font-black text-xl text-red-600">
+                              ${item.precio.toLocaleString("es-AR")}
+                              <span className="text-base ml-2 text-gray-400 line-through">
+                                $
+                                {(
+                                  Number(item.precio) + parseInt(item.oferta)
+                                ).toLocaleString("es-AR")}
+                              </span>
+                              <span className="text-sm text-gray-500 font-normal ml-2">
+                                por{" "}
+                                {(item.tipo || "Bulto") === "Bulto"
+                                  ? "bulto"
+                                  : "unidad"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="font-black text-xl text-[#FF6600] mb-3">
+                            ${item.precio.toLocaleString("es-AR")}
+                            <span className="text-sm text-gray-500 font-normal ml-2">
+                              por{" "}
+                              {(item.tipo || "Bulto") === "Bulto"
+                                ? "bulto"
+                                : "unidad"}
                             </span>
-                          )}
-                        </div>
-                        <div className="font-black text-xl text-[#FF6600] mb-3">
-                          ${item.precio.toLocaleString("es-AR")}
-                          <span className="text-sm text-gray-500 font-normal ml-2">
-                            por {(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
-                          </span>
-                        </div>
+                          </div>
+                        )}
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden">
                             <button
@@ -367,7 +423,10 @@ export default function CartPage() {
                               value={item.cantidad}
                               onChange={(e) => setQty(index, e.target.value)}
                               onInput={(e) =>
-                                (e.target.value = e.target.value.replace(/[^0-9]/g, ""))
+                                (e.target.value = e.target.value.replace(
+                                  /[^0-9]/g,
+                                  "",
+                                ))
                               }
                               className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-12 sm:w-16 h-9 sm:h-10 text-center font-black focus:outline-none focus:bg-blue-50 text-gray-700"
                               style={{ MozAppearance: "textfield" }}
@@ -380,7 +439,11 @@ export default function CartPage() {
                             </button>
                           </div>
                           <div className="font-bold text-sm sm:text-lg flex-1 sm:flex-none">
-                            Subtotal: ${(item.precio * item.cantidad).toLocaleString("es-AR")}
+                            Subtotal: $
+                            {(item.precio * item.cantidad).toLocaleString(
+                              "es-AR",
+                            )}
+                            {item.offert}
                           </div>
                           <button
                             onClick={() => removeFromCart(item.Id)}
@@ -427,7 +490,9 @@ export default function CartPage() {
                       <input
                         type="text"
                         name="nombre"
-                        value={loadingUserData ? 'Cargando...' : orderData.nombre}
+                        value={
+                          loadingUserData ? "Cargando..." : orderData.nombre
+                        }
                         onChange={
                           campoNombreBloqueado ? undefined : handleInputChange
                         }
@@ -437,7 +502,11 @@ export default function CartPage() {
                             ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
                             : "border-gray-200 focus:border-[#FF6600]"
                         }`}
-                        placeholder={loadingUserData ? 'Cargando datos...' : 'Tu nombre completo'}
+                        placeholder={
+                          loadingUserData
+                            ? "Cargando datos..."
+                            : "Tu nombre completo"
+                        }
                       />
                       {campoNombreBloqueado && (
                         <Lock
@@ -463,7 +532,9 @@ export default function CartPage() {
                       <input
                         type="tel"
                         name="telefono"
-                        value={loadingUserData ? 'Cargando...' : orderData.telefono}
+                        value={
+                          loadingUserData ? "Cargando..." : orderData.telefono
+                        }
                         onChange={
                           campoTelefonoBloqueado ? undefined : handleInputChange
                         }
@@ -473,7 +544,9 @@ export default function CartPage() {
                             ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
                             : "border-gray-200 focus:border-[#FF6600]"
                         }`}
-                        placeholder={loadingUserData ? 'Cargando datos...' : 'Tu teléfono'}
+                        placeholder={
+                          loadingUserData ? "Cargando datos..." : "Tu teléfono"
+                        }
                       />
                       {campoTelefonoBloqueado && (
                         <Lock
@@ -502,10 +575,12 @@ export default function CartPage() {
                         />
                         <div className="flex-1">
                           <div className="font-medium">Efectivo</div>
-                          <div className="text-sm text-gray-500">Pago al recibir el pedido</div>
+                          <div className="text-sm text-gray-500">
+                            Pago al recibir el pedido
+                          </div>
                         </div>
                       </label>
-                      
+
                       <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
                         <input
                           type="radio"
@@ -516,33 +591,15 @@ export default function CartPage() {
                           className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
                         />
                         <div className="flex-1">
-                          <div className="font-medium">Transferencia bancaria</div>
-                          <div className="text-sm text-gray-500">Transferencia o depósito</div>
+                          <div className="font-medium">
+                            Transferencia bancaria
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Transferencia o depósito
+                          </div>
                         </div>
                       </label>
-                      
-                      {/* <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
-                        <input
-                          type="radio"
-                          name="metodoPago"
-                          value="tarjeta"
-                          checked={orderData.metodoPago === "tarjeta"}
-                          onChange={handleInputChange}
-                          className="mr-3 text-[#FF6600] focus:ring-[#FF6600]"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">💳 Tarjeta de crédito/débito</div>
-                          <div className="text-sm text-gray-500">Visa, Mastercard, Maestro</div>
-                        </div>
-                      </label> */}
-
                     </div>
-                    {orderData.metodoPago === "mercadopago" && (
-                      <div className="mt-2 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-xs font-medium text-yellow-800">
-                        <i className="fas fa-info-circle"></i>
-                        Mercado Pago aplica un recargo del 8% sobre el total del pedido
-                      </div>
-                    )}
                   </div>
 
                   {/* Método de Entrega */}
@@ -564,7 +621,7 @@ export default function CartPage() {
                         <div className="flex-1">
                           <span className="font-medium">Envío a domicilio</span>
                           <span className="text-sm text-gray-500 ml-2">
-                            (+ ${shippingPrice.toLocaleString('es-AR')})
+                            (+ ${shippingPrice.toLocaleString("es-AR")})
                           </span>
                         </div>
                       </label>
@@ -599,9 +656,9 @@ export default function CartPage() {
                       <label className="block text-sm font-bold text-gray-700 mb-2">
                         <i className="fas fa-map-marker-alt mr-2"></i>
                         Dirección de entrega
-                          <span className="ml-2 text-xs text-gray-400 font-normal">
-                            (de tu cuenta)
-                          </span>
+                        <span className="ml-2 text-xs text-gray-400 font-normal">
+                          (de tu cuenta)
+                        </span>
                       </label>
                       <div className="relative">
                         <input
@@ -610,7 +667,11 @@ export default function CartPage() {
                           value={orderData.direccion}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition border-gray-200 focus:border-[#FF6600]"
-                          placeholder={loadingUserData ? 'Cargando datos...' : 'Tu dirección'}
+                          placeholder={
+                            loadingUserData
+                              ? "Cargando datos..."
+                              : "Tu dirección"
+                          }
                         />
                       </div>
                     </div>
@@ -641,9 +702,14 @@ export default function CartPage() {
 
                   {orderData.metodoPago === "mercadopago" && (
                     <div className="flex justify-between text-sm font-medium mb-2">
-                      <span className="text-yellow-700">Recargo Mercado Pago (8%):</span>
                       <span className="text-yellow-700">
-                        ${(getCartTotalWithDiscount(userProfile) * 0.08).toLocaleString("es-AR")}
+                        Recargo Mercado Pago (8%):
+                      </span>
+                      <span className="text-yellow-700">
+                        $
+                        {(
+                          getCartTotalWithDiscount(userProfile) * 0.08
+                        ).toLocaleString("es-AR")}
                       </span>
                     </div>
                   )}
@@ -651,13 +717,17 @@ export default function CartPage() {
                   {orderData.metodoEntrega === "envio" && (
                     <div className="flex justify-between text-sm font-medium mb-2">
                       <span>Costo de envío:</span>
-                      <span className="text-gray-600">${shippingPrice.toLocaleString("es-AR")}</span>
+                      <span className="text-gray-600">
+                        ${shippingPrice.toLocaleString("es-AR")}
+                      </span>
                     </div>
                   )}
 
                   {qualifiesForFirstBuyDiscount(userProfile) && (
                     <div className="flex justify-between text-sm font-medium mb-2">
-                      <span className="text-green-600">🎉 Descuento primera compra:</span>
+                      <span className="text-green-600">
+                        🎉 Descuento primera compra:
+                      </span>
                       <span className="text-green-600">-$1.000</span>
                     </div>
                   )}
@@ -665,17 +735,26 @@ export default function CartPage() {
                   <div className="border-t pt-2 flex justify-between text-xl font-black">
                     <span>Total:</span>
                     <span className="text-[#FF6600]">
-                      ${(
-                        orderData.metodoEntrega === "retiro"
-                          ? (getCartTotalWithDiscount(userProfile) + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile) * 0.08 : 0))
-                          : (getCartTotalWithDiscount(userProfile) + shippingPrice + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile) * 0.08 : 0))
+                      $
+                      {(orderData.metodoEntrega === "retiro"
+                        ? getCartTotalWithDiscount(userProfile) +
+                          (orderData.metodoPago === "mercadopago"
+                            ? getCartTotalWithDiscount(userProfile) * 0.08
+                            : 0)
+                        : getCartTotalWithDiscount(userProfile) +
+                          shippingPrice +
+                          (orderData.metodoPago === "mercadopago"
+                            ? getCartTotalWithDiscount(userProfile) * 0.08
+                            : 0)
                       ).toLocaleString("es-AR")}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 font-medium mt-2">
                     {cart.length} {cart.length === 1 ? "producto" : "productos"}
                     {qualifiesForFirstBuyDiscount(userProfile) && (
-                      <span className="text-green-600 ml-2">✨ ¡$1.000 OFF aplicado!</span>
+                      <span className="text-green-600 ml-2">
+                        ✨ ¡$1.000 OFF aplicado!
+                      </span>
                     )}
                   </div>
                 </div>

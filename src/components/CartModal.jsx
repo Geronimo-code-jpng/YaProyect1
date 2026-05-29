@@ -395,12 +395,26 @@ export default function CartModal() {
                       </span>
                     )}
                   </div>
-                  <div className="font-black text-[#FF6600]">
-                    ${item.precio.toLocaleString("es-AR")}
-                    <span className="text-xs text-gray-500 font-normal ml-1">
-                      por {(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
-                    </span>
-                  </div>
+                  {item.oferta && parseInt(item.oferta) > 0 && parseInt(item.oferta) < Number(item.precio) ? (
+                    <div className="flex items-baseline gap-2">
+                      <div className="font-black text-red-600">
+                        ${item.precio.toLocaleString("es-AR")}
+                        <span className="text-xs text-gray-500 font-normal ml-1">
+                          por {(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-400 line-through">
+                        ${(Number(item.precio) + parseInt(item.oferta)).toLocaleString("es-AR")}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="font-black text-[#FF6600]">
+                      ${item.precio.toLocaleString("es-AR")}
+                      <span className="text-xs text-gray-500 font-normal ml-1">
+                        por {(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden mt-2 w-max relative">
                     <button
                       onClick={() => changeQty(index, -1)}

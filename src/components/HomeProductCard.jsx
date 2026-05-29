@@ -24,6 +24,7 @@ export default function HomeProductCard({ product, compact = false }) {
       imagen: product.image || product.imagen,
       tipo: product.tipo || "Bulto",
       quantity_per_bundle: product.quantity_per_bundle || 1,
+      Oferta: product.Oferta || product.discount,
       originalPrice: product.originalPrice,
       discount: product.discount,
       inStock: product.inStock

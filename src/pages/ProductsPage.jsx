@@ -1,12 +1,10 @@
 import React , { useState, useEffect, useRef } from "react";
-import { useCart } from "../contexts/CartContext";
 import { useProducts } from "../contexts/ProductContext";
 import ProductsGrid from "../components/ProductsGrid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function ProductsPage() {
-  const { addToCart } = useCart();
   const { products, isLoading } = useProducts();
 
   const [searchParams] = useSearchParams();
@@ -187,7 +185,7 @@ export default function ProductsPage() {
             <p className="text-lg font-bold">No se encontraron productos</p>
           </div>
         ) : (
-          <ProductsGrid products={productosFiltrados} onAddToCart={addToCart} />
+          <ProductsGrid products={productosFiltrados} />
         )}
       </div>
     </div>

@@ -59,7 +59,9 @@ export const CartProvider = ({ children }) => {
           cantidad: product.cantidad || 1,
           tipo: productType,
           precio_unitario: product.precio_unitario || product.precio,
-          quantity_per_bundle: product.quantity_per_bundle || 1
+          quantity_per_bundle: product.quantity_per_bundle || 1,
+          oferta: product.Oferta,
+          descuento: product.descuento
         },
       ];
     });

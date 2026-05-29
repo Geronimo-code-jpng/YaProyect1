@@ -18,7 +18,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import React, {  useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase as supabaseClient } from "../lib/supabase";
 import PhraseGroup from "./BucleSlogan";
 
@@ -289,13 +289,21 @@ export default function NavBar() {
                       <ChevronDown
                         size={18}
                         className={`transition-transform duration-200 ${
-                          mobileCategoriesOpen ? "rotate-180" : ""
+                          mobileCategoriesOpen ? "" : "rotate-180"
                         }`}
                       />
                     </span>
                   </button>
                   {mobileCategoriesOpen && categories.length > 0 && (
                     <div className="ml-8 mt-1 space-y-1 border-l-2 border-gray-100 pl-4 overflow-hidden transition-all duration-300">
+                      <Link
+                        key={"llProducts"}
+                        to={`/productos?`}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block text-sm font-medium text-gray-500 hover:text-[#FF6600] transition py-1.5"
+                      >
+                        Todos los Productos
+                      </Link>
                       {categories.map((cat) => (
                         <Link
                           key={cat}
@@ -414,8 +422,8 @@ export default function NavBar() {
                 <h3 className="font-black text-gray-900 mb-3">Horarios</h3>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>Lunes a Viernes: 8:00 - 18:00</p>
-                  <p>Sábados: 8:00 - 13:00</p>
-                  <p>Domingos: Cerrado</p>
+                  <p>Sábados: 8:00 - 16:00</p>
+                  <p>Domingos: 8:00 - 13:00</p>
                 </div>
               </div>
             </div>

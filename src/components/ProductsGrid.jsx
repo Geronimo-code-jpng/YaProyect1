@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 
 // Función para generar URL de imagen por defecto si no hay imagen personalizada
 export const getDefaultProductImage = (productId) => {
@@ -44,9 +44,10 @@ export default function ProductsGrid({ products }) {
     const bundleOriginal = Number(producto.precio) || 0;
     const discount = getDiscount(producto);
     const quantityPerBundle = producto.quantity || 1;
-    const unitOriginal = Math.ceil((bundleOriginal / quantityPerBundle) * 1.2 / 10) * 10;
+    const unitOriginal =
+      Math.ceil(((bundleOriginal / quantityPerBundle) * 1.2) / 10) * 10;
     const bundlePrice =
-      discount > 0 ? bundleOriginal - discount : bundleOriginal;
+      discount > 0 ? bundleOriginal : bundleOriginal;
     const finalPrice = tipo === "Bulto" ? bundlePrice : unitOriginal;
 
     addToCart({
@@ -58,6 +59,8 @@ export default function ProductsGrid({ products }) {
       tipo: tipo,
       precio_unitario: finalPrice,
       quantity_per_bundle: quantityPerBundle,
+      Oferta: producto.Oferta,
+      descuento: discount,
     });
 
     // Visual feedback using React state
@@ -202,14 +205,14 @@ export default function ProductsGrid({ products }) {
                   const discount = getDiscount(producto);
                   const quantityPerBundle = producto.quantity || 1;
                   const unitOriginal =
-                    Math.ceil((bundleOriginal / quantityPerBundle) * 1.2 / 10) * 10;
+                    Math.ceil(
+                      ((bundleOriginal / quantityPerBundle) * 1.2) / 10,
+                    ) * 10;
                   const selectedType = selectedTypes[producto.Id] || "Bulto";
                   const isBulto = selectedType === "Bulto";
                   const applyDiscount = discount > 0;
                   const bundleSale = bundleOriginal + discount;
-                  const displayPrice = isBulto
-                    ? bundleOriginal
-                    : unitOriginal;
+                  const displayPrice = isBulto ? bundleOriginal : unitOriginal;
                   const displayOriginal = isBulto ? bundleOriginal : null;
 
                   return (
@@ -220,7 +223,7 @@ export default function ProductsGrid({ products }) {
                         >
                           ${displayPrice.toLocaleString("es-AR")}
                         </p>
-                        {(displayOriginal && applyDiscount) && (
+                        {displayOriginal && applyDiscount && (
                           <span className="text-sm text-gray-400 line-through">
                             ${bundleSale.toLocaleString("es-AR")}
                           </span>
@@ -281,7 +284,7 @@ ProductsGrid.propTypes = {
       imagen: PropTypes.string,
       Stock: PropTypes.bool,
       Oferta: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-      quantity: PropTypes.number
-    })
-  ).isRequired
+      quantity: PropTypes.number,
+    }),
+  ).isRequired,
 };
