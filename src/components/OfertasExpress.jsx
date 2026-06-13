@@ -85,8 +85,8 @@ export default function OfertasExpress() {
 
   if (loading) {
     return (
-      <section className="py-8 bg-gradient-to-r from-red-50 to-orange-50">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-10">
+      <section className="py-8 bg-linear-to-r from-red-50 to-orange-50">
+        <div className="max-w-7xlto px-4 sm:px-6 lg:px-10">
           <h2 className="text-2xl font-black text-gray-900 mb-6">
             Ofertas <span className="text-orange-600">Express</span>
           </h2>
@@ -101,8 +101,8 @@ export default function OfertasExpress() {
   if (ofertas.length === 0) return null;
 
   return (
-    <section className="py-8 sm:py-10 lg:py-14 bg-gradient-to-r from-red-50 to-orange-50">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-10">
+    <section className="py-8 sm:py-10 lg:py-14 bg-linear-to-r from-red-50 to-orange-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
 
         {/* Encabezado */}
         <div className="flex items-center justify-between mb-6 lg:mb-8">

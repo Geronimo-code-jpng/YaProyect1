@@ -157,16 +157,6 @@ export default function CartPage() {
     setIsSubmitting(true);
 
     try {
-      // Verificar si el usuario está logueado
-      if (!user) {
-        showError(
-          "❌ No puedes enviar el pedido. Crea una cuenta o inicia sesión para continuar.",
-        );
-        setIsSubmitting(false);
-        navigate("/login");
-        return;
-      }
-
       if (cartTotal <= 0) {
         showError(
           "❌ El total del pedido debe ser mayor a $0. Por favor agrega productos al carrito.",
