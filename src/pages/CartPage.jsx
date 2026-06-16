@@ -269,7 +269,14 @@ export default function CartPage() {
       showSuccess("¡Pedido enviado! Lo revisaremos a la brevedad.");
 
       setTimeout(() => {
-        navigate("/");
+        navigate("/thankyoupage", {
+          state: {
+          datosCliente: orderData.nombre,
+          totalAbonado: baseTotal + shipping,
+          pedidoId: data.id, // El ID que devuelve Supabase
+          items: cart        // Tu objeto cart original
+        }
+        });
         window.scrollTo(0, 0);
       }, 1500);
     } catch (error) {

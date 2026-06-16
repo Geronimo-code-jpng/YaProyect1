@@ -24,6 +24,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProfilePage from "./pages/ProfilePage";
+import ThankYouPage from "./pages/ThankYouPage";
 import { useAuth } from "./contexts/AuthContext";
 
 function AppContent() {
@@ -48,6 +49,7 @@ function AppContent() {
       "/register": "YA MAYORISTA! | Crear Cuenta",
       "/pedidos": "YA MAYORISTA! | Mis Pedidos",
       "/perfil": "YA MAYORISTA! | Mi Perfil",
+      "/thankyoupage": "YA MAYORISTA! | Gracias por tu compra",
     };
 
     // Handle dynamic routes
@@ -166,6 +168,7 @@ function AppContent() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/pedidos" element={<OrdersPage />} />
         <Route path="/perfil" element={<ProfilePage />} />
+        <Route path="/thankyoupage" element={<ThankYouPage />} />
       </Routes>
 
       <Footer />
