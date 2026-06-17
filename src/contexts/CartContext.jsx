@@ -1,14 +1,22 @@
 import React, { useState, createContext, useContext, useEffect } from "react";
 import PropTypes from "prop-types";
 
+const CART_EXPIRATION = 1000 * 60 * 60;
+const STORAGE_KEY = "yaCart";
+
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
     try {
-      const saved = localStorage.getItem("yaCart");
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.expira && Date.now() > parsed.expira) {
+          localStorage.removeItem(STORAGE_KEY);
+          return [];
+        }
+        return parsed.data || [];
       }
       return [];
     } catch (error) {
@@ -20,12 +28,16 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      localStorage.setItem("yaCart", JSON.stringify(cart));
+      const payload = {
+        data: cart,
+        expira: Date.now() + CART_EXPIRATION,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (error) {
       console.error("Error guardando carrito en localStorage:", error);
       if (error.name === 'QuotaExceededError') {
         console.warn("LocalStorage quota exceeded, clearing cart storage");
-        localStorage.removeItem("yaCart");
+        localStorage.removeItem(STORAGE_KEY);
       }
     }
   }, [cart]);
