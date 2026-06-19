@@ -62,7 +62,25 @@ export default function ProductsGrid({ products }) {
       Oferta: producto.Oferta,
       descuento: discount,
     });
-
+// 2. --- INICIO DATALAYER PARA GA4 ---
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "add_to_cart",
+      ecommerce: {
+        currency: "ARS", // Cambia a "USD", "MXN", etc. si corresponde
+        value: finalPrice, // Como la cantidad aquí está forzada a 1, el valor total es finalPrice
+        items: [
+          {
+            item_id: String(producto.Id),
+            item_name: nombreSeguro,
+            price: finalPrice,
+            quantity: 1, // En este código específico, siempre agregas de a 1
+            item_category: tipo
+          }
+        ]
+      }
+    });
+    // --- FIN DATALAYER PARA GA4 ---
     // Visual feedback using React state
     setAddedToCart((prev) => new Set(prev).add(producto.Id));
 
