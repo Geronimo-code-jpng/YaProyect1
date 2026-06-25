@@ -35,7 +35,7 @@ export const CartProvider = ({ children }) => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (error) {
       console.error("Error guardando carrito en localStorage:", error);
-      if (error.name === 'QuotaExceededError') {
+      if (error.name === "QuotaExceededError") {
         console.warn("LocalStorage quota exceeded, clearing cart storage");
         localStorage.removeItem(STORAGE_KEY);
       }
@@ -51,29 +51,32 @@ export const CartProvider = ({ children }) => {
     setCart((prev) => {
       const productId = String(product.Id);
       const productType = product.tipo || "Bulto"; // "Unidad" o "Bulto"
-      
-      const exists = prev.find((item) => 
-        String(item.Id) === productId && (item.tipo || "Bulto") === productType
+
+      const exists = prev.find(
+        (item) =>
+          String(item.Id) === productId &&
+          (item.tipo || "Bulto") === productType,
       );
 
       if (exists) {
         return prev.map((item) =>
-          (String(item.Id) === productId && (item.tipo || "Bulto") === productType)
+          String(item.Id) === productId &&
+          (item.tipo || "Bulto") === productType
             ? { ...item, cantidad: item.cantidad + (product.cantidad || 1) }
             : item,
         );
       }
       return [
         ...prev,
-        { 
-          ...product, 
-          Id: productId, 
+        {
+          ...product,
+          Id: productId,
           cantidad: product.cantidad || 1,
           tipo: productType,
           precio_unitario: product.precio_unitario || product.precio,
           quantity_per_bundle: product.quantity_per_bundle || 1,
           oferta: product.Oferta,
-          descuento: product.descuento
+          descuento: product.descuento,
         },
       ];
     });
@@ -83,8 +86,9 @@ export const CartProvider = ({ children }) => {
     setCart((prev) => {
       if (tipo) {
         // Remove specific item with tipo
-        return prev.filter((item) => 
-          String(item.Id) !== String(id) || (item.tipo || "Bulto") !== tipo
+        return prev.filter(
+          (item) =>
+            String(item.Id) !== String(id) || (item.tipo || "Bulto") !== tipo,
         );
       } else {
         // Remove all items with this ID (both unit and bundle)
@@ -99,7 +103,7 @@ export const CartProvider = ({ children }) => {
       prev.map((item) => {
         const matchesId = String(item.Id) === String(id);
         const matchesType = !tipo || (item.tipo || "Bulto") === tipo;
-        
+
         return matchesId && matchesType ? { ...item, cantidad } : item;
       }),
     );
@@ -116,21 +120,25 @@ export const CartProvider = ({ children }) => {
 
   const cartCount = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
-  // Función para calcular total con descuento de primera compra
-  const getCartTotalWithDiscount = (userProfile) => {
-    const subtotal = cartTotal;
-    const isFirstBuy = userProfile && (userProfile.cantidad_pedidos || 0) === 0;
-    const qualifiesForDiscount = isFirstBuy && subtotal >= 80000;
-    
-    if (qualifiesForDiscount) {
-      return Math.max(0, subtotal - 1000); // $1.000 de descuento
-    }
-    return subtotal;
+  // Función para verificar si califica para descuento
+  const qualifiesForFirstBuyDiscount = (userProfile, shipMethod) => {
+    return (
+      userProfile &&
+      (userProfile.cantidad_pedidos || 0) === 0 &&
+      cartTotal >= 80000 &&
+      shipMethod == "envio"
+    );
   };
 
-  // Función para verificar si califica para descuento
-  const qualifiesForFirstBuyDiscount = (userProfile) => {
-    return userProfile && (userProfile.cantidad_pedidos || 0) === 0 && cartTotal >= 80000;
+  // Función para calcular total con descuento de primera compra
+  const getCartTotalWithDiscount = (userProfile, shipMethod) => {
+    const subtotal = cartTotal;
+
+    if (qualifiesForFirstBuyDiscount(userProfile, shipMethod)) {
+      return Math.max(0, subtotal - 1000); // $1.000 de descuento
+    }
+
+    return subtotal;
   };
 
   return (

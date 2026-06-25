@@ -1,4 +1,4 @@
-import React, {  useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -42,6 +42,7 @@ function AppContent() {
   useEffect(() => {
     const titles = {
       "/": "YA MAYORISTA! | Página Principal",
+      "/s": "YA MAYORISTA! | Página Principalssss",
       "/productos": "YA MAYORISTA! | Catálogo Oficial",
       "/admin": "YA MAYORISTA! | Panel Administración",
       "/cart": "YA MAYORISTA! | Mi Carrito",
@@ -120,41 +121,41 @@ function AppContent() {
 
       {/* Promo modal - Solo mostrar si no hay sesión iniciada o es primera compra */}
       {showPromoModal && !user && (
-          <div
-            id="promoModal"
-            className="fixed inset-0 bg-black/60 z-99999 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity"
-          >
-            <div className="bg-white rounded-3xl p-8 max-w-sm text-center shadow-2xl modal-animate relative">
-              <button
-                onClick={() => setShowPromoModal(false)}
-                className="absolute cursor-pointer top-4 right-4 text-gray-400 hover:text-black text-3xl leading-none"
-              >
-                &times;
-              </button>
-              <i className="fas fa-gift text-6xl text-[#FF6600] mb-4"></i>
-              <h2 className="text-3xl font-black text-zinc-900 leading-tight mb-2">
-                ¡$1.000 OFF!
-              </h2>
-              <p className="text-gray-600 font-medium mb-6">
-                {user
-                  ? `¡Hola ${userProfile?.nombre || user.email?.split("@")[0]}! Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000.`
-                  : "Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000."}
-              </p>
-              <button
-                onClick={() => (openAuthModal(), setShowPromoModal(false))}
-                className="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg"
-              >
-                {user ? "Ir al Catálogo" : "Crear Mi Cuenta"}
-              </button>
-              <button
-                onClick={() => setShowPromoModal(false)}
-                className="mt-4 text-sm font-bold text-gray-400 hover:text-gray-600"
-              >
-                No, gracias.
-              </button>
-            </div>
+        <div
+          id="promoModal"
+          className="fixed inset-0 bg-black/60 z-99999 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity"
+        >
+          <div className="bg-white rounded-3xl p-8 max-w-sm text-center shadow-2xl modal-animate relative">
+            <button
+              onClick={() => setShowPromoModal(false)}
+              className="absolute cursor-pointer top-4 right-4 text-gray-400 hover:text-black text-3xl leading-none"
+            >
+              &times;
+            </button>
+            <i className="fas fa-gift text-6xl text-[#FF6600] mb-4"></i>
+            <h2 className="text-3xl font-black text-zinc-900 leading-tight mb-2">
+              ¡$1.000 OFF!
+            </h2>
+            <p className="text-gray-600 font-medium mb-6">
+              {user
+                ? `¡Hola ${userProfile?.nombre || user.email?.split("@")[0]}! Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000. Solo en envios`
+                : "Creá tu cuenta gratis ahora y ahorrá $1.000 en tu primera compra superior a $80.000. Solo en envios"}
+            </p>
+            <button
+              onClick={() => (openAuthModal(), setShowPromoModal(false))}
+              className="w-full bg-[#FF6600] text-white text-lg font-black py-4 rounded-xl hover:bg-orange-700 transition shadow-lg"
+            >
+              {user ? "Ir al Catálogo" : "Crear Mi Cuenta"}
+            </button>
+            <button
+              onClick={() => setShowPromoModal(false)}
+              className="mt-4 text-sm font-bold text-gray-400 hover:text-gray-600"
+            >
+              No, gracias.
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
       <NavBar />
 

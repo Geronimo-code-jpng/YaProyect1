@@ -243,7 +243,7 @@ export default function CartModal() {
 
       await verificarPedidosVencidos();
 
-      const baseTotal = getCartTotalWithDiscount(userProfile);
+      const baseTotal = getCartTotalWithDiscount(userProfile, orderData.metodoEntrega);
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
       const mpFee = orderData.metodoPago === "mercadopago" ? baseTotal * 0.08 : 0;
 
@@ -265,7 +265,7 @@ export default function CartModal() {
           tipo: item.tipo || "Bulto",
         })),
         total: baseTotal + shipping + mpFee,
-        descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
+        descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile, orderData.metodoEntrega)
           ? 1000
           : 0,
         estado: "pendiente",
@@ -737,7 +737,7 @@ export default function CartModal() {
                   <div className="flex justify-between text-sm font-medium mb-2">
                     <span className="text-yellow-700">Recargo Mercado Pago (8%):</span>
                     <span className="text-yellow-700">
-                      ${(getCartTotalWithDiscount(userProfile) * 0.08).toLocaleString("es-AR")}
+                      ${(getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08).toLocaleString("es-AR")}
                     </span>
                   </div>
                 )}
@@ -749,7 +749,7 @@ export default function CartModal() {
                   </div>
                 )}
 
-                {qualifiesForFirstBuyDiscount(userProfile) && (
+                {qualifiesForFirstBuyDiscount(userProfile, orderData.metodoEntrega) && (
                   <div className="flex justify-between text-sm font-medium mb-2">
                     <span className="text-green-600">🎉 Descuento primera compra:</span>
                     <span className="text-green-600">-$1.000</span>
@@ -761,14 +761,14 @@ export default function CartModal() {
                   <span className="text-[#FF6600]">
                     ${(
                       orderData.metodoEntrega === "retiro"
-                        ? (getCartTotalWithDiscount(userProfile) + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile) * 0.08 : 0))
-                        : (getCartTotalWithDiscount(userProfile) + shippingPrice + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile) * 0.08 : 0))
+                        ? (getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08 : 0))
+                        : (getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + shippingPrice + (orderData.metodoPago === "mercadopago" ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08 : 0))
                     ).toLocaleString("es-AR")}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 font-medium mt-2">
                   {cart.length} {cart.length === 1 ? "producto" : "productos"}
-                  {qualifiesForFirstBuyDiscount(userProfile) && (
+                  {qualifiesForFirstBuyDiscount(userProfile, orderData.metodoEntrega) && (
                     <span className="text-green-600 ml-2">✨ ¡$1.000 OFF aplicado!</span>
                   )}
                 </div>

@@ -52,16 +52,12 @@ export default function CartPage() {
           .single();
 
         if (error) {
-          const savedPrice = localStorage.getItem("shippingPrice");
-          if (savedPrice) {
-            setShippingPrice(parseInt(savedPrice, 10));
-          }
+          console.log(error);
           return;
         }
 
         if (config && config.precio_envio) {
           setShippingPrice(config.precio_envio);
-          localStorage.setItem("shippingPrice", config.precio_envio.toString());
         }
       } catch (error) {
         console.error("Error cargando precio de envío:", error);
@@ -184,7 +180,7 @@ export default function CartPage() {
         return;
       }
 
-      const baseTotal = getCartTotalWithDiscount(userProfile);
+      const baseTotal = getCartTotalWithDiscount(userProfile, orderData.metodoEntrega);
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
 
       const pedidoData = {
@@ -206,11 +202,14 @@ export default function CartPage() {
           oferta: item.descuento || 0,
         })),
         total: baseTotal + shipping,
-        descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile)
-          ? 1000
-          : 0,
         estado: "pendiente",
         metodo: orderData.metodoEntrega,
+        descuento_aplicado: qualifiesForFirstBuyDiscount(
+          userProfile,
+          orderData.metodoEntrega,
+        )
+          ? 1000
+          : 0,
         created_at: new Date().toISOString(),
         ...(orderData.metodoPago !== "efectivo" && {
           expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
@@ -271,11 +270,11 @@ export default function CartPage() {
       setTimeout(() => {
         navigate("/thankyoupage", {
           state: {
-          datosCliente: orderData.nombre,
-          totalAbonado: baseTotal + shipping,
-          pedidoId: data.id, // El ID que devuelve Supabase
-          items: cart        // Tu objeto cart original
-        }
+            datosCliente: orderData.nombre,
+            totalAbonado: baseTotal + shipping,
+            pedidoId: data.id, // El ID que devuelve Supabase
+            items: cart, // Tu objeto cart original
+          },
         });
         window.scrollTo(0, 0);
       }, 1500);
@@ -697,20 +696,6 @@ export default function CartPage() {
                     <span>${cartTotal.toLocaleString("es-AR")}</span>
                   </div>
 
-                  {orderData.metodoPago === "mercadopago" && (
-                    <div className="flex justify-between text-sm font-medium mb-2">
-                      <span className="text-yellow-700">
-                        Recargo Mercado Pago (8%):
-                      </span>
-                      <span className="text-yellow-700">
-                        $
-                        {(
-                          getCartTotalWithDiscount(userProfile) * 0.08
-                        ).toLocaleString("es-AR")}
-                      </span>
-                    </div>
-                  )}
-
                   {orderData.metodoEntrega === "envio" && (
                     <div className="flex justify-between text-sm font-medium mb-2">
                       <span>Costo de envío:</span>
@@ -720,7 +705,10 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {qualifiesForFirstBuyDiscount(userProfile) && (
+                  {qualifiesForFirstBuyDiscount(
+                    userProfile,
+                    orderData.metodoEntrega,
+                  ) && (
                     <div className="flex justify-between text-sm font-medium mb-2">
                       <span className="text-green-600">
                         🎉 Descuento primera compra:
@@ -734,21 +722,24 @@ export default function CartPage() {
                     <span className="text-[#FF6600]">
                       $
                       {(orderData.metodoEntrega === "retiro"
-                        ? getCartTotalWithDiscount(userProfile) +
+                        ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
                           (orderData.metodoPago === "mercadopago"
-                            ? getCartTotalWithDiscount(userProfile) * 0.08
+                            ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08
                             : 0)
-                        : getCartTotalWithDiscount(userProfile) +
+                        : getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
                           shippingPrice +
                           (orderData.metodoPago === "mercadopago"
-                            ? getCartTotalWithDiscount(userProfile) * 0.08
+                            ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08
                             : 0)
                       ).toLocaleString("es-AR")}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 font-medium mt-2">
                     {cart.length} {cart.length === 1 ? "producto" : "productos"}
-                    {qualifiesForFirstBuyDiscount(userProfile) && (
+                    {qualifiesForFirstBuyDiscount(
+                      userProfile,
+                      orderData.metodoEntrega,
+                    ) && (
                       <span className="text-green-600 ml-2">
                         ✨ ¡$1.000 OFF aplicado!
                       </span>

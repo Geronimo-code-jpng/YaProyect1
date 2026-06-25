@@ -360,26 +360,23 @@ export default function AdminPanel() {
   };
 
   const eliminarCategoria = async (id, nombre) => {
-    showConfirm(
-      `¿Eliminar la categoría "${nombre}"?`,
-      async () => {
-        setConfirm(null);
-        try {
-          const { error } = await supabaseClient
-            .from("categorias")
-            .delete()
-            .eq("id", id);
-          if (error) {
-            showToast("Error al eliminar categoría", "error");
-            return;
-          }
-          await loadCategorias();
-          showToast(`Categoría "${nombre}" eliminada`, "success");
-        } catch (err) {
+    showConfirm(`¿Eliminar la categoría "${nombre}"?`, async () => {
+      setConfirm(null);
+      try {
+        const { error } = await supabaseClient
+          .from("categorias")
+          .delete()
+          .eq("id", id);
+        if (error) {
           showToast("Error al eliminar categoría", "error");
+          return;
         }
-      },
-    );
+        await loadCategorias();
+        showToast(`Categoría "${nombre}" eliminada`, "success");
+      } catch (err) {
+        showToast("Error al eliminar categoría", "error");
+      }
+    });
   };
 
   // Cargar pedidos (con useCallback para evitar re-renders)
@@ -1490,10 +1487,11 @@ export default function AdminPanel() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 text-sm">
                       {pedidosFiltrados.map((p) => {
-                        const fecha = p.created_at.split("T")[0]
+                        const fecha = p.created_at.split("T")[0];
                         const tiempoRestante =
                           p.fuente === "web" &&
-                          (p.estado === "configurado" || p.estado === "vencido") &&
+                          (p.estado === "configurado" ||
+                            p.estado === "vencido") &&
                           p.expira_en
                             ? calcularTiempoRestante(p.expira_en)
                             : 0;
@@ -1540,7 +1538,8 @@ export default function AdminPanel() {
                                 </p>
                               )}
                               {p.fuente === "web" &&
-                                (p.estado === "configurado" || p.estado === "vencido") &&
+                                (p.estado === "configurado" ||
+                                  p.estado === "vencido") &&
                                 p.expira_en && (
                                   <div className="text-xs font-bold mt-1">
                                     {tiempoRestante > 0 ? (
@@ -1592,7 +1591,8 @@ export default function AdminPanel() {
                                     </button>
                                   )}
                                 {p.fuente === "web" &&
-                                  (p.estado === "configurado" || p.estado === "vencido") && (
+                                  (p.estado === "configurado" ||
+                                    p.estado === "vencido") && (
                                     <button
                                       onClick={() => marcarPagado(p.id)}
                                       className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg shadow text-xs font-black transition flex items-center gap-1"
@@ -2037,7 +2037,9 @@ export default function AdminPanel() {
                         type="text"
                         value={nuevaCategoria}
                         onChange={(e) => setNuevaCategoria(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && agregarCategoria()}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && agregarCategoria()
+                        }
                         className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
                         placeholder="Nueva categoría..."
                       />
@@ -2050,16 +2052,22 @@ export default function AdminPanel() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {categorias.length === 0 && (
-                        <p className="text-sm text-gray-400 font-medium">No hay categorías todavía</p>
+                        <p className="text-sm text-gray-400 font-medium">
+                          No hay categorías todavía
+                        </p>
                       )}
                       {categorias.map((cat) => (
                         <div
                           key={cat.id}
                           className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg"
                         >
-                          <span className="text-sm font-bold text-gray-700">{cat.categoria}</span>
+                          <span className="text-sm font-bold text-gray-700">
+                            {cat.categoria}
+                          </span>
                           <button
-                            onClick={() => eliminarCategoria(cat.id, cat.categoria)}
+                            onClick={() =>
+                              eliminarCategoria(cat.id, cat.categoria)
+                            }
                             className="text-red-400 hover:text-red-600 transition"
                           >
                             <i className="fas fa-times"></i>
