@@ -31,6 +31,28 @@ export default function HomeProductCard({ product, compact = false }) {
     };
 
     addToCart(productForCart);
+// 2. --- INICIO DATALAYER PARA GA4 ---
+    // Aseguramos que dataLayer exista en el entorno global (window)
+    window.dataLayer = window.dataLayer || [];
+    
+    // Empujamos el evento con la estructura exacta que pide GA4
+    window.dataLayer.push({
+      event: "add_to_cart",
+      ecommerce: {
+        currency: "ARS", // Cambia esto si usas otra moneda (ej. "USD", "MXN")
+        value: (product.price || product.precio) * quantity, // Valor total de esta acción
+        items: [
+          {
+            item_id: String(product.id || product.Id), // GA4 recomienda IDs como texto
+            item_name: product.name || product.nombre,
+            price: product.price || product.precio,
+            quantity: quantity,
+            item_category: product.tipo || "Bulto"
+          }
+        ]
+      }
+    });
+    // --- FIN DATALAYER PARA GA4 ---
 
     setAddedToCart(true);
     
