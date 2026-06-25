@@ -33,7 +33,7 @@ function AppContent() {
   const { openAuthModal, user, userProfile } = useAuth();
   const location = useLocation();
 
-  // Scroll to top when route changes
+  // Scroll to top when route changesssss
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location]);
