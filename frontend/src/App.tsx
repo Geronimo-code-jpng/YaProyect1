@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -12,14 +12,13 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { AlertProvider } from "./contexts/AlertContext";
 import { ProductProvider } from "./contexts/ProductContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import HomePage from "./pages/HomePage";
 import { AdminPanel } from "./components/admin";
 import CartPage from "./pages/CartPage";
 import LoginPage from "./pages/LoginPage";
+import Bot from "./components/layout/Bot";
 import RegisterPage from "./pages/RegisterPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -106,16 +105,8 @@ function AppContent() {
         <span id="toastMsg">¡Operación exitosa!</span>
       </div>
 
-      {/* WhatsApp floating button */}
-      <a
-        id="floatingWa"
-        href="https://wa.me/3425084197"
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-4xl shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:bg-green-600 transition-all z-50 hover:scale-110"
-      >
-        <FontAwesomeIcon icon={faWhatsapp} />
-      </a>
+      {/* ChatBot */}
+      <Bot />
 
       {/* Promo modal - Solo mostrar si no hay sesión iniciada o es primera compra */}
       {showPromoModal && !user && (

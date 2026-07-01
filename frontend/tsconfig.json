@@ -17,8 +17,14 @@
     /* Linting */
     "strict": false,
     "noFallthroughCasesInSwitch": true,
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "pip install fastapi uvicorn6.0",
   },
-  "include": ["src/**/*", "vite.config.js", "api/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",
+    "vite.config.js",
+    "api/**/*",
+    "../backend/bot",
+    "../backend/ya_mayorista_ai_venv",
+  ],
+  "exclude": ["node_modules", "dist"],
 }
