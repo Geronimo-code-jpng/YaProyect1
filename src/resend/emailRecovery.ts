@@ -42,7 +42,6 @@ export async function sendPasswordRecoveryEmail(email: string, token: string): P
 
     return data as { id: string };
   } catch (error) {
-    console.log(error)
     // Fallback a simulación para desarrollo
     return { id: `simulated-${Date.now().toString()}` };
   }

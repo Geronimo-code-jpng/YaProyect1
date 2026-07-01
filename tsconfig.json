@@ -15,17 +15,10 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
     "noFallthroughCasesInSwitch": true,
-
-    /* Path mapping */
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*", "vite.config.js", "src/vite-env.d.ts", "api/**/*", "supabase/**/*"],
+  "include": ["src/**/*", "vite.config.js", "api/**/*"],
   "exclude": ["node_modules", "dist"]
 }

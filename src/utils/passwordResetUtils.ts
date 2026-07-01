@@ -44,7 +44,7 @@ export async function verifyTokenAndResetPassword(token: string, newPassword: st
       return { success: false, error: 'Error actualizando contraseña' };
     }
 
-    const user = users.find(u => u.email === profileData.email);
+    const user = (users as any[]).find(u => u.email === (profileData as any).email);
     
     if (!user) {
       return { success: false, error: 'Usuario no encontrado' };

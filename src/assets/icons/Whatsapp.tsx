@@ -1,5 +1,3 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 
 const WhatsappIcon = ({
   size,
@@ -45,17 +43,5 @@ const WhatsappIcon = ({
   );
 };
 
-WhatsappIcon.propTypes = {
-  size: PropTypes.number.isRequired,
-  color: PropTypes.string,
-  strokeWidth: PropTypes.number,
-  background: PropTypes.string,
-  opacity: PropTypes.number,
-  rotation: PropTypes.number,
-  shadow: PropTypes.number,
-  flipHorizontal: PropTypes.bool,
-  flipVertical: PropTypes.bool,
-  padding: PropTypes.number
-};
 
 export default WhatsappIcon;

@@ -1,5 +1,3 @@
-// Tipos compartidos para toda la aplicación
-
 export interface Product {
   Id: number;
   nombre: string;
@@ -9,6 +7,16 @@ export interface Product {
   Imagen?: string;
   imagen?: string;
   Oferta?: string;
+  descripcion?: string;
+  quantity?: number;
+  solo_bulto?: boolean;
+  oferta_express?: boolean;
+  mas_vendido?: boolean;
+  tipo?: string;
+  precio_unitario?: number;
+  quantity_per_bundle?: number;
+  descuento?: number;
+  ofert?: string;
 }
 
 export interface User {
@@ -23,6 +31,9 @@ export interface UserProfile {
   email: string;
   nombre?: string;
   rol?: string;
+  telefono?: string;
+  direccion?: string;
+  tipo_cliente?: string;
   cantidad_pedidos?: number;
 }
 
@@ -39,6 +50,17 @@ export interface Order {
   fuente: string;
   creado_en?: string;
   actualizado_en?: string;
+  numeroPedidoUsuario?: string;
+  metodo_pago?: string;
+  expira_en?: string;
+  carrito?: Product[];
+  historial?: string[];
+  horario?: string;
+  nombre_cliente?: string;
+  metodo?: string;
+  descuento_aplicado?: number;
+  created_at?: string;
+  user_id?: string;
 }
 
 export interface CartItem extends Product {
@@ -54,7 +76,6 @@ export interface UserSession {
   loginTime: string;
 }
 
-// Extensiones para Window
 declare global {
   interface Window {
     productManager?: {
@@ -63,5 +84,7 @@ declare global {
       eliminarTodos: () => Promise<boolean>;
       exportar: () => Promise<string | null>;
     };
+    dataLayer?: unknown[];
+    fbq?: (...args: unknown[]) => void;
   }
 }
