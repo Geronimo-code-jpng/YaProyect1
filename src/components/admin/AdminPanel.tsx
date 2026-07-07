@@ -9,6 +9,8 @@ import { processProductImageReplacement } from "../../utils/imageFileHandler";
 import RejectDialog from "./RejectDialog";
 import ConfirmDialog from "./ConfirmDialog";
 import Toast from "./Toast";
+import { validateCartItems } from "../../utils/validateCartItems";
+import type { PriceChange } from "../../utils/validateCartItems";
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -41,6 +43,11 @@ export default function AdminPanel() {
   });
   const [categorias, setCategorias] = useState([]);
   const [nuevaCategoria, setNuevaCategoria] = useState("");
+  const [priceComparison, setPriceComparison] = useState<{
+    results: PriceChange[];
+    loading: boolean;
+    show: boolean;
+  }>({ results: [], loading: false, show: false });
 
   const showToast = useCallback(
     (message, type = "success") => {
@@ -847,6 +854,34 @@ export default function AdminPanel() {
   const cerrarModalPedido = () => {
     setModalOpen(false);
     setPedidoEditando(null);
+    setPriceComparison({ results: [], loading: false, show: false });
+  };
+
+  const compareOrderPrices = async () => {
+    if (!pedidoEditando || !pedidoEditando.carrito?.length) return;
+
+    setPriceComparison((prev) => ({ ...prev, loading: true, show: true }));
+
+    const items = pedidoEditando.carrito.map((item) => ({
+      Id: item.Id || item.id_producto,
+      nombre: item.nombre || "Producto",
+      precio: Number(item.precio || item.precio_unitario || 0),
+      Stock: true,
+      Oferta: item.Oferta ? String(item.Oferta) : item.oferta ? String(item.oferta) : undefined,
+      cantidad: item.cantidad || 1,
+      tipo: item.tipo || "Bulto",
+      quantity_per_bundle: item.quantity_per_bundle || 1,
+      imagen: item.Imagen || item.imagen,
+    }));
+
+    try {
+      const result = await validateCartItems(items);
+      setPriceComparison({ results: result.changes, loading: false, show: true });
+    } catch (err) {
+      console.error("Error comparando precios:", err);
+      setPriceComparison({ results: [], loading: false, show: true });
+      showToast("Error al comparar precios", "error");
+    }
   };
 
   const cambiarCantidadModal = (index, cambio) => {
@@ -2076,6 +2111,85 @@ export default function AdminPanel() {
                 })}
               </div>
             </div>
+
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+              <button
+                onClick={compareOrderPrices}
+                disabled={priceComparison.loading}
+                className={`text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1 ${
+                  priceComparison.show && priceComparison.results.length > 0
+                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                    : priceComparison.show && priceComparison.results.length === 0
+                      ? "bg-green-100 text-green-700"
+                      : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                }`}
+              >
+                {priceComparison.loading ? (
+                  <i className="fas fa-spinner fa-spin"></i>
+                ) : (
+                  <i className="fas fa-scale-balanced"></i>
+                )}
+                {priceComparison.loading
+                  ? "Verificando..."
+                  : priceComparison.show && priceComparison.results.length > 0
+                    ? `${priceComparison.results.length} cambio(s) detectado(s)`
+                    : priceComparison.show && priceComparison.results.length === 0
+                      ? "Precios actualizados ✓"
+                      : "Comparar precios actuales"}
+              </button>
+            </div>
+
+            {priceComparison.show && priceComparison.results.length > 0 && (
+              <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-200">
+                <h4 className="font-bold text-yellow-800 text-xs uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <i className="fas fa-triangle-exclamation"></i>
+                  Diferencias detectadas con precios actuales
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {priceComparison.results.map((change, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white border border-yellow-200 rounded-lg p-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-gray-800 truncate">
+                          {change.nombre}
+                        </span>
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-black ${
+                          change.tipo === "Bulto"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                        }`}>
+                          {change.tipo}
+                        </span>
+                      </div>
+                      {change.cambios.map((c, ci) => (
+                        <div key={ci} className="text-gray-600 mt-1 flex items-center gap-1">
+                          {c.campo === "precio" && (
+                            <>
+                              <span className="text-gray-400 line-through">{c.valorViejo}</span>
+                              <span className="text-red-600 font-bold">→ {c.valorNuevo}</span>
+                            </>
+                          )}
+                          {c.campo === "stock" && (
+                            <span className="text-red-600 font-bold">Sin stock actualmente</span>
+                          )}
+                          {c.campo === "oferta" && (
+                            <>
+                              <span className="text-gray-400 line-through">{c.valorViejo}</span>
+                              <span className="text-red-600 font-bold">→ {c.valorNuevo}</span>
+                            </>
+                          )}
+                          {c.campo === "existencia" && (
+                            <span className="text-red-600 font-bold">Ya no existe en la DB</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="p-4 border-t border-gray-200 bg-white">
               {/* Desglose del pedido */}
