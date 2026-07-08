@@ -26,19 +26,24 @@ export interface PriceChange {
 export interface ValidationResult {
   hasChanges: boolean;
   changes: PriceChange[];
-  dbProducts: Record<number, {
-    Id: number;
-    nombre: string;
-    precio: number;
-    Stock: boolean;
-    Oferta?: string;
-    quantity: number;
-    Imagen?: string;
-    Categoria?: string;
-  }>;
+  dbProducts: Record<
+    number,
+    {
+      Id: number;
+      nombre: string;
+      precio: number;
+      Stock: boolean;
+      Oferta?: string;
+      quantity: number;
+      Imagen?: string;
+      Categoria?: string;
+    }
+  >;
 }
 
-export async function validateCartItems(cart: CartValidationItem[]): Promise<ValidationResult> {
+export async function validateCartItems(
+  cart: CartValidationItem[],
+): Promise<ValidationResult> {
   if (cart.length === 0) {
     return { hasChanges: false, changes: [], dbProducts: {} };
   }
@@ -68,7 +73,11 @@ export async function validateCartItems(cart: CartValidationItem[]): Promise<Val
         nombre: item.nombre,
         tipo: item.tipo,
         cambios: [
-          { campo: "existencia", valorViejo: "Disponible", valorNuevo: "Ya no existe" },
+          {
+            campo: "existencia",
+            valorViejo: "Disponible",
+            valorNuevo: "Ya no existe",
+          },
         ],
       });
       continue;
@@ -77,12 +86,17 @@ export async function validateCartItems(cart: CartValidationItem[]): Promise<Val
     const itemChanges: PriceChange["cambios"] = [];
 
     if (!db.Stock) {
-      itemChanges.push({ campo: "stock", valorViejo: "Disponible", valorNuevo: "Sin stock" });
+      itemChanges.push({
+        campo: "stock",
+        valorViejo: "Disponible",
+        valorNuevo: "Sin stock",
+      });
     }
 
     const quantityPerBundle = db.quantity || 1;
     const dbBundlePrice = Number(db.precio);
-    const dbUnitPrice = Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
+    const dbUnitPrice =
+      Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
     const currentPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
 
     if (currentPrice !== item.precio) {
@@ -90,16 +104,6 @@ export async function validateCartItems(cart: CartValidationItem[]): Promise<Val
         campo: "precio",
         valorViejo: `$${item.precio.toLocaleString("es-AR")}`,
         valorNuevo: `$${currentPrice.toLocaleString("es-AR")}`,
-      });
-    }
-
-    const oldOferta = parseInt(item.Oferta || "0") || 0;
-    const newOferta = parseInt(db.Oferta || "0") || 0;
-    if (oldOferta !== newOferta) {
-      itemChanges.push({
-        campo: "oferta",
-        valorViejo: oldOferta > 0 ? `$${oldOferta.toLocaleString("es-AR")} OFF` : "Sin oferta",
-        valorNuevo: newOferta > 0 ? `$${newOferta.toLocaleString("es-AR")} OFF` : "Sin oferta",
       });
     }
 
@@ -120,25 +124,29 @@ export function computeUpdatedCart(
   cart: CartValidationItem[],
   dbProducts: Record<number, any>,
 ): CartValidationItem[] {
-  return cart
-    .map((item) => {
-      const db = dbProducts[item.Id];
-      if (!db || !db.Stock) return null;
+  return cart.map((item) => {
+    const db = dbProducts[item.Id];
+    if (!db) return item;
 
-      const quantityPerBundle = db.quantity || 1;
-      const dbBundlePrice = Number(db.precio);
-      const dbUnitPrice = Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
-      const finalPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
+    if (!db.Stock) {
+      return { ...item, cantidad: 0, Stock: false };
+    }
 
-      return {
-        ...item,
-        precio: finalPrice,
-        precio_unitario: finalPrice,
-        Oferta: db.Oferta || undefined,
-        Stock: db.Stock,
-        quantity_per_bundle: quantityPerBundle,
-        nombre: db.nombre || item.nombre,
-      };
-    })
-    .filter(Boolean) as CartValidationItem[];
+    const quantityPerBundle = db.quantity || 1;
+    const dbBundlePrice = Number(db.precio);
+    const dbUnitPrice =
+      Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
+    const finalPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
+
+    return {
+      ...item,
+      precio: finalPrice,
+      precio_unitario: finalPrice,
+      oferta: item.oferta || item.Oferta,
+      descuento: item.descuento || item.discount,
+      Stock: db.Stock,
+      quantity_per_bundle: quantityPerBundle,
+      nombre: db.nombre || item.nombre,
+    };
+  }) as CartValidationItem[];
 }

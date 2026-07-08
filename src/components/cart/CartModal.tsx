@@ -31,6 +31,7 @@ export default function CartModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pedidoTimeout, setPedidoTimeout] = useState(null);
   const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
+  const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
   const [validatingPrices, setValidatingPrices] = useState(false);
   const [orderData, setOrderData] = useState({
     nombre: "",
@@ -254,6 +255,7 @@ export default function CartModal() {
 
       if (result.hasChanges) {
         setPriceChanges(result.changes);
+        setPriceChangesDb(result.dbProducts || {});
         setIsSubmitting(false);
         return;
       }
@@ -361,32 +363,7 @@ export default function CartModal() {
 
   const handleUpdateCartPrices = () => {
     if (!priceChanges) return;
-    const dbProducts = {} as Record<number, any>;
     const { cart: currentCart } = { cart };
-    for (const change of priceChanges) {
-      const item = currentCart.find((i) => i.Id === change.Id && (i.tipo || "Bulto") === change.tipo);
-      if (!item) continue;
-      const dbData = {
-        Id: change.Id,
-        nombre: item.nombre,
-        precio: item.precio,
-        Stock: true,
-        Oferta: item.Oferta,
-        quantity: item.quantity_per_bundle,
-      };
-      for (const c of change.cambios) {
-        if (c.campo === "precio") {
-          const newPrice = Number(String(c.valorNuevo).replace(/[^0-9]/g, ""));
-          if (newPrice) dbData.precio = newPrice;
-        }
-        if (c.campo === "stock") dbData.Stock = false;
-        if (c.campo === "oferta") {
-          const ofertaMatch = String(c.valorNuevo).match(/\d+/);
-          dbData.Oferta = ofertaMatch ? ofertaMatch[0] : "0";
-        }
-      }
-      dbProducts[change.Id] = dbData;
-    }
     const updated = computeUpdatedCart(
       currentCart.map((item) => ({
         Id: item.Id,
@@ -394,15 +371,17 @@ export default function CartModal() {
         precio: item.precio,
         Stock: item.Stock ?? true,
         Oferta: item.Oferta,
+        oferta: item.oferta || item.Oferta,
         cantidad: item.cantidad,
         tipo: item.tipo || "Bulto",
         quantity_per_bundle: item.quantity_per_bundle,
         imagen: item.Imagen || item.imagen,
       })),
-      dbProducts,
+      priceChangesDb,
     );
     replaceCart(updated as any);
     setPriceChanges(null);
+    setPriceChangesDb({});
   };
 
   const handleClearCart = () => {

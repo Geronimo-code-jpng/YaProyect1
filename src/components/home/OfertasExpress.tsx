@@ -36,6 +36,7 @@ export default function OfertasExpress() {
           .from("productos")
           .select("*")
           .eq("oferta_express", true)
+          .eq("Stock", true)
           .order("nombre", { ascending: true });
 
         if (error) {

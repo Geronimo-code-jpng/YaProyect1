@@ -18,7 +18,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react";
 import { supabase as supabaseClient } from "../../lib/supabase";
 import PhraseGroup from "./BucleSlogan";
 
@@ -75,21 +75,24 @@ export default function NavBar() {
   };
 
   const displayName = getDisplayName();
-  const isAdmin = userProfile?.rol === "admin";
+  let isAdmin = null;
+  if (userProfile) {
+    isAdmin = userProfile.rol == "admin";
+  }
 
   return (
     <div className="sticky top-0 z-40">
+      {isAdmin && (
+        <div className="text-center py-2 bg-red-600">
+          <Link
+            to="/admin"
+            className="text-white hover:text-red-100 font-bold text-sm transition inline-flex items-center gap-2"
+          >
+            <i className="fas fa-tools"></i> Panel Admin
+          </Link>
+        </div>
+      )}
       <div className="bg-white shadow-sm">
-        {isAdmin && (
-          <div className="text-center py-2 bg-red-600">
-            <Link
-              to="/admin"
-              className="text-white hover:text-red-100 font-bold text-sm transition inline-flex items-center gap-2"
-            >
-              <i className="fas fa-tools"></i> Panel Admin
-            </Link>
-          </div>
-        )}
         <div className="relative flex overflow-x-hidden border-b border-gray-200 bg-white md:hidden">
           <div className="flex animate-marquee-reverse whitespace-nowrap">
             <PhraseGroup />
@@ -129,11 +132,15 @@ export default function NavBar() {
               <div
                 className="relative"
                 onMouseEnter={() => {
-                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                  if (hoverTimeoutRef.current)
+                    clearTimeout(hoverTimeoutRef.current);
                   setCategoriesOpen(true);
                 }}
                 onMouseLeave={() => {
-                  hoverTimeoutRef.current = setTimeout(() => setCategoriesOpen(false), 250);
+                  hoverTimeoutRef.current = setTimeout(
+                    () => setCategoriesOpen(false),
+                    250,
+                  );
                 }}
               >
                 <Link
@@ -153,11 +160,15 @@ export default function NavBar() {
                 {categoriesOpen && categories.length > 0 && (
                   <div
                     onMouseEnter={() => {
-                      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                      if (hoverTimeoutRef.current)
+                        clearTimeout(hoverTimeoutRef.current);
                       setCategoriesOpen(true);
                     }}
                     onMouseLeave={() => {
-                      hoverTimeoutRef.current = setTimeout(() => setCategoriesOpen(false), 250);
+                      hoverTimeoutRef.current = setTimeout(
+                        () => setCategoriesOpen(false),
+                        250,
+                      );
                     }}
                     className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 min-w-[220px] z-50"
                   >
@@ -262,7 +273,6 @@ export default function NavBar() {
           </div>
         </div>
       </div>
-
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 md:hidden">
@@ -443,7 +453,6 @@ export default function NavBar() {
           </div>
         </div>
       )}
-
       <div>
         <AuthModal />
         <ProfileModal />
