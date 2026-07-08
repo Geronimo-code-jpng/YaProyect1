@@ -1476,61 +1476,63 @@ export default function AdminPanel() {
       </header>
 
       <main className="max-w-400 mx-auto px-4 py-8">
+        {activeTab == "pedidos" && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              {
+                label: "Pendientes",
+                estado: "pendiente",
+                color: "text-yellow-600",
+                bg: "bg-yellow-50",
+                icon: "fa-clock",
+              },
+              {
+                label: "Configurados",
+                estado: "configurado",
+                color: "text-blue-600",
+                bg: "bg-blue-50",
+                icon: "fa-cog",
+              },
+              {
+                label: "Pagados",
+                estado: "pagado",
+                color: "text-purple-600",
+                bg: "bg-purple-50",
+                icon: "fa-check-circle",
+              },
+              {
+                label: "Total",
+                estado: "todos",
+                color: "text-gray-700",
+                bg: "bg-white",
+                icon: "fa-inbox",
+              },
+            ].map(({ label, estado, color, bg, icon }) => (
+              <button
+                key={estado}
+                onClick={() => setFiltroEstado(estado)}
+                className={`${bg} ${filtroEstado === estado ? "ring-2 ring-[#FF6600]" : ""} rounded-2xl hover:cursor-pointer p-4 shadow-sm border border-gray-100 text-left transition hover:shadow-md`}
+              >
+                <div className={`text-2xl font-black ${color}`}>
+                  {estado === "todos"
+                    ? pedidos.length
+                    : estadosConteo[estado] || 0}
+                </div>
+                <div className="text-sm font-bold text-gray-500 flex items-center gap-1 mt-1">
+                  <i className={`fas ${icon} text-xs`}></i> {label}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
         {/* Estadísticas rápidas */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            {
-              label: "Pendientes",
-              estado: "pendiente",
-              color: "text-yellow-600",
-              bg: "bg-yellow-50",
-              icon: "fa-clock",
-            },
-            {
-              label: "Configurados",
-              estado: "configurado",
-              color: "text-blue-600",
-              bg: "bg-blue-50",
-              icon: "fa-cog",
-            },
-            {
-              label: "Pagados",
-              estado: "pagado",
-              color: "text-purple-600",
-              bg: "bg-purple-50",
-              icon: "fa-check-circle",
-            },
-            {
-              label: "Total",
-              estado: "todos",
-              color: "text-gray-700",
-              bg: "bg-white",
-              icon: "fa-inbox",
-            },
-          ].map(({ label, estado, color, bg, icon }) => (
-            <button
-              key={estado}
-              onClick={() => setFiltroEstado(estado)}
-              className={`${bg} ${filtroEstado === estado ? "ring-2 ring-[#FF6600]" : ""} rounded-2xl p-4 shadow-sm border border-gray-100 text-left transition hover:shadow-md`}
-            >
-              <div className={`text-2xl font-black ${color}`}>
-                {estado === "todos"
-                  ? pedidos.length
-                  : estadosConteo[estado] || 0}
-              </div>
-              <div className="text-sm font-bold text-gray-500 flex items-center gap-1 mt-1">
-                <i className={`fas ${icon} text-xs`}></i> {label}
-              </div>
-            </button>
-          ))}
-        </div>
 
         {/* Pestañas de navegación */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="flex space-x-8">
             <button
               onClick={() => setActiveTab("pedidos")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "pedidos"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1540,7 +1542,7 @@ export default function AdminPanel() {
             </button>
             <button
               onClick={() => setActiveTab("productos")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "productos"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1550,7 +1552,7 @@ export default function AdminPanel() {
             </button>
             <button
               onClick={() => setActiveTab("configuracion")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "configuracion"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1560,7 +1562,7 @@ export default function AdminPanel() {
             </button>
             <button
               onClick={() => setActiveTab("perfiles")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "perfiles"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1783,15 +1785,15 @@ export default function AdminPanel() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={cargarProductos}
-                  className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+                  className="bg-zinc-700 hover:bg-zinc-600 hover:cursor-pointer px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
                   title="Refrescar productos"
                 >
-                  <i className="fas fa-sync-alt"></i>
-                  Refrescar
+                  <i className="fas fa-sync-alt text-white"></i>
+                  <p className="text-white">Refrescar</p>
                 </button>
                 <button
                   onClick={() => abrirModalProducto()}
-                  className="bg-[#FF6600] hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2 shadow-md"
+                  className="bg-[#FF6600] hover:cursor-pointer hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2 shadow-md"
                 >
                   <i className="fas fa-plus"></i>
                   Nuevo Producto
@@ -1824,213 +1826,215 @@ export default function AdminPanel() {
                 : products;
 
               return productLoading ? (
-              <div className="text-center py-20">
-                <i className="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-4"></i>
-                <p className="text-lg font-bold text-gray-500">
-                  Cargando productos...
-                </p>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-20 text-gray-400">
-                <i className="fas fa-box-open text-6xl mb-4"></i>
-                <p className="text-lg font-bold">
-                  {q ? "No se encontraron productos" : "No hay productos"}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-225">
-                  <thead className="z-2">
-                    <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                      <th className="p-4 font-black">ID</th>
-                      <th className="p-4 font-black">Imagen</th>
-                      <th className="p-4 font-black">Nombre</th>
-                      <th className="p-4 font-black">Categoría</th>
-                      <th className="p-4 font-black">Precio</th>
-                      <th className="p-4 font-black">Cantidad por bulto</th>
-                      <th className="p-4 font-black">Stock</th>
-                      <th className="p-4 font-black">Oferta</th>
-                      <th className="p-4 font-black">Oferta Express</th>
-                      <th className="p-4 font-black">Más Vendido</th>
-                      <th className="p-4 font-black">Solo Bulto</th>
-                      <th className="p-4 font-black">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProducts.map((product) => {
-                      return (
-                        <tr
-                          key={product.Id}
-                          className="border-b hover:bg-gray-50"
-                        >
-                          <td className="p-4 font-medium">{product.Id}</td>
-                          <td className="p-4">
-                            <img
-                              src={
-                                product.Imagen ||
-                                product.imagen ||
-                                `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`
-                              }
-                              alt={product.nombre}
-                              className="w-12 h-12 object-contain rounded-lg"
-                              onError={(e) => {
-                                console.error(
-                                  `Error cargando imagen para producto ${(product as any).Id}`,
-                                );
-                                (e.target as HTMLImageElement).src =
-                                  `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${(product as any).Id}`;
-                              }}
-                              title={
-                                product.Imagen || product.imagen
-                                  ? "Imagen de Supabase Storage"
-                                  : "Sin imagen"
-                              }
-                            />
-                          </td>
-                          <td className="p-4 font-medium">{product.nombre}</td>
-                          <td className="p-4">
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-black">
-                              {product.Categoria}
-                            </span>
-                          </td>
-                          <td className="p-4 font-black text-green-600">
-                            ${product.precio?.toLocaleString("es-AR")}
-                          </td>
-                          <td>
-                            <input
-                              className="rounded-xl text-center border border-gray-300 px-2 py-1 w-20"
-                              type="number"
-                              min="1"
-                              value={product.quantity || 1}
-                              onChange={(e) =>
-                                updateProductQuantity(
-                                  product.Id,
-                                  parseInt(e.target.value) || 1,
-                                )
-                              }
-                            />
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-black ${
-                                product.Stock
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {product.Stock ? "Verdadero" : "Falso"}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {product.Oferta ? (
-                              <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-black">
-                                {product.Oferta}
+                <div className="text-center py-20">
+                  <i className="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-4"></i>
+                  <p className="text-lg font-bold text-gray-500">
+                    Cargando productos...
+                  </p>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-20 text-gray-400">
+                  <i className="fas fa-box-open text-6xl mb-4"></i>
+                  <p className="text-lg font-bold">
+                    {q ? "No se encontraron productos" : "No hay productos"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-225">
+                    <thead className="z-2">
+                      <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                        <th className="p-4 font-black">ID</th>
+                        <th className="p-4 font-black">Imagen</th>
+                        <th className="p-4 font-black">Nombre</th>
+                        <th className="p-4 font-black">Categoría</th>
+                        <th className="p-4 font-black">Precio</th>
+                        <th className="p-4 font-black">Cantidad por bulto</th>
+                        <th className="p-4 font-black">Stock</th>
+                        <th className="p-4 font-black">Oferta</th>
+                        <th className="p-4 font-black">Oferta Express</th>
+                        <th className="p-4 font-black">Más Vendido</th>
+                        <th className="p-4 font-black">Solo Bulto</th>
+                        <th className="p-4 font-black">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map((product) => {
+                        return (
+                          <tr
+                            key={product.Id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="p-4 font-medium">{product.Id}</td>
+                            <td className="p-4">
+                              <img
+                                src={
+                                  product.Imagen ||
+                                  product.imagen ||
+                                  `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`
+                                }
+                                alt={product.nombre}
+                                className="w-12 h-12 object-contain rounded-lg"
+                                onError={(e) => {
+                                  console.error(
+                                    `Error cargando imagen para producto ${(product as any).Id}`,
+                                  );
+                                  (e.target as HTMLImageElement).src =
+                                    `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${(product as any).Id}`;
+                                }}
+                                title={
+                                  product.Imagen || product.imagen
+                                    ? "Imagen de Supabase Storage"
+                                    : "Sin imagen"
+                                }
+                              />
+                            </td>
+                            <td className="p-4 font-medium">
+                              {product.nombre}
+                            </td>
+                            <td className="p-4">
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-black">
+                                {product.Categoria}
                               </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">-</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <button
-                              onClick={() =>
-                                updateProductFlag(
-                                  product.Id,
-                                  "oferta_express",
-                                  !product.oferta_express,
-                                )
-                              }
-                              className={`w-14 h-7 rounded-full transition relative ${
-                                product.oferta_express
-                                  ? "bg-green-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
+                            </td>
+                            <td className="p-4 font-black text-green-600">
+                              ${product.precio?.toLocaleString("es-AR")}
+                            </td>
+                            <td>
+                              <input
+                                className="rounded-xl text-center border border-gray-300 px-2 py-1 w-20"
+                                type="number"
+                                min="1"
+                                value={product.quantity || 1}
+                                onChange={(e) =>
+                                  updateProductQuantity(
+                                    product.Id,
+                                    parseInt(e.target.value) || 1,
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="p-4">
                               <span
-                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                className={`px-2 py-1 rounded-full text-xs font-black ${
+                                  product.Stock
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {product.Stock ? "Verdadero" : "Falso"}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              {product.Oferta ? (
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-black">
+                                  {product.Oferta}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <button
+                                onClick={() =>
+                                  updateProductFlag(
+                                    product.Id,
+                                    "oferta_express",
+                                    !product.oferta_express,
+                                  )
+                                }
+                                className={`w-14 h-7 rounded-full transition relative ${
                                   product.oferta_express
-                                    ? "-translate-x-7"
-                                    : "translate-x-0.5"
+                                    ? "bg-green-500"
+                                    : "bg-gray-300"
                                 }`}
-                              />
-                            </button>
-                          </td>
-                          <td className="p-4">
-                            <button
-                              onClick={() =>
-                                updateProductFlag(
-                                  product.Id,
-                                  "mas_vendido",
-                                  !product.mas_vendido,
-                                )
-                              }
-                              className={`w-14 h-7 rounded-full transition relative ${
-                                product.mas_vendido
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                              >
+                                <span
+                                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                    product.oferta_express
+                                      ? "-translate-x-7"
+                                      : "translate-x-0.5"
+                                  }`}
+                                />
+                              </button>
+                            </td>
+                            <td className="p-4">
+                              <button
+                                onClick={() =>
+                                  updateProductFlag(
+                                    product.Id,
+                                    "mas_vendido",
+                                    !product.mas_vendido,
+                                  )
+                                }
+                                className={`w-14 h-7 rounded-full transition relative ${
                                   product.mas_vendido
-                                    ? "-translate-x-7"
-                                    : "translate-x-0.5"
+                                    ? "bg-yellow-500"
+                                    : "bg-gray-300"
                                 }`}
-                              />
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              onClick={() =>
-                                updateProductFlag(
-                                  product.Id,
-                                  "solo_bulto",
-                                  !product.solo_bulto,
-                                )
-                              }
-                              className={`w-14 h-7 rounded-full transition relative ${
-                                product.solo_bulto
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                              >
+                                <span
+                                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                    product.mas_vendido
+                                      ? "-translate-x-7"
+                                      : "translate-x-0.5"
+                                  }`}
+                                />
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() =>
+                                  updateProductFlag(
+                                    product.Id,
+                                    "solo_bulto",
+                                    !product.solo_bulto,
+                                  )
+                                }
+                                className={`w-14 h-7 rounded-full transition relative ${
                                   product.solo_bulto
-                                    ? "-translate-x-7"
-                                    : "translate-x-0.5"
+                                    ? "bg-yellow-500"
+                                    : "bg-gray-300"
                                 }`}
-                              />
-                            </button>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => abrirModalProducto(product.Id)}
-                                disabled={loadingProductId === product.Id}
-                                className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Editar"
                               >
-                                <i className="fas fa-edit mr-1"></i>
-                                Editar
+                                <span
+                                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                    product.solo_bulto
+                                      ? "-translate-x-7"
+                                      : "translate-x-0.5"
+                                  }`}
+                                />
                               </button>
-                              <button
-                                onClick={() => eliminarProducto(product.Id)}
-                                className="bg-red-500 cursor-pointer hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
-                                title="Eliminar"
-                              >
-                                <i className="fas fa-trash mr-1"></i>
-                                Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })()}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => abrirModalProducto(product.Id)}
+                                  disabled={loadingProductId === product.Id}
+                                  className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Editar"
+                                >
+                                  <i className="fas fa-edit mr-1"></i>
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => eliminarProducto(product.Id)}
+                                  className="bg-red-500 cursor-pointer hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
+                                  title="Eliminar"
+                                >
+                                  <i className="fas fa-trash mr-1"></i>
+                                  Eliminar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -2273,67 +2277,67 @@ export default function AdminPanel() {
                   : perfiles;
 
                 return filteredPerfiles.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  <i className="fas fa-users text-5xl mb-4"></i>
-                  <p className="font-bold text-lg">
-                    No hay perfiles registrados
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                        <th className="p-4 font-black">Nombre</th>
-                        <th className="p-4 font-black">Email</th>
-                        <th className="p-4 font-black">Teléfono</th>
-                        <th className="p-4 font-black">Rol</th>
-                        <th className="p-4 font-black">Tipo Cliente</th>
-                        <th className="p-4 font-black">Dirección</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {filteredPerfiles.map((perfil) => (
-                        <tr
-                          key={perfil.id}
-                          className="hover:bg-gray-50 transition"
-                        >
-                          <td className="p-4 font-bold text-gray-800">
-                            {perfil.nombre || "—"}
-                          </td>
-                          <td className="p-4 text-gray-600">
-                            {perfil.email || "—"}
-                          </td>
-                          <td className="p-4 text-gray-600">
-                            {perfil.telefono || "—"}
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={`inline-block px-2 py-1 rounded text-xs font-bold ${
-                                perfil.rol === "admin"
-                                  ? "bg-[#FF6600]/10 text-[#FF6600]"
-                                  : "bg-gray-100 text-gray-600"
-                              }`}
-                            >
-                              {perfil.rol || "cliente"}
-                            </span>
-                          </td>
-                          <td className="p-4 text-gray-600">
-                            {perfil.tipo_cliente || "—"}
-                          </td>
-                          <td className="p-4 text-gray-600 max-w-[200px] truncate">
-                            {perfil.direccion || "—"}
-                          </td>
+                  <div className="text-center py-16 text-gray-400">
+                    <i className="fas fa-users text-5xl mb-4"></i>
+                    <p className="font-bold text-lg">
+                      No hay perfiles registrados
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                          <th className="p-4 font-black">Nombre</th>
+                          <th className="p-4 font-black">Email</th>
+                          <th className="p-4 font-black">Teléfono</th>
+                          <th className="p-4 font-black">Rol</th>
+                          <th className="p-4 font-black">Tipo Cliente</th>
+                          <th className="p-4 font-black">Dirección</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()}
-          </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredPerfiles.map((perfil) => (
+                          <tr
+                            key={perfil.id}
+                            className="hover:bg-gray-50 transition"
+                          >
+                            <td className="p-4 font-bold text-gray-800">
+                              {perfil.nombre || "—"}
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {perfil.email || "—"}
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {perfil.telefono || "—"}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+                                  perfil.rol === "admin"
+                                    ? "bg-[#FF6600]/10 text-[#FF6600]"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                {perfil.rol || "cliente"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {perfil.tipo_cliente || "—"}
+                            </td>
+                            <td className="p-4 text-gray-600 max-w-[200px] truncate">
+                              {perfil.direccion || "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
 
-          <p className="text-center text-xs text-gray-400 mt-4 font-medium">
+            <p className="text-center text-xs text-gray-400 mt-4 font-medium">
               {(() => {
                 const q = perfilSearch.toLowerCase().trim();
                 const count = q

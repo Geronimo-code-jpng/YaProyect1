@@ -5,7 +5,6 @@ export default async function getRandomOfertProducts() {
 
   if (error) {
     console.error("Error al obtener productos:", error);
-  } else {
   }
 
   return data;

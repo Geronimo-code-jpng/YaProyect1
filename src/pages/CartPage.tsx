@@ -376,13 +376,10 @@ export default function CartPage() {
                       key={`${item.Id}-${index}`}
                       className="flex p-1 m-1 border border-black/10 gap-4 rounded-xl hover:bg-gray-50 transition"
                     >
-                      <button onClick={() => console.log(item)}>
-                        oñwesahieunfghoseiufghno
-                      </button>
                       <img
                         src={getProductImageUrl(item)}
                         alt={item.nombre}
-                        className="w-24 h-24 sm:w-28 hidden sm:block sm:h-28 object-contain rounded-xl bg-gray-50"
+                        className="w-40 hidden sm:block rounded-xl bg-gray-50"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             "https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod";

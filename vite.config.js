@@ -10,14 +10,16 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
-    build: {
-      chunkSizeWarningLimit: 1000,
-    },
     define: {
       "import.meta.env": env,
     },
     server: {
       allowedHosts: ["unadvocated-justus-opticly.ngrok-free.dev"],
+    },
+    build: {
+      rolldownOptions: {
+        chunkSizeWarningLimit: 1000,
+      },
     },
   };
 });
