@@ -1,7 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAlert } from "../../contexts/AlertContext";
-import { supabase as supabaseClient, supabaseUrl, supabaseAnonKey } from "../../lib/supabase";
+import {
+  supabase as supabaseClient,
+  supabaseUrl,
+  supabaseAnonKey,
+} from "../../lib/supabase";
 import { setOpenPedidosRef } from "../../utils/pedidosUtils";
 import CheckoutSuccess from "../../metaPixel/CheckoutSuccess";
 import { getShippingPriceFromDB } from "../../utils/getShippingPrice";
@@ -42,10 +46,10 @@ export default function PedidosModal() {
       // Actualizar el estado del pedido a 'pendiente' y limpiar expira_en
       const { error } = await supabaseClient
         .from("pedidos")
-        .update({ 
+        .update({
           estado: "pendiente",
           expira_en: null, // Limpiar tiempo de expiración
-          horario: "Tiempo de pago expirado - esperando reactivación"
+          horario: "Tiempo de pago expirado - esperando reactivación",
         })
         .eq("id", pedidoId);
 
@@ -73,42 +77,48 @@ export default function PedidosModal() {
   // Determinar si un error es recuperable
   const isRetriableError = useCallback((error) => {
     if (!error) return false;
-    
+
     const errorMessage = error.message || error.toString();
     const retriableErrors = [
-      'AbortError',
-      'NetworkError',
-      'timeout',
-      'connection',
-      'lock request',
-      'fetch error',
-      'ECONNRESET',
-      'ETIMEDOUT'
+      "AbortError",
+      "NetworkError",
+      "timeout",
+      "connection",
+      "lock request",
+      "fetch error",
+      "ECONNRESET",
+      "ETIMEDOUT",
     ];
-    
-    return retriableErrors.some(err => 
-      errorMessage.toLowerCase().includes(err.toLowerCase())
+
+    return retriableErrors.some((err) =>
+      errorMessage.toLowerCase().includes(err.toLowerCase()),
     );
   }, []);
 
   // Función de reintentos con exponential backoff
-  const retryWithBackoff = useCallback(async (fn, maxRetries = 3, delay = 1000) => {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        return await fn();
-      } catch (error) {
-        // Si es el último intento o no es un error recuperable, lanzar el error
-        if (i === maxRetries - 1 || !isRetriableError(error)) {
-          throw error;
+  const retryWithBackoff = useCallback(
+    async (fn, maxRetries = 3, delay = 1000) => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          return await fn();
+        } catch (error) {
+          // Si es el último intento o no es un error recuperable, lanzar el error
+          if (i === maxRetries - 1 || !isRetriableError(error)) {
+            throw error;
+          }
+
+          // Esperar con exponential backoff
+          const waitTime = delay * Math.pow(2, i);
+          console.warn(
+            `Reintentando carga de pedidos (${i + 1}/${maxRetries}) en ${waitTime}ms... Error:`,
+            error.message,
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
         }
-        
-        // Esperar con exponential backoff
-        const waitTime = delay * Math.pow(2, i);
-        console.warn(`Reintentando carga de pedidos (${i + 1}/${maxRetries}) en ${waitTime}ms... Error:`, error.message);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
-    }
-  }, [isRetriableError]);
+    },
+    [isRetriableError],
+  );
 
   const cargarPedidos = useCallback(async () => {
     if (!user && !userProfile) {
@@ -117,19 +127,17 @@ export default function PedidosModal() {
     }
 
     setIsLoading(true);
-    
+
     // Crear AbortController para este ciclo de carga
     const abortController = new AbortController();
-    
+
     try {
       const fetchPedidos = async () => {
         // Verificar si fue abortado antes de continuar
         if (abortController.signal.aborted) {
-          throw new Error('Operación cancelada');
+          throw new Error("Operación cancelada");
         }
-        let query = supabaseClient
-          .from("pedidos")
-          .select("*");
+        let query = supabaseClient.from("pedidos").select("*");
 
         // ESTRATEGIA 1: Si el usuario está logueado, buscar PRIMERO por user_id
         if (user && user.id) {
@@ -209,11 +217,14 @@ export default function PedidosModal() {
       // Usar reintentos para la carga de pedidos con timeout
       const pedidosConNumero = await Promise.race([
         retryWithBackoff(fetchPedidos, 3, 1000),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout cargando pedidos')), 15000)
-        )
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout cargando pedidos")),
+            15000,
+          ),
+        ),
       ]);
-      
+
       // Verificar si no fue abortado antes de actualizar estado
       if (!abortController.signal.aborted) {
         setPedidos(pedidosConNumero);
@@ -221,17 +232,25 @@ export default function PedidosModal() {
     } catch (error) {
       if (!abortController.signal.aborted) {
         console.error("Error cargando pedidos web:", error);
-        
+
         // Manejo específico para errores de lock/abort
-        if (error.message.includes('AbortError') || error.message.includes('lock') || error.message.includes('cancelada')) {
-          console.warn("Operación cancelada o lock detectado, no mostrar error al usuario");
+        if (
+          error.message.includes("AbortError") ||
+          error.message.includes("lock") ||
+          error.message.includes("cancelada")
+        ) {
+          console.warn(
+            "Operación cancelada o lock detectado, no mostrar error al usuario",
+          );
           showError("Conexión interrumpida, intenta recargar la página");
-        } else if (error.message.includes('Timeout')) {
-          showError("La conexión está tomando demasiado tiempo, intenta nuevamente");
+        } else if (error.message.includes("Timeout")) {
+          showError(
+            "La conexión está tomando demasiado tiempo, intenta nuevamente",
+          );
         } else {
           showError("Error cargando tus pedidos: " + error.message);
         }
-        
+
         setPedidos([]);
       }
     } finally {
@@ -241,51 +260,58 @@ export default function PedidosModal() {
     }
   }, [user, userProfile, showError, retryWithBackoff]);
 
-  const verificarEstadoPago = useCallback(async (pedidoId) => {
-    try {
-      const { data: pedido, error } = await supabaseClient
-        .from("pedidos")
-        .select("*")
-        .eq("id", pedidoId)
-        .single();
+  const verificarEstadoPago = useCallback(
+    async (pedidoId) => {
+      try {
+        const { data: pedido, error } = await supabaseClient
+          .from("pedidos")
+          .select("*")
+          .eq("id", pedidoId)
+          .single();
 
-      if (error) {
-        console.error("❌ Error obteniendo pedido:", error);
-        return;
-      }
-
-      if (pedido.estado === "pagado") {
-        // Preparar datos para el pixel de Facebook
-        let carritoArray = [];
-        if (typeof pedido.carrito === "string") {
-          try {
-            carritoArray = JSON.parse(pedido.carrito);
-          } catch (e) {
-            carritoArray = [];
-          }
-        } else if (Array.isArray(pedido.carrito)) {
-          carritoArray = pedido.carrito;
+        if (error) {
+          console.error("❌ Error obteniendo pedido:", error);
+          return;
         }
 
-        const ids = carritoArray.map(item => item.id || item.nombre).filter(Boolean);
-        const orderDetails = {
-          total: pedido.total,
-          ids: ids,
-        };
-        setCheckoutSuccessData(orderDetails);
+        if (pedido.estado === "pagado") {
+          // Preparar datos para el pixel de Facebook
+          let carritoArray = [];
+          if (typeof pedido.carrito === "string") {
+            try {
+              carritoArray = JSON.parse(pedido.carrito);
+            } catch (e) {
+              carritoArray = [];
+            }
+          } else if (Array.isArray(pedido.carrito)) {
+            carritoArray = pedido.carrito;
+          }
 
-        showSuccess("✅ ¡Pago confirmado! Tu pedido está siendo procesado.");
-        await cargarPedidos();
-      } else {
-        showWarning("⏳ El pago está siendo procesado. Por favor, espera un momento...");
-        // Reintentar después de 5 segundos
-        setTimeout(() => verificarEstadoPago(pedidoId), 5000);
+          const ids = carritoArray
+            .map((item) => item.id || item.nombre)
+            .filter(Boolean);
+          const orderDetails = {
+            total: pedido.total,
+            ids: ids,
+          };
+          setCheckoutSuccessData(orderDetails);
+
+          showSuccess("✅ ¡Pago confirmado! Tu pedido está siendo procesado.");
+          await cargarPedidos();
+        } else {
+          showWarning(
+            "⏳ El pago está siendo procesado. Por favor, espera un momento...",
+          );
+          // Reintentar después de 5 segundos
+          setTimeout(() => verificarEstadoPago(pedidoId), 5000);
+        }
+      } catch (error) {
+        console.error("❌ Error verificando estado del pago:", error);
+        showError("Error verificando el estado del pago");
       }
-    } catch (error) {
-      console.error("❌ Error verificando estado del pago:", error);
-      showError("Error verificando el estado del pago");
-    }
-  }, [cargarPedidos, showError, showSuccess, showWarning]);
+    },
+    [cargarPedidos, showError, showSuccess, showWarning],
+  );
 
   // Verificar estado del pago al cargar el modal si viene de Mercado Pago
   useEffect(() => {
@@ -297,7 +323,11 @@ export default function PedidosModal() {
       if (status === "success" && pedidoId) {
         verificarEstadoPago(parseInt(pedidoId));
         // Limpiar URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
       }
     }
   }, [showModal, verificarEstadoPago]);
@@ -317,8 +347,15 @@ export default function PedidosModal() {
         try {
           payloadCart = JSON.parse(pedido.carrito);
         } catch (e) {
-          console.error("Error parsing cart:", e, "Original cart:", pedido.carrito);
-          throw new Error("El carrito del pedido tiene un formato inválido: " + e.message);
+          console.error(
+            "Error parsing cart:",
+            e,
+            "Original cart:",
+            pedido.carrito,
+          );
+          throw new Error(
+            "El carrito del pedido tiene un formato inválido: " + e.message,
+          );
         }
       } else if (Array.isArray(pedido.carrito)) {
         payloadCart = pedido.carrito;
@@ -335,28 +372,41 @@ export default function PedidosModal() {
 
       // Filtrar items válidos con mejor validación
       payloadCart = payloadCart.filter((item) => {
-        if (!item || typeof item !== 'object') {
+        if (!item || typeof item !== "object") {
           console.warn("Invalid cart item:", item);
           return false;
         }
-        
+
         // Validar cantidad (aceptar número o string convertible a número)
         const cantidad = Number(item.cantidad);
         const precio = Number(item.precio);
         const nombre = item.nombre || item.title;
-        
-        if (!nombre || isNaN(cantidad) || isNaN(precio) || cantidad <= 0 || precio <= 0) {
-          console.warn("Invalid item data:", { nombre, cantidad, precio, item });
+
+        if (
+          !nombre ||
+          isNaN(cantidad) ||
+          isNaN(precio) ||
+          cantidad <= 0 ||
+          precio <= 0
+        ) {
+          console.warn("Invalid item data:", {
+            nombre,
+            cantidad,
+            precio,
+            item,
+          });
           return false;
         }
-        
+
         return true;
       });
 
       console.warn("Valid cart items:", payloadCart);
 
       if (payloadCart.length === 0) {
-        throw new Error("El carrito no tiene productos válidos (todos los items fueron filtrados)");
+        throw new Error(
+          "El carrito no tiene productos válidos (todos los items fueron filtrados)",
+        );
       }
 
       // Calcular total real del carrito
@@ -477,7 +527,7 @@ export default function PedidosModal() {
       } else {
         showSuccess("❌ Pedido rechazado.");
       }
-      
+
       cargarPedidos(); // Recargar la lista
     } catch (error) {
       console.error("Error respondiendo modificación:", error);
@@ -485,7 +535,6 @@ export default function PedidosModal() {
     }
   };
 
-  
   const getStatusBadge = (estado) => {
     const badges = {
       aprobado: {
@@ -712,48 +761,81 @@ export default function PedidosModal() {
                                 <div
                                   key={index}
                                   className={`flex justify-between text-sm border-b pb-1 ${
-                                    item.cantidad === 0 ? 'opacity-50 line-through' : ''
+                                    item.cantidad === 0
+                                      ? "opacity-50 line-through"
+                                      : ""
                                   }`}
                                 >
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <span className={`font-medium ${
-                                        item.cantidad === 0 ? 'text-gray-400 line-through' : ''
-                                      }`}>
+                                      <span
+                                        className={`font-medium ${
+                                          item.cantidad === 0
+                                            ? "text-gray-400 line-through"
+                                            : ""
+                                        }`}
+                                      >
                                         {item.nombre}
                                       </span>
-                                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-black ${
-                                        (item.tipo || "Bulto") === "Bulto" 
-                                          ? "bg-blue-100 text-blue-700" 
-                                          : "bg-green-100 text-green-700"
-                                      }`}>
-                                        {(item.tipo || "Bulto") === "Bulto" ? "Bulto" : "Unidad"}
+                                      <span
+                                        className={`inline-block px-2 py-0.5 rounded text-xs font-black ${
+                                          (item.tipo || "Bulto") === "Bulto"
+                                            ? "bg-blue-100 text-blue-700"
+                                            : "bg-green-100 text-green-700"
+                                        }`}
+                                      >
+                                        {(item.tipo || "Bulto") === "Bulto"
+                                          ? "Bulto"
+                                          : "Unidad"}
                                       </span>
                                     </div>
-                                    <span className={`text-gray-500 text-xs ${
-                                      item.cantidad === 0 ? 'line-through' : ''
-                                    }`}>
-                                      x{item.cantidad} {(item.tipo || "Bulto") === "Bulto" && item.quantity_per_bundle > 1 ? 
-                                        `(${item.cantidad * item.quantity_per_bundle} unidades)` : 
-                                        "unidades"
-                                      }
+                                    <span
+                                      className={`text-gray-500 text-xs ${
+                                        item.cantidad === 0
+                                          ? "line-through"
+                                          : ""
+                                      }`}
+                                    >
+                                      x{item.cantidad}{" "}
+                                      {(item.tipo || "Bulto") === "Bulto" &&
+                                      item.quantity_per_bundle > 1
+                                        ? `(${item.cantidad * item.quantity_per_bundle} unidades)`
+                                        : "unidades"}
                                     </span>
                                   </div>
                                   <div className="text-right">
-                                    <span className={`font-black text-sm ${
-                                      item.cantidad === 0 ? 'text-gray-400 line-through' : ''
-                                    }`}>
-                                      ${(item.precio_unitario || item.precio || 0).toLocaleString("es-AR")} 
-                                      <span className="text-xs text-gray-500 font-normal">
-                                        /{(item.tipo || "Bulto") === "Bulto" ? "bulto" : "unidad"}
-                                      </span>
-                                    </span>
-                                    <div className={`text-[#FF6600] font-bold ${
-                                      item.cantidad === 0 ? 'text-gray-400 line-through' : ''
-                                    }`}>
+                                    <span
+                                      className={`font-black text-sm ${
+                                        item.cantidad === 0
+                                          ? "text-gray-400 line-through"
+                                          : ""
+                                      }`}
+                                    >
                                       $
                                       {(
-                                        (item.precio_unitario || item.precio || 0) * item.cantidad
+                                        item.precio_unitario ||
+                                        item.precio ||
+                                        0
+                                      ).toLocaleString("es-AR")}
+                                      <span className="text-xs text-gray-500 font-normal">
+                                        /
+                                        {(item.tipo || "Bulto") === "Bulto"
+                                          ? "bulto"
+                                          : "unidad"}
+                                      </span>
+                                    </span>
+                                    <div
+                                      className={`text-[#FF6600] font-bold ${
+                                        item.cantidad === 0
+                                          ? "text-gray-400 line-through"
+                                          : ""
+                                      }`}
+                                    >
+                                      $
+                                      {(
+                                        (item.precio_unitario ||
+                                          item.precio ||
+                                          0) * item.cantidad
                                       ).toLocaleString("es-AR")}
                                     </div>
                                   </div>
@@ -785,16 +867,21 @@ export default function PedidosModal() {
                             } else if (Array.isArray(pedido.carrito)) {
                               carritoArray = pedido.carrito;
                             }
-                            
+
                             // Calcular subtotal real de los productos
-                            const subtotal = carritoArray.reduce((total, item) => {
-                              const precioUnitario = item.precio_unitario || item.precio || 0;
-                              return total + (precioUnitario * item.cantidad);
-                            }, 0);
-                            
-                            const envioCosto = pedido.metodo === "retiro" ? 0 : shippingPrice;
+                            const subtotal = carritoArray.reduce(
+                              (total, item) => {
+                                const precioUnitario =
+                                  item.precio_unitario || item.precio || 0;
+                                return total + precioUnitario * item.cantidad;
+                              },
+                              0,
+                            );
+
+                            const envioCosto =
+                              pedido.metodo === "retiro" ? 0 : shippingPrice;
                             const totalFinal = subtotal + envioCosto;
-                            
+
                             return (
                               <>
                                 <div className="flex justify-between">
@@ -806,10 +893,9 @@ export default function PedidosModal() {
                                 <div className="flex justify-between text-green-600">
                                   <span>Envío:</span>
                                   <span>
-                                    {pedido.metodo === "retiro" 
-                                      ? "Retira en sucursal" 
-                                      : `$${envioCosto.toLocaleString("es-AR")}`
-                                    }
+                                    {pedido.metodo === "retiro"
+                                      ? "Retira en sucursal"
+                                      : `$${envioCosto.toLocaleString("es-AR")}`}
                                   </span>
                                 </div>
                                 <div className="flex justify-between font-black text-lg border-t pt-2">
@@ -862,7 +948,7 @@ export default function PedidosModal() {
                                         );
                                       } catch (e) {
                                         carritoAnterior = [];
-                                        console.error("Error: ", e)
+                                        console.error("Error: ", e);
                                       }
                                     } else if (
                                       Array.isArray(
@@ -882,7 +968,8 @@ export default function PedidosModal() {
                                         >
                                           • {item.nombre} x{item.cantidad} = $
                                           {(
-                                            (item.precio_unitario || 0) * item.cantidad
+                                            (item.precio_unitario || 0) *
+                                            item.cantidad
                                           ).toLocaleString("es-AR")}
                                         </div>
                                       ))
@@ -926,7 +1013,7 @@ export default function PedidosModal() {
                                         );
                                       } catch (e) {
                                         carritoNuevo = [];
-                                        console.error("Error: ", e)
+                                        console.error("Error: ", e);
                                       }
                                     } else if (
                                       Array.isArray(
@@ -946,7 +1033,8 @@ export default function PedidosModal() {
                                         >
                                           • {item.nombre} x{item.cantidad} = $
                                           {(
-                                            (item.precio_unitario || 0) * item.cantidad
+                                            (item.precio_unitario || 0) *
+                                            item.cantidad
                                           ).toLocaleString("es-AR")}
                                         </div>
                                       ))
@@ -1058,4 +1146,3 @@ export default function PedidosModal() {
     </div>
   );
 }
-

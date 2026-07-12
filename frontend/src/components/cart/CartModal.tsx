@@ -7,6 +7,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase as supabaseClient } from "../../lib/supabase";
 // import { openPedidos } from "../../utils/pedidosUtils";
 import { getProductImageUrl } from "../../utils/productImageUtils";
+import { validateCartItems, computeUpdatedCart } from "../../utils/validateCartItems";
+import type { PriceChange } from "../../utils/validateCartItems";
+import PriceChangeAlert from "./PriceChangeAlert";
 
 export default function CartModal() {
   const navigate = useNavigate();
@@ -18,6 +21,7 @@ export default function CartModal() {
     isCartOpen,
     setIsCartOpen,
     clearCart,
+    replaceCart,
     getCartTotalWithDiscount,
     qualifiesForFirstBuyDiscount,
   } = useCart();
@@ -26,6 +30,9 @@ export default function CartModal() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pedidoTimeout, setPedidoTimeout] = useState(null);
+  const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
+  const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
+  const [validatingPrices, setValidatingPrices] = useState(false);
   const [orderData, setOrderData] = useState({
     nombre: "",
     telefono: "",
@@ -230,6 +237,29 @@ export default function CartModal() {
         return;
       }
 
+      setValidatingPrices(true);
+      const result = await validateCartItems(
+        cart.map((item) => ({
+          Id: item.Id,
+          nombre: item.nombre,
+          precio: item.precio,
+          Stock: item.Stock ?? true,
+          Oferta: item.Oferta,
+          cantidad: item.cantidad,
+          tipo: item.tipo || "Bulto",
+          quantity_per_bundle: item.quantity_per_bundle,
+          imagen: item.Imagen || item.imagen,
+        })),
+      );
+      setValidatingPrices(false);
+
+      if (result.hasChanges) {
+        setPriceChanges(result.changes);
+        setPriceChangesDb(result.dbProducts || {});
+        setIsSubmitting(false);
+        return;
+      }
+
       await verificarPedidosVencidos();
 
       const baseTotal = getCartTotalWithDiscount(userProfile, orderData.metodoEntrega);
@@ -329,6 +359,34 @@ export default function CartModal() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleUpdateCartPrices = () => {
+    if (!priceChanges) return;
+    const { cart: currentCart } = { cart };
+    const updated = computeUpdatedCart(
+      currentCart.map((item) => ({
+        Id: item.Id,
+        nombre: item.nombre,
+        precio: item.precio,
+        Stock: item.Stock ?? true,
+        Oferta: item.Oferta,
+        oferta: item.oferta || item.Oferta,
+        cantidad: item.cantidad,
+        tipo: item.tipo || "Bulto",
+        quantity_per_bundle: item.quantity_per_bundle,
+        imagen: item.Imagen || item.imagen,
+      })),
+      priceChangesDb,
+    );
+    replaceCart(updated as any);
+    setPriceChanges(null);
+    setPriceChangesDb({});
+  };
+
+  const handleClearCart = () => {
+    clearCart();
+    setPriceChanges(null);
   };
 
   if (!isCartOpen) return null;
@@ -799,6 +857,14 @@ export default function CartModal() {
           </div>
         </div>
       )}
+
+      <PriceChangeAlert
+        isOpen={priceChanges !== null}
+        changes={priceChanges || []}
+        onUpdateCart={handleUpdateCartPrices}
+        onClearCart={handleClearCart}
+        onClose={() => setPriceChanges(null)}
+      />
     </div>
   );
 }

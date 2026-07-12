@@ -30,6 +30,7 @@ export default function ProductosMasVendidos() {
           .from("productos")
           .select("*")
           .eq("mas_vendido", true)
+          .eq("Stock", true)
           .order("nombre", { ascending: true });
 
         if (error) {

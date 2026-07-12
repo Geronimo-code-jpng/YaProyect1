@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { supabase as supabaseClient } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import ProductModal from "./ProductModal";
@@ -9,6 +10,8 @@ import { processProductImageReplacement } from "../../utils/imageFileHandler";
 import RejectDialog from "./RejectDialog";
 import ConfirmDialog from "./ConfirmDialog";
 import Toast from "./Toast";
+import { validateCartItems } from "../../utils/validateCartItems";
+import type { PriceChange } from "../../utils/validateCartItems";
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -17,7 +20,7 @@ export default function AdminPanel() {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("pedidos"); // 'pedidos', 'productos', o 'configuracion'
+  const [activeTab, setActiveTab] = useState("pedidos"); // 'pedidos', 'productos', 'configuracion', o 'perfiles'
   const [products, setProducts] = useState([]);
   const [product, setProduct] = useState<any>();
   const [productLoading, setProductLoading] = useState(false);
@@ -41,6 +44,16 @@ export default function AdminPanel() {
   });
   const [categorias, setCategorias] = useState([]);
   const [nuevaCategoria, setNuevaCategoria] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [perfilSearch, setPerfilSearch] = useState("");
+  const [perfiles, setPerfiles] = useState([]);
+  const [perfilesLoading, setPerfilesLoading] = useState(false);
+  const [priceComparison, setPriceComparison] = useState<{
+    results: PriceChange[];
+    loading: boolean;
+    show: boolean;
+    dbProducts: Record<number, any>;
+  }>({ results: [], loading: false, show: false, dbProducts: {} });
 
   const showToast = useCallback(
     (message, type = "success") => {
@@ -243,6 +256,21 @@ export default function AdminPanel() {
     });
   };
 
+  const cargarPerfiles = useCallback(async () => {
+    setPerfilesLoading(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from("perfiles")
+        .select("*")
+        .order("nombre", { ascending: true });
+      if (!error && data) setPerfiles(data);
+    } catch (err) {
+      console.error("Error cargando perfiles:", err);
+    } finally {
+      setPerfilesLoading(false);
+    }
+  }, []);
+
   // Cargar pedidos (con useCallback para evitar re-renders)
   const cargarPedidosAdmin = useCallback(async () => {
     try {
@@ -336,6 +364,7 @@ export default function AdminPanel() {
 
         setLoading(false);
         cargarPedidosAdmin();
+        cargarPerfiles();
       } catch (err) {
         setError("Error crítico: " + err.message);
         setLoading(false);
@@ -399,7 +428,8 @@ export default function AdminPanel() {
   }, [cargarPedidosAdmin]);
 
   const calcularTiempoRestante = (fechaVencimiento) => {
-    const diferencia = Number(new Date(fechaVencimiento)) - Number(new Date(tiempoActual));
+    const diferencia =
+      Number(new Date(fechaVencimiento)) - Number(new Date(tiempoActual));
     return Math.max(0, Math.floor(diferencia / 1000));
   };
 
@@ -532,7 +562,8 @@ export default function AdminPanel() {
         (dataToSave as any).Imagen = imageUrl;
       } else if (product && (product.Imagen || product.imagen)) {
         // Si estamos editando y no se subió nueva imagen, mantener la existente
-        (dataToSave as any).Imagen = (product as any).Imagen || (product as any).imagen;
+        (dataToSave as any).Imagen =
+          (product as any).Imagen || (product as any).imagen;
       }
       // Si es un producto nuevo y no se subió imagen, no se incluye el campo Imagen
 
@@ -557,7 +588,10 @@ export default function AdminPanel() {
         }
 
         // Update quantity per bundle
-        await updateProductQuantity((product as any).Id, productoData.quantity || 1);
+        await updateProductQuantity(
+          (product as any).Id,
+          productoData.quantity || 1,
+        );
 
         showToast("Producto actualizado exitosamente", "success");
       } else {
@@ -837,6 +871,7 @@ export default function AdminPanel() {
     pedidoCopia.carrito = pedidoCopia.carrito.map((item) => ({
       ...item,
       cantidad_original: item.cantidad,
+      precio_original: item.precio || item.precio_unitario || 0,
       subtotal: (item.precio_unitario || item.precio || 0) * item.cantidad,
     }));
 
@@ -847,6 +882,152 @@ export default function AdminPanel() {
   const cerrarModalPedido = () => {
     setModalOpen(false);
     setPedidoEditando(null);
+    setPriceComparison({
+      results: [],
+      loading: false,
+      show: false,
+      dbProducts: {},
+    });
+  };
+
+  const compareOrderPrices = async () => {
+    if (!pedidoEditando || !pedidoEditando.carrito?.length) return;
+
+    setPriceComparison((prev) => ({ ...prev, loading: true, show: true }));
+
+    const items = pedidoEditando.carrito.map((item) => ({
+      Id: item.Id || item.id_producto,
+      nombre: item.nombre || "Producto",
+      precio: Number(item.precio || item.precio_unitario || 0),
+      Stock: true,
+      Oferta: item.Oferta
+        ? String(item.Oferta)
+        : item.oferta
+          ? String(item.oferta)
+          : undefined,
+      cantidad: item.cantidad || 1,
+      tipo: item.tipo || "Bulto",
+      quantity_per_bundle: item.quantity_per_bundle || 1,
+      imagen: item.Imagen || item.imagen,
+    }));
+
+    try {
+      const result = await validateCartItems(items);
+      setPriceComparison({
+        results: result.changes,
+        loading: false,
+        show: true,
+        dbProducts: result.dbProducts || {},
+      });
+    } catch (err) {
+      console.error("Error comparando precios:", err);
+      setPriceComparison({
+        results: [],
+        loading: false,
+        show: true,
+        dbProducts: {},
+      });
+      showToast("Error al comparar precios", "error");
+    }
+  };
+
+  const actualizarPrecioIndividual = (changeId) => {
+    const db = priceComparison.dbProducts[changeId];
+
+    const idx = pedidoEditando.carrito.findIndex(
+      (item) => (item.Id || item.id_producto) === changeId,
+    );
+    if (idx === -1) return;
+
+    const item = pedidoEditando.carrito[idx];
+    const nuevoPedido = { ...pedidoEditando };
+    nuevoPedido.carrito = [...nuevoPedido.carrito];
+
+    if (!db || !db.Stock) {
+      nuevoPedido.carrito[idx] = {
+        ...nuevoPedido.carrito[idx],
+        cantidad: 0,
+      };
+      nuevoPedido.total = nuevoPedido.carrito.reduce(
+        (acc, item) =>
+          acc + (item.precio_unitario || item.precio || 0) * item.cantidad,
+        0,
+      );
+      setPedidoEditando(nuevoPedido);
+      showToast(`"${item.nombre}" sin stock — cantidad puesta en 0`);
+      return;
+    }
+
+    const quantityPerBundle = db.quantity || 1;
+    const dbBundlePrice = Number(db.precio);
+    const dbUnitPrice =
+      Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
+    const finalPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
+
+    nuevoPedido.carrito[idx] = {
+      ...nuevoPedido.carrito[idx],
+      precio: finalPrice,
+      precio_unitario: finalPrice,
+    };
+    nuevoPedido.total = nuevoPedido.carrito.reduce(
+      (acc, item) =>
+        acc + (item.precio_unitario || item.precio || 0) * item.cantidad,
+      0,
+    );
+    setPedidoEditando(nuevoPedido);
+    showToast(
+      `Precio de "${item.nombre}" actualizado a $${finalPrice.toLocaleString("es-AR")}`,
+    );
+  };
+
+  const actualizarTodosLosPrecios = () => {
+    if (!priceComparison.results.length) return;
+
+    const nuevoPedido = { ...pedidoEditando };
+    nuevoPedido.carrito = [...nuevoPedido.carrito];
+    let sinStock = 0;
+
+    for (const change of priceComparison.results) {
+      const db = priceComparison.dbProducts[change.Id];
+
+      const idx = nuevoPedido.carrito.findIndex(
+        (item) => (item.Id || item.id_producto) === change.Id,
+      );
+      if (idx === -1) continue;
+
+      if (!db || !db.Stock) {
+        nuevoPedido.carrito[idx] = {
+          ...nuevoPedido.carrito[idx],
+          cantidad: 0,
+        };
+        sinStock++;
+        continue;
+      }
+
+      const quantityPerBundle = db.quantity || 1;
+      const dbBundlePrice = Number(db.precio);
+      const dbUnitPrice =
+        Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
+      const finalPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
+
+      nuevoPedido.carrito[idx] = {
+        ...nuevoPedido.carrito[idx],
+        precio: finalPrice,
+        precio_unitario: finalPrice,
+      };
+    }
+
+    nuevoPedido.total = nuevoPedido.carrito.reduce(
+      (acc, item) =>
+        acc + (item.precio_unitario || item.precio || 0) * item.cantidad,
+      0,
+    );
+    setPedidoEditando(nuevoPedido);
+    const msg =
+      sinStock > 0
+        ? `Precios actualizados (${sinStock} producto(s) sin stock → cantidad 0)`
+        : `Precios actualizados automáticamente (${priceComparison.results.length} producto(s))`;
+    showToast(msg);
   };
 
   const cambiarCantidadModal = (index, cambio) => {
@@ -871,7 +1052,27 @@ export default function AdminPanel() {
     nuevoPedido.carrito = [...nuevoPedido.carrito];
     nuevoPedido.carrito[index] = { ...nuevoPedido.carrito[index], cantidad: 0 };
     nuevoPedido.total = nuevoPedido.carrito.reduce(
-      (acc, item) => acc + item.precio_unitario * item.cantidad,
+      (acc, item) =>
+        acc + (item.precio_unitario || item.precio || 0) * item.cantidad,
+      0,
+    );
+    setPedidoEditando(nuevoPedido);
+  };
+
+  const cambiarPrecioModal = (index, nuevoPrecio) => {
+    const precio = parseInt(nuevoPrecio) || 0;
+    if (precio < 0) return;
+
+    const nuevoPedido = { ...pedidoEditando };
+    nuevoPedido.carrito = [...nuevoPedido.carrito];
+    nuevoPedido.carrito[index] = {
+      ...nuevoPedido.carrito[index],
+      precio: precio,
+      precio_unitario: precio,
+    };
+    nuevoPedido.total = nuevoPedido.carrito.reduce(
+      (acc, item) =>
+        acc + (item.precio_unitario || item.precio || 0) * item.cantidad,
       0,
     );
     setPedidoEditando(nuevoPedido);
@@ -943,8 +1144,48 @@ export default function AdminPanel() {
       if (error) throw error;
 
       showToast(
-        "Pedido modificado. Se abrirá WhatsApp para notificar al cliente.",
+        "Pedido modificado. Abriendo WhatsApp para notificar al cliente...",
       );
+
+      // Detectar cambios manuales de precio (los que el admin escribió a mano)
+      const cambiosManuales = [];
+      for (const item of carritoParaGuardar) {
+        if (item.cantidad > 0 && item.precio_original !== undefined) {
+          const precioActual = item.precio || item.precio_unitario || 0;
+          if (precioActual !== item.precio_original) {
+            cambiosManuales.push({
+              Id: item.Id || item.id_producto,
+              nombre: item.nombre,
+              tipo: item.tipo,
+              cambios: [
+                {
+                  campo: "precio",
+                  valorViejo: `$${Number(item.precio_original).toLocaleString("es-AR")}`,
+                  valorNuevo: `$${precioActual.toLocaleString("es-AR")}`,
+                },
+              ],
+            });
+          }
+        }
+      }
+
+      const todosLosCambios = [...priceComparison.results];
+      for (const cm of cambiosManuales) {
+        const existente = todosLosCambios.find((c) => c.Id === cm.Id);
+        if (!existente) {
+          todosLosCambios.push(cm);
+        }
+      }
+
+      await enviarWhatsAppConfiguracion(
+        pedidoEditando,
+        todosLosCambios,
+        priceComparison.dbProducts,
+        subtotal,
+        envioCosto,
+        mpFee,
+      );
+
       cerrarModalPedido();
       cargarPedidosAdmin();
     } catch (err) {
@@ -952,7 +1193,14 @@ export default function AdminPanel() {
     }
   };
 
-  const enviarWhatsAppConfiguracion = async (pedido) => {
+  const enviarWhatsAppConfiguracion = async (
+    pedido,
+    priceChanges = [],
+    dbProducts = {},
+    subtotal = 0,
+    envioCosto = 0,
+    mpFee = 0,
+  ) => {
     try {
       // Obtener detalles del carrito para mensaje personalizado
       let carritoArray = [];
@@ -967,9 +1215,34 @@ export default function AdminPanel() {
       }
 
       const productosTexto = carritoArray
-        .slice(0, 3)
+        .filter((item) => item.cantidad > 0)
+        .slice(0, 5)
         .map((item) => `*${item.nombre}* x${item.cantidad}`)
         .join("\n");
+
+      const totalConEnvio = subtotal + mpFee + envioCosto;
+
+      // Sección de cambios de precio si los hay
+      let cambiosTexto = "";
+      if (priceChanges.length > 0) {
+        const cambiosDetalle = priceChanges
+          .map((ch) => {
+            const precioCambio = ch.cambios.find((c) => c.campo === "precio");
+            return precioCambio
+              ? `- ${ch.nombre}: ${precioCambio.valorViejo} → ${precioCambio.valorNuevo}`
+              : `- ${ch.nombre}: ${ch.cambios.map((c) => `${c.campo} ${c.valorViejo} → ${c.valorNuevo}`).join(", ")}`;
+          })
+          .join("\n");
+
+        cambiosTexto =
+          `\n━━━ *ACTUALIZACIÓN DE PRECIOS* ━━━\n\n` +
+          `*Se actualizaron los siguientes productos:*\n${cambiosDetalle}\n\n` +
+          (pedido.email
+            ? `*Si tienes cuenta*, puedes confirmar o rechazar estos cambios desde el panel de ordenes de tu cuenta en nuestra web.\n\n` +
+              `*Si no tienes cuenta* o prefieres, responde este mensaje para confirmar los cambios o contáctanos.\n\n`
+            : `*Responde este mensaje* para confirmar los cambios o contáctanos si tienes dudas.\n\n`) +
+          `━━━━━━━━━━━━━━━━━━━━\n\n`;
+      }
 
       const timeMinutes = 15;
       const instruccionesPago =
@@ -983,14 +1256,19 @@ export default function AdminPanel() {
         `*¡TU PEDIDO ESTÁ LISTO!*\n\n` +
         `*Pedido #${pedido.id}*\n` +
         `*Cliente:* ${pedido.nombre_cliente}\n\n` +
-        `*Tus productos:*\n${productosTexto}${carritoArray.length > 3 ? `\n*Y ${carritoArray.length - 3} productos más*` : ""}\n\n` +
-        `*Total a pagar:* $${Number(pedido.total).toLocaleString("es-AR")}\n\n` +
+        `*Tus productos:*\n${productosTexto}${carritoArray.filter((i) => i.cantidad > 0).length > 5 ? `\n*Y ${carritoArray.filter((i) => i.cantidad > 0).length - 5} productos más*` : ""}\n\n` +
+        `*Subtotal:* $${subtotal.toLocaleString("es-AR")}\n` +
+        (envioCosto > 0
+          ? `*Envío:* $${envioCosto.toLocaleString("es-AR")}\n`
+          : `*Retiro en sucursal*\n`) +
+        (mpFee > 0 ? `*Recargo MP:* $${mpFee.toLocaleString("es-AR")}\n` : "") +
+        `*Total a pagar:* $${totalConEnvio.toLocaleString("es-AR")}\n\n` +
         `*Metodo de entrega:* ${pedido.metodo === "retiro" ? "Retiro en sucursal" : "Envío a domicilio"}\n\n` +
         (pedido.metodo_pago !== "efectivo"
           ? `*Tienes ${timeMinutes} minutos para completar el pago*\n`
           : "") +
         instruccionesPago +
-        `\n` +
+        cambiosTexto +
         `*¡Gracias por tu compra!*\n` +
         `*Te mantendremos informado del estado de tu pedido*`;
 
@@ -1162,7 +1440,7 @@ export default function AdminPanel() {
         />
       )}
 
-      <header className="bg-zinc-900 text-white shadow-md sticky top-0 z-40">
+      <header className="bg-zinc-900 text-white shadow-md top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white text-2xl font-black italic">
@@ -1198,61 +1476,63 @@ export default function AdminPanel() {
       </header>
 
       <main className="max-w-400 mx-auto px-4 py-8">
+        {activeTab == "pedidos" && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              {
+                label: "Pendientes",
+                estado: "pendiente",
+                color: "text-yellow-600",
+                bg: "bg-yellow-50",
+                icon: "fa-clock",
+              },
+              {
+                label: "Configurados",
+                estado: "configurado",
+                color: "text-blue-600",
+                bg: "bg-blue-50",
+                icon: "fa-cog",
+              },
+              {
+                label: "Pagados",
+                estado: "pagado",
+                color: "text-purple-600",
+                bg: "bg-purple-50",
+                icon: "fa-check-circle",
+              },
+              {
+                label: "Total",
+                estado: "todos",
+                color: "text-gray-700",
+                bg: "bg-white",
+                icon: "fa-inbox",
+              },
+            ].map(({ label, estado, color, bg, icon }) => (
+              <button
+                key={estado}
+                onClick={() => setFiltroEstado(estado)}
+                className={`${bg} ${filtroEstado === estado ? "ring-2 ring-[#FF6600]" : ""} rounded-2xl hover:cursor-pointer p-4 shadow-sm border border-gray-100 text-left transition hover:shadow-md`}
+              >
+                <div className={`text-2xl font-black ${color}`}>
+                  {estado === "todos"
+                    ? pedidos.length
+                    : estadosConteo[estado] || 0}
+                </div>
+                <div className="text-sm font-bold text-gray-500 flex items-center gap-1 mt-1">
+                  <i className={`fas ${icon} text-xs`}></i> {label}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
         {/* Estadísticas rápidas */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            {
-              label: "Pendientes",
-              estado: "pendiente",
-              color: "text-yellow-600",
-              bg: "bg-yellow-50",
-              icon: "fa-clock",
-            },
-            {
-              label: "Configurados",
-              estado: "configurado",
-              color: "text-blue-600",
-              bg: "bg-blue-50",
-              icon: "fa-cog",
-            },
-            {
-              label: "Pagados",
-              estado: "pagado",
-              color: "text-purple-600",
-              bg: "bg-purple-50",
-              icon: "fa-check-circle",
-            },
-            {
-              label: "Total",
-              estado: "todos",
-              color: "text-gray-700",
-              bg: "bg-white",
-              icon: "fa-inbox",
-            },
-          ].map(({ label, estado, color, bg, icon }) => (
-            <button
-              key={estado}
-              onClick={() => setFiltroEstado(estado)}
-              className={`${bg} ${filtroEstado === estado ? "ring-2 ring-[#FF6600]" : ""} rounded-2xl p-4 shadow-sm border border-gray-100 text-left transition hover:shadow-md`}
-            >
-              <div className={`text-2xl font-black ${color}`}>
-                {estado === "todos"
-                  ? pedidos.length
-                  : estadosConteo[estado] || 0}
-              </div>
-              <div className="text-sm font-bold text-gray-500 flex items-center gap-1 mt-1">
-                <i className={`fas ${icon} text-xs`}></i> {label}
-              </div>
-            </button>
-          ))}
-        </div>
 
         {/* Pestañas de navegación */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="flex space-x-8">
             <button
               onClick={() => setActiveTab("pedidos")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "pedidos"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1262,7 +1542,7 @@ export default function AdminPanel() {
             </button>
             <button
               onClick={() => setActiveTab("productos")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "productos"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1272,13 +1552,23 @@ export default function AdminPanel() {
             </button>
             <button
               onClick={() => setActiveTab("configuracion")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
                 activeTab === "configuracion"
                   ? "border-[#FF6600] text-[#FF6600]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               Configuración
+            </button>
+            <button
+              onClick={() => setActiveTab("perfiles")}
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
+                activeTab === "perfiles"
+                  ? "border-[#FF6600] text-[#FF6600]"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Perfiles
             </button>
           </nav>
         </div>
@@ -1495,15 +1785,15 @@ export default function AdminPanel() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={cargarProductos}
-                  className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
+                  className="bg-zinc-700 hover:bg-zinc-600 hover:cursor-pointer px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2"
                   title="Refrescar productos"
                 >
-                  <i className="fas fa-sync-alt"></i>
-                  Refrescar
+                  <i className="fas fa-sync-alt text-white"></i>
+                  <p className="text-white">Refrescar</p>
                 </button>
                 <button
                   onClick={() => abrirModalProducto()}
-                  className="bg-[#FF6600] hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2 shadow-md"
+                  className="bg-[#FF6600] hover:cursor-pointer hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center gap-2 shadow-md"
                 >
                   <i className="fas fa-plus"></i>
                   Nuevo Producto
@@ -1511,213 +1801,240 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            {productLoading ? (
-              <div className="text-center py-20">
-                <i className="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-4"></i>
-                <p className="text-lg font-bold text-gray-500">
-                  Cargando productos...
-                </p>
+            <div className="mb-4">
+              <div className="relative max-w-md">
+                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input
+                  type="text"
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="Buscar productos por nombre, categoría o ID..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium text-sm"
+                />
               </div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-20 text-gray-400">
-                <i className="fas fa-box-open text-6xl mb-4"></i>
-                <p className="text-lg font-bold">No hay productos</p>
-                <p className="text-gray-500 mt-2">
-                  Comienza agregando tu primer producto
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[900px]">
-                  <thead className="z-2">
-                    <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                      <th className="p-4 font-black">ID</th>
-                      <th className="p-4 font-black">Imagen</th>
-                      <th className="p-4 font-black">Nombre</th>
-                      <th className="p-4 font-black">Categoría</th>
-                      <th className="p-4 font-black">Precio</th>
-                      <th className="p-4 font-black">Cantidad por bulto</th>
-                      <th className="p-4 font-black">Stock</th>
-                      <th className="p-4 font-black">Oferta</th>
-                      <th className="p-4 font-black">Oferta Express</th>
-                      <th className="p-4 font-black">Más Vendido</th>
-                      <th className="p-4 font-black">Solo Bulto</th>
-                      <th className="p-4 font-black">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => {
-                      return (
-                        <tr
-                          key={product.Id}
-                          className="border-b hover:bg-gray-50"
-                        >
-                          <td className="p-4 font-medium">{product.Id}</td>
-                          <td className="p-4">
-                            <img
-                              src={
-                                product.Imagen ||
-                                product.imagen ||
-                                `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`
-                              }
-                              alt={product.nombre}
-                              className="w-12 h-12 object-contain rounded-lg"
-                              onError={(e) => {
-                                console.error(
-                                  `Error cargando imagen para producto ${(product as any).Id}`,
-                                );
-                                (e.target as HTMLImageElement).src = `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${(product as any).Id}`;
-                              }}
-                              title={
-                                product.Imagen || product.imagen
-                                  ? "Imagen de Supabase Storage"
-                                  : "Sin imagen"
-                              }
-                            />
-                          </td>
-                          <td className="p-4 font-medium">{product.nombre}</td>
-                          <td className="p-4">
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-black">
-                              {product.Categoria}
-                            </span>
-                          </td>
-                          <td className="p-4 font-black text-green-600">
-                            ${product.precio?.toLocaleString("es-AR")}
-                          </td>
-                          <td>
-                            <input
-                              className="rounded-xl text-center border border-gray-300 px-2 py-1 w-20"
-                              type="number"
-                              min="1"
-                              value={product.quantity || 1}
-                              onChange={(e) =>
-                                updateProductQuantity(
-                                  product.Id,
-                                  parseInt(e.target.value) || 1,
-                                )
-                              }
-                            />
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-black ${
-                                product.Stock
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {product.Stock ? "Verdadero" : "Falso"}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {product.Oferta ? (
-                              <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-black">
-                                {product.Oferta}
+            </div>
+
+            {(() => {
+              const q = productSearch.toLowerCase().trim();
+              const filteredProducts = q
+                ? products.filter(
+                    (p) =>
+                      String(p.Id).includes(q) ||
+                      (p.nombre || "").toLowerCase().includes(q) ||
+                      (p.Categoria || "").toLowerCase().includes(q),
+                  )
+                : products;
+
+              return productLoading ? (
+                <div className="text-center py-20">
+                  <i className="fas fa-spinner fa-spin text-4xl text-[#FF6600] mb-4"></i>
+                  <p className="text-lg font-bold text-gray-500">
+                    Cargando productos...
+                  </p>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-20 text-gray-400">
+                  <i className="fas fa-box-open text-6xl mb-4"></i>
+                  <p className="text-lg font-bold">
+                    {q ? "No se encontraron productos" : "No hay productos"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-225">
+                    <thead className="z-2">
+                      <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                        <th className="p-4 font-black">ID</th>
+                        <th className="p-4 font-black">Imagen</th>
+                        <th className="p-4 font-black">Nombre</th>
+                        <th className="p-4 font-black">Categoría</th>
+                        <th className="p-4 font-black">Precio</th>
+                        <th className="p-4 font-black">Cantidad por bulto</th>
+                        <th className="p-4 font-black">Stock</th>
+                        <th className="p-4 font-black">Oferta</th>
+                        <th className="p-4 font-black">Oferta Express</th>
+                        <th className="p-4 font-black">Más Vendido</th>
+                        <th className="p-4 font-black">Solo Bulto</th>
+                        <th className="p-4 font-black">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map((product) => {
+                        return (
+                          <tr
+                            key={product.Id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="p-4 font-medium">{product.Id}</td>
+                            <td className="p-4">
+                              <img
+                                src={
+                                  product.Imagen ||
+                                  product.imagen ||
+                                  `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`
+                                }
+                                alt={product.nombre}
+                                className="w-12 h-12 object-contain rounded-lg"
+                                onError={(e) => {
+                                  console.error(
+                                    `Error cargando imagen para producto ${(product as any).Id}`,
+                                  );
+                                  (e.target as HTMLImageElement).src =
+                                    `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${(product as any).Id}`;
+                                }}
+                                title={
+                                  product.Imagen || product.imagen
+                                    ? "Imagen de Supabase Storage"
+                                    : "Sin imagen"
+                                }
+                              />
+                            </td>
+                            <td className="p-4 font-medium">
+                              {product.nombre}
+                            </td>
+                            <td className="p-4">
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-black">
+                                {product.Categoria}
                               </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">-</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <button
-                              onClick={() =>
-                                updateProductFlag(
-                                  product.Id,
-                                  "oferta_express",
-                                  !product.oferta_express,
-                                )
-                              }
-                              className={`w-14 h-7 rounded-full transition relative ${
-                                product.oferta_express
-                                  ? "bg-green-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
+                            </td>
+                            <td className="p-4 font-black text-green-600">
+                              ${product.precio?.toLocaleString("es-AR")}
+                            </td>
+                            <td>
+                              <input
+                                className="rounded-xl text-center border border-gray-300 px-2 py-1 w-20"
+                                type="number"
+                                min="1"
+                                value={product.quantity || 1}
+                                onChange={(e) =>
+                                  updateProductQuantity(
+                                    product.Id,
+                                    parseInt(e.target.value) || 1,
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="p-4">
                               <span
-                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                className={`px-2 py-1 rounded-full text-xs font-black ${
+                                  product.Stock
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {product.Stock ? "Verdadero" : "Falso"}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              {product.Oferta ? (
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-black">
+                                  {product.Oferta}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <button
+                                onClick={() =>
+                                  updateProductFlag(
+                                    product.Id,
+                                    "oferta_express",
+                                    !product.oferta_express,
+                                  )
+                                }
+                                className={`w-14 h-7 rounded-full transition relative ${
                                   product.oferta_express
-                                    ? "-translate-x-7"
-                                    : "translate-x-0.5"
+                                    ? "bg-green-500"
+                                    : "bg-gray-300"
                                 }`}
-                              />
-                            </button>
-                          </td>
-                          <td className="p-4">
-                            <button
-                              onClick={() =>
-                                updateProductFlag(
-                                  product.Id,
-                                  "mas_vendido",
-                                  !product.mas_vendido,
-                                )
-                              }
-                              className={`w-14 h-7 rounded-full transition relative ${
-                                product.mas_vendido
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                              >
+                                <span
+                                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                    product.oferta_express
+                                      ? "-translate-x-7"
+                                      : "translate-x-0.5"
+                                  }`}
+                                />
+                              </button>
+                            </td>
+                            <td className="p-4">
+                              <button
+                                onClick={() =>
+                                  updateProductFlag(
+                                    product.Id,
+                                    "mas_vendido",
+                                    !product.mas_vendido,
+                                  )
+                                }
+                                className={`w-14 h-7 rounded-full transition relative ${
                                   product.mas_vendido
-                                    ? "-translate-x-7"
-                                    : "translate-x-0.5"
+                                    ? "bg-yellow-500"
+                                    : "bg-gray-300"
                                 }`}
-                              />
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              onClick={() =>
-                                updateProductFlag(
-                                  product.Id,
-                                  "solo_bulto",
-                                  !product.solo_bulto,
-                                )
-                              }
-                              className={`w-14 h-7 rounded-full transition relative ${
-                                product.solo_bulto
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                              >
+                                <span
+                                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                    product.mas_vendido
+                                      ? "-translate-x-7"
+                                      : "translate-x-0.5"
+                                  }`}
+                                />
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() =>
+                                  updateProductFlag(
+                                    product.Id,
+                                    "solo_bulto",
+                                    !product.solo_bulto,
+                                  )
+                                }
+                                className={`w-14 h-7 rounded-full transition relative ${
                                   product.solo_bulto
-                                    ? "-translate-x-7"
-                                    : "translate-x-0.5"
+                                    ? "bg-yellow-500"
+                                    : "bg-gray-300"
                                 }`}
-                              />
-                            </button>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => abrirModalProducto(product.Id)}
-                                disabled={loadingProductId === product.Id}
-                                className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Editar"
                               >
-                                <i className="fas fa-edit mr-1"></i>
-                                Editar
+                                <span
+                                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                                    product.solo_bulto
+                                      ? "-translate-x-7"
+                                      : "translate-x-0.5"
+                                  }`}
+                                />
                               </button>
-                              <button
-                                onClick={() => eliminarProducto(product.Id)}
-                                className="bg-red-500 cursor-pointer hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
-                                title="Eliminar"
-                              >
-                                <i className="fas fa-trash mr-1"></i>
-                                Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => abrirModalProducto(product.Id)}
+                                  disabled={loadingProductId === product.Id}
+                                  className="bg-blue-500 cursor-pointer hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Editar"
+                                >
+                                  <i className="fas fa-edit mr-1"></i>
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => eliminarProducto(product.Id)}
+                                  className="bg-red-500 cursor-pointer hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition"
+                                  title="Eliminar"
+                                >
+                                  <i className="fas fa-trash mr-1"></i>
+                                  Eliminar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1921,12 +2238,133 @@ export default function AdminPanel() {
             </div>
           </div>
         )}
+
+        {activeTab === "perfiles" && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-zinc-800 flex items-center gap-2">
+                <i className="fas fa-users text-[#FF6600]"></i>
+                Perfiles
+              </h2>
+              {perfilesLoading && (
+                <i className="fas fa-spinner fa-spin text-[#FF6600]"></i>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <div className="relative max-w-md">
+                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input
+                  type="text"
+                  value={perfilSearch}
+                  onChange={(e) => setPerfilSearch(e.target.value)}
+                  placeholder="Buscar perfiles por nombre, email o teléfono..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              {(() => {
+                const q = perfilSearch.toLowerCase().trim();
+                const filteredPerfiles = q
+                  ? perfiles.filter(
+                      (p) =>
+                        (p.nombre || "").toLowerCase().includes(q) ||
+                        (p.email || "").toLowerCase().includes(q) ||
+                        (p.telefono || "").toLowerCase().includes(q),
+                    )
+                  : perfiles;
+
+                return filteredPerfiles.length === 0 ? (
+                  <div className="text-center py-16 text-gray-400">
+                    <i className="fas fa-users text-5xl mb-4"></i>
+                    <p className="font-bold text-lg">
+                      No hay perfiles registrados
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                          <th className="p-4 font-black">Nombre</th>
+                          <th className="p-4 font-black">Email</th>
+                          <th className="p-4 font-black">Teléfono</th>
+                          <th className="p-4 font-black">Rol</th>
+                          <th className="p-4 font-black">Tipo Cliente</th>
+                          <th className="p-4 font-black">Dirección</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredPerfiles.map((perfil) => (
+                          <tr
+                            key={perfil.id}
+                            className="hover:bg-gray-50 transition"
+                          >
+                            <td className="p-4 font-bold text-gray-800">
+                              {perfil.nombre || "—"}
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {perfil.email || "—"}
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {perfil.telefono || "—"}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+                                  perfil.rol === "admin"
+                                    ? "bg-[#FF6600]/10 text-[#FF6600]"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                {perfil.rol || "cliente"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {perfil.tipo_cliente || "—"}
+                            </td>
+                            <td className="p-4 text-gray-600 max-w-[200px] truncate">
+                              {perfil.direccion || "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <p className="text-center text-xs text-gray-400 mt-4 font-medium">
+              {(() => {
+                const q = perfilSearch.toLowerCase().trim();
+                const count = q
+                  ? perfiles.filter(
+                      (p) =>
+                        (p.nombre || "").toLowerCase().includes(q) ||
+                        (p.email || "").toLowerCase().includes(q) ||
+                        (p.telefono || "").toLowerCase().includes(q),
+                    ).length
+                  : perfiles.length;
+                return `${count} perfil${count !== 1 ? "es" : ""} registrado${count !== 1 ? "s" : ""}`;
+              })()}
+            </p>
+          </div>
+        )}
       </main>
 
       {/* Modal de edición */}
       {modalOpen && pedidoEditando && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div
+            className={`bg-white rounded-2xl shadow-xl w-full overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 ${
+              priceComparison.show && priceComparison.results.length > 0
+                ? "max-w-6xl"
+                : "max-w-2xl"
+            }`}
+          >
             <div className="flex items-center gap-2"></div>
             <div className="bg-zinc-900 text-white p-4 flex justify-between items-center">
               <div>
@@ -1992,181 +2430,390 @@ export default function AdminPanel() {
               )}
             </div>
 
-            <div className="p-4 overflow-y-auto flex-1 bg-gray-50">
-              <h4 className="font-black text-gray-700 text-sm mb-3 uppercase tracking-wide">
-                Productos del pedido
-              </h4>
-              <div className="space-y-3">
-                {pedidoEditando.carrito.map((item, index) => {
-                  const estaEliminado = item.cantidad === 0;
-                  return (
-                    <div
-                      key={index}
-                      className={`${estaEliminado ? "bg-red-50 opacity-60" : "bg-white"} p-3 rounded-lg border border-gray-200 flex justify-between items-center shadow-sm`}
-                    >
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-800 text-sm leading-tight">
-                          {estaEliminado ? <s>{item.nombre}</s> : item.nombre}
-                          {!estaEliminado && (
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div
+                className={`${
+                  priceComparison.show && priceComparison.results.length > 0
+                    ? "grid grid-cols-1 lg:grid-cols-5"
+                    : ""
+                }`}
+              >
+                {/* Left column: products */}
+                <div
+                  className={`bg-gray-50 ${
+                    priceComparison.show && priceComparison.results.length > 0
+                      ? "lg:col-span-3"
+                      : ""
+                  }`}
+                >
+                  <div className="p-4">
+                    <h4 className="font-black text-gray-700 text-sm mb-3 uppercase tracking-wide">
+                      Productos del pedido
+                    </h4>
+                    <div className="space-y-3">
+                      {pedidoEditando.carrito.map((item, index) => {
+                        const estaEliminado = item.cantidad === 0;
+                        return (
+                          <div
+                            key={index}
+                            className={`${estaEliminado ? "bg-red-50 opacity-60" : "bg-white"} p-3 rounded-lg border border-gray-200 shadow-sm`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-gray-800 text-sm leading-tight">
+                                  {estaEliminado ? (
+                                    <s>{item.nombre}</s>
+                                  ) : (
+                                    item.nombre
+                                  )}
+                                  {!estaEliminado && (
+                                    <a
+                                      href={`/producto/${item.Id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center ml-2 text-[#FF6600] hover:text-orange-700 transition"
+                                      title="Ver producto en tienda"
+                                    >
+                                      <i className="fas fa-external-link-alt text-[10px]"></i>
+                                    </a>
+                                  )}
+                                  {!estaEliminado && (
+                                    <span
+                                      className={`inline-block ml-2 px-2 py-0.5 rounded text-xs font-black ${
+                                        (item.tipo || "Bulto") === "Bulto"
+                                          ? "bg-blue-100 text-blue-700"
+                                          : "bg-green-100 text-green-700"
+                                      }`}
+                                    >
+                                      {item.tipo || "Bulto"}
+                                    </span>
+                                  )}
+                                  {estaEliminado && (
+                                    <span className="text-red-500 ml-1 text-xs">
+                                      (Eliminado)
+                                    </span>
+                                  )}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase">
+                                      $
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={
+                                        item.precio_unitario || item.precio || 0
+                                      }
+                                      onChange={(e) =>
+                                        cambiarPrecioModal(
+                                          index,
+                                          e.target.value,
+                                        )
+                                      }
+                                      onInput={(e) =>
+                                        ((e.target as HTMLInputElement).value =
+                                          (
+                                            e.target as HTMLInputElement
+                                          ).value.replace(/[^0-9]/g, ""))
+                                      }
+                                      className="w-20 px-2 py-1 text-xs font-bold text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6600] focus:ring-1 focus:ring-[#FF6600] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      style={{ MozAppearance: "textfield" }}
+                                      disabled={estaEliminado}
+                                    />
+                                    <span className="text-[10px] text-gray-400 font-medium">
+                                      c/u
+                                    </span>
+                                  </div>
+                                  {item.cantidad > 0 && (
+                                    <span className="text-xs font-bold text-gray-700">
+                                      = $
+                                      {(
+                                        Number(
+                                          item.precio_unitario ||
+                                            item.precio ||
+                                            0,
+                                        ) * item.cantidad
+                                      ).toLocaleString("es-AR")}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                                  <button
+                                    onClick={() =>
+                                      cambiarCantidadModal(index, -1)
+                                    }
+                                    className="px-3 py-2 hover:bg-gray-200 font-black text-gray-600 transition disabled:opacity-30"
+                                    disabled={estaEliminado}
+                                  >
+                                    -
+                                  </button>
+                                  <span className="px-3 font-bold text-sm min-w-[40px] text-center">
+                                    {item.cantidad}
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      cambiarCantidadModal(index, 1)
+                                    }
+                                    className="px-3 py-2 hover:bg-gray-200 font-black text-gray-600 transition"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <button
+                                  onClick={() => eliminarDelModal(index)}
+                                  className="text-red-400 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition"
+                                  title="Quitar producto"
+                                  disabled={estaEliminado}
+                                >
+                                  <i className="fas fa-trash-alt"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right column: comparison panel */}
+                {priceComparison.show && priceComparison.results.length > 0 && (
+                  <div className="lg:col-span-2 bg-yellow-50/30 border-l border-yellow-200 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                        <i className="fas fa-triangle-exclamation text-yellow-600 text-sm"></i>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-yellow-800 text-sm">
+                          Diferencias detectadas
+                        </h4>
+                        <p className="text-[11px] text-yellow-700 font-medium">
+                          {priceComparison.results.length} producto
+                          {priceComparison.results.length !== 1 ? "s" : ""} con
+                          cambios
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {priceComparison.results.map((change, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white border border-yellow-200 rounded-xl p-3 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-bold text-gray-800 text-sm truncate">
+                                {change.nombre}
+                              </span>
+                              <a
+                                href={`/producto/${change.Id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FF6600] hover:text-orange-700 flex-shrink-0 transition"
+                                title="Ver producto en tienda"
+                              >
+                                <i className="fas fa-external-link-alt text-xs"></i>
+                              </a>
+                            </div>
                             <span
-                              className={`inline-block ml-2 px-2 py-0.5 rounded text-xs font-black ${
-                                (item.tipo || "Bulto") === "Bulto"
+                              className={`flex-shrink-0 inline-block px-2 py-0.5 rounded text-[10px] font-black ${
+                                change.tipo === "Bulto"
                                   ? "bg-blue-100 text-blue-700"
                                   : "bg-green-100 text-green-700"
                               }`}
                             >
-                              {item.tipo || "Bulto"}
+                              {change.tipo}
                             </span>
-                          )}
-                          {estaEliminado && (
-                            <span className="text-red-500 ml-1 text-xs">
-                              (Eliminado)
-                            </span>
-                          )}
-                        </h4>
-                        <p className="text-xs text-gray-500 font-medium mt-1">
-                          $
-                          {Number(
-                            item.precio_unitario || item.precio || 0,
-                          ).toLocaleString("es-AR")}{" "}
-                          c/u
-                          {item.cantidad > 0 && (
-                            <span className="ml-2 text-gray-700 font-bold">
-                              = $
-                              {(
-                                Number(
-                                  item.precio_unitario || item.precio || 0,
-                                ) * item.cantidad
-                              ).toLocaleString("es-AR")}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3 ml-4">
-                        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                          </div>
+                          <div className="space-y-1.5">
+                            {change.cambios.map((c, ci) => (
+                              <div
+                                key={ci}
+                                className="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-3 py-2"
+                              >
+                                <span className="w-14 font-bold text-gray-500 uppercase">
+                                  {c.campo}:
+                                </span>
+                                {c.campo === "existencia" ? (
+                                  <span className="text-red-600 font-bold">
+                                    {c.valorNuevo}
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span className="text-gray-400 line-through">
+                                      {c.valorViejo}
+                                    </span>
+                                    <i className="fas fa-arrow-right text-gray-300 text-[10px]"></i>
+                                    <span className="text-red-600 font-bold">
+                                      {c.valorNuevo}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                           <button
-                            onClick={() => cambiarCantidadModal(index, -1)}
-                            className="px-3 py-2 hover:bg-gray-200 font-black text-gray-600 transition disabled:opacity-30"
-                            disabled={estaEliminado}
+                            onClick={() =>
+                              actualizarPrecioIndividual(change.Id)
+                            }
+                            className="mt-2 w-full text-xs font-bold px-3 py-2 rounded-lg bg-yellow-200 text-yellow-800 hover:bg-yellow-300 transition flex items-center justify-center gap-1"
                           >
-                            -
-                          </button>
-                          <span className="px-3 font-bold text-sm min-w-[40px] text-center">
-                            {item.cantidad}
-                          </span>
-                          <button
-                            onClick={() => cambiarCantidadModal(index, 1)}
-                            className="px-3 py-2 hover:bg-gray-200 font-black text-gray-600 transition"
-                          >
-                            +
+                            <i className="fas fa-sync-alt text-[10px]"></i>
+                            Actualizar este producto
                           </button>
                         </div>
-                        <button
-                          onClick={() => eliminarDelModal(index)}
-                          className="text-red-400 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition"
-                          title="Quitar producto"
-                          disabled={estaEliminado}
-                        >
-                          <i className="fas fa-trash-alt"></i>
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center gap-2">
+              <button
+                onClick={compareOrderPrices}
+                disabled={priceComparison.loading}
+                className={`text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1 ${
+                  priceComparison.loading
+                    ? "bg-blue-100 text-blue-700"
+                    : priceComparison.show && priceComparison.results.length > 0
+                      ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                      : priceComparison.show &&
+                          priceComparison.results.length === 0
+                        ? "bg-green-100 text-green-700"
+                        : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                }`}
+              >
+                {priceComparison.loading ? (
+                  <i className="fas fa-spinner fa-spin"></i>
+                ) : (
+                  <i className="fas fa-scale-balanced"></i>
+                )}
+                {priceComparison.loading
+                  ? "Verificando..."
+                  : priceComparison.show && priceComparison.results.length > 0
+                    ? `${priceComparison.results.length} cambio(s) detectado(s) — click para re-verificar`
+                    : priceComparison.show &&
+                        priceComparison.results.length === 0
+                      ? "Precios actualizados ✓"
+                      : "Comparar precios actuales"}
+              </button>
+              {priceComparison.show && priceComparison.results.length > 0 && (
+                <button
+                  onClick={actualizarTodosLosPrecios}
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 transition flex items-center gap-1"
+                >
+                  <i className="fas fa-sync-alt text-[10px]"></i>
+                  Actualizar todo
+                </button>
+              )}
+              {priceComparison.show && (
+                <button
+                  onClick={() =>
+                    setPriceComparison({
+                      results: [],
+                      loading: false,
+                      show: false,
+                      dbProducts: {},
+                    })
+                  }
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 transition"
+                >
+                  Cerrar panel
+                </button>
+              )}
             </div>
 
             <div className="p-4 border-t border-gray-200 bg-white">
               {/* Desglose del pedido */}
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-bold text-gray-700 mb-3 text-sm">
-                  Desglose del Pedido:
-                </h4>
-                <div className="space-y-2 text-sm">
-                  {(() => {
-                    // Calcular desglose del pedido
-                    let carritoArray = [];
-                    if (typeof pedidoEditando.carrito === "string") {
-                      try {
-                        carritoArray = JSON.parse(pedidoEditando.carrito);
-                      } catch {
-                        carritoArray = [];
-                      }
-                    } else if (Array.isArray(pedidoEditando.carrito)) {
-                      carritoArray = pedidoEditando.carrito;
+              <h4 className="font-bold text-gray-700 mb-3 text-sm">
+                Desglose del Pedido:
+              </h4>
+              <div className="space-y-2 text-sm">
+                {(() => {
+                  // Calcular desglose del pedido
+                  let carritoArray = [];
+                  if (typeof pedidoEditando.carrito === "string") {
+                    try {
+                      carritoArray = JSON.parse(pedidoEditando.carrito);
+                    } catch {
+                      carritoArray = [];
                     }
+                  } else if (Array.isArray(pedidoEditando.carrito)) {
+                    carritoArray = pedidoEditando.carrito;
+                  }
 
-                    const subtotal = carritoArray.reduce((total, item) => {
-                      const precioUnitario =
-                        item.precio_unitario || item.precio || 0;
-                      return total + precioUnitario * item.cantidad;
-                    }, 0);
+                  const subtotal = carritoArray.reduce((total, item) => {
+                    const precioUnitario =
+                      item.precio_unitario || item.precio || 0;
+                    return total + precioUnitario * item.cantidad;
+                  }, 0);
 
-                    const envioCosto =
-                      pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
-                    const mpFee =
-                      pedidoEditando.metodo_pago === "mercadopago"
-                        ? subtotal * 0.08
-                        : 0;
-                    const totalCalculado = subtotal + mpFee + envioCosto;
+                  const envioCosto =
+                    pedidoEditando.metodo === "retiro" ? 0 : shippingPrice;
+                  const mpFee =
+                    pedidoEditando.metodo_pago === "mercadopago"
+                      ? subtotal * 0.08
+                      : 0;
+                  const totalCalculado = subtotal + mpFee + envioCosto;
 
-                    return (
-                      <>
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">
+                          Subtotal productos:
+                        </span>
+                        <span className="font-medium">
+                          ${subtotal.toLocaleString("es-AR")}
+                        </span>
+                      </div>
+                      {pedidoEditando.metodo !== "retiro" && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Costo de envío:</span>
+                          <span className="font-medium">
+                            ${envioCosto.toLocaleString("es-AR")}
+                          </span>
+                        </div>
+                      )}
+                      {mpFee > 0 && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">
-                            Subtotal productos:
+                            Recargo Mercado Pago (8%):
                           </span>
                           <span className="font-medium">
-                            ${subtotal.toLocaleString("es-AR")}
+                            ${mpFee.toLocaleString("es-AR")}
                           </span>
                         </div>
-                        {pedidoEditando.metodo !== "retiro" && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Costo de envío:
-                            </span>
-                            <span className="font-medium">
-                              ${envioCosto.toLocaleString("es-AR")}
-                            </span>
-                          </div>
-                        )}
-                        {mpFee > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Recargo Mercado Pago (8%):
-                            </span>
-                            <span className="font-medium">
-                              ${mpFee.toLocaleString("es-AR")}
-                            </span>
-                          </div>
-                        )}
-                        <div className="border-t pt-2 mt-2">
-                          <div className="flex justify-between">
-                            <span className="font-bold text-gray-700">
-                              Total:
-                            </span>
-                            <span className="text-2xl font-black text-[#FF6600]">
-                              ${totalCalculado.toLocaleString("es-AR")}
-                            </span>
-                          </div>
+                      )}
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between">
+                          <span className="font-bold text-gray-700">
+                            Total:
+                          </span>
+                          <span className="text-2xl font-black text-[#FF6600]">
+                            ${totalCalculado.toLocaleString("es-AR")}
+                          </span>
                         </div>
-                        {pedidoEditando.metodo_pago && (
-                          <div className="mt-2 pt-2 border-t text-xs text-gray-500 font-medium">
-                            <span className="uppercase">
-                              Pago:{" "}
-                              {pedidoEditando.metodo_pago === "mercadopago"
-                                ? "Mercado Pago"
-                                : pedidoEditando.metodo_pago === "transferencia"
-                                  ? "Transferencia bancaria"
-                                  : "Efectivo"}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
+                      </div>
+                      {pedidoEditando.metodo_pago && (
+                        <div className="mt-2 pt-2 border-t text-xs text-gray-500 font-medium">
+                          <span className="uppercase">
+                            Pago:{" "}
+                            {pedidoEditando.metodo_pago === "mercadopago"
+                              ? "Mercado Pago"
+                              : pedidoEditando.metodo_pago === "transferencia"
+                                ? "Transferencia bancaria"
+                                : "Efectivo"}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <button
                 onClick={guardarModificacionPedido}

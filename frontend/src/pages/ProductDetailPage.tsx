@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
 import { supabase as supabaseClient } from "../lib/supabase";
@@ -58,8 +58,10 @@ export default function ProductDetailPage() {
     const quantityPerBundle = product.quantity || 1;
     const discount = getDiscountAmount();
     const isBulto = typeOfQuantity === "Bulto";
-    const bundlePrice = isBulto && discount > 0 ? bundleOriginal : bundleOriginal;
-    const unitPrice = Math.ceil((bundleOriginal / quantityPerBundle) * 1.20 / 10) * 10;
+    const bundlePrice =
+      isBulto && discount > 0 ? bundleOriginal : bundleOriginal;
+    const unitPrice =
+      Math.ceil(((bundleOriginal / quantityPerBundle) * 1.2) / 10) * 10;
 
     return isBulto ? bundlePrice : unitPrice;
   };
@@ -169,19 +171,24 @@ export default function ProductDetailPage() {
               {product.nombre}
             </h1>
             {(() => {
-              const discount = getDiscountAmount()
+              const discount = getDiscountAmount();
               const currentPrice = calculatePrice();
               const originalPrice = calculateOriginalPrice();
               const originalPriceForBulto = calculateOriginalPrice() + discount;
               return (
                 <>
                   <div className="flex items-baseline gap-3 mb-2">
-                    <p className={`text-3xl font-black ${originalPrice ? 'text-red-600' : 'text-[#FF6600]'}`}>
+                    <p
+                      className={`text-3xl font-black ${originalPrice ? "text-red-600" : "text-[#FF6600]"}`}
+                    >
                       ${currentPrice.toLocaleString("es-AR")}
                     </p>
                     {originalPrice && (
                       <p className="text-xl text-gray-400 diagonal-strike font-medium">
-                        $${typeOfQuantity == "Bulto" ? originalPriceForBulto.toLocaleString("es-AR") : currentPrice.toLocaleString("es-AR")}
+                        $
+                        {typeOfQuantity == "Bulto"
+                          ? originalPriceForBulto.toLocaleString("es-AR")
+                          : currentPrice.toLocaleString("es-AR")}
                       </p>
                     )}
                   </div>
@@ -192,7 +199,9 @@ export default function ProductDetailPage() {
 
           {/* Unit/Bundle Selector */}
           <div>
-            <h3 className="text-lg font-black text-zinc-900 mb-3">Tipo de compra</h3>
+            <h3 className="text-lg font-black text-zinc-900 mb-3">
+              Tipo de compra
+            </h3>
             <div className="flex gap-3">
               {!product.solo_bulto && (
                 <button

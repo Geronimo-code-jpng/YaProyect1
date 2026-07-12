@@ -9,11 +9,17 @@ import {
   Lock,
   ArrowLeft,
 } from "lucide-react";
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase as supabaseClient } from "../lib/supabase";
 import { getProductImageUrl } from "../utils/productImageUtils";
 import { getShippingPriceFromDB } from "../utils/getShippingPrice";
+import {
+  validateCartItems,
+  computeUpdatedCart,
+} from "../utils/validateCartItems";
+import type { PriceChange } from "../utils/validateCartItems";
+import PriceChangeAlert from "../components/cart/PriceChangeAlert";
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -23,6 +29,7 @@ export default function CartPage() {
     updateQuantity,
     cartTotal,
     clearCart,
+    replaceCart,
     getCartTotalWithDiscount,
     qualifiesForFirstBuyDiscount,
   } = useCart();
@@ -30,6 +37,9 @@ export default function CartPage() {
   const { showSuccess, showError } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pedidoTimeout, setPedidoTimeout] = useState(null);
+  const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
+  const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
+  const [validatingPrices, setValidatingPrices] = useState(false);
   const [orderData, setOrderData] = useState({
     nombre: "",
     telefono: "",
@@ -160,7 +170,33 @@ export default function CartPage() {
         return;
       }
 
-      const baseTotal = getCartTotalWithDiscount(userProfile, orderData.metodoEntrega);
+      setValidatingPrices(true);
+      const result = await validateCartItems(
+        cart.map((item) => ({
+          Id: item.Id,
+          nombre: item.nombre,
+          precio: item.precio,
+          Stock: item.Stock ?? true,
+          Oferta: item.Oferta,
+          cantidad: item.cantidad,
+          tipo: item.tipo || "Bulto",
+          quantity_per_bundle: item.quantity_per_bundle,
+          imagen: item.Imagen || item.imagen,
+        })),
+      );
+      setValidatingPrices(false);
+
+      if (result.hasChanges) {
+        setPriceChanges(result.changes);
+        setPriceChangesDb(result.dbProducts || {});
+        setIsSubmitting(false);
+        return;
+      }
+
+      const baseTotal = getCartTotalWithDiscount(
+        userProfile,
+        orderData.metodoEntrega,
+      );
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
 
       const pedidoData = {
@@ -266,6 +302,33 @@ export default function CartPage() {
     }
   };
 
+  const handleUpdateCartPrices = () => {
+    if (!priceChanges) return;
+    const updated = computeUpdatedCart(
+      cart.map((item) => ({
+        Id: item.Id,
+        nombre: item.nombre,
+        precio: item.precio,
+        Stock: item.Stock ?? true,
+        Oferta: item.Oferta,
+        oferta: item.oferta || item.Oferta,
+        cantidad: item.cantidad,
+        tipo: item.tipo || "Bulto",
+        quantity_per_bundle: item.quantity_per_bundle,
+        imagen: item.Imagen || item.imagen,
+      })),
+      priceChangesDb,
+    );
+    replaceCart(updated as any);
+    setPriceChanges(null);
+    setPriceChangesDb({});
+  };
+
+  const handleClearCart = () => {
+    clearCart();
+    setPriceChanges(null);
+  };
+
   return (
     <div className="min-h-screen w-screen flex justify-center bg-gray-50 py-8">
       <div className="mx-auto px-4">
@@ -316,7 +379,7 @@ export default function CartPage() {
                       <img
                         src={getProductImageUrl(item)}
                         alt={item.nombre}
-                        className="w-24 h-24 sm:w-28 hidden sm:block sm:h-28 object-contain rounded-xl bg-gray-50"
+                        className="w-40 hidden sm:block rounded-xl bg-gray-50"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             "https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod";
@@ -399,10 +462,9 @@ export default function CartPage() {
                               value={item.cantidad}
                               onChange={(e) => setQty(index, e.target.value)}
                               onInput={(e) =>
-                                ((e.target as HTMLInputElement).value = (e.target as HTMLInputElement).value.replace(
-                                  /[^0-9]/g,
-                                  "",
-                                ))
+                                ((e.target as HTMLInputElement).value = (
+                                  e.target as HTMLInputElement
+                                ).value.replace(/[^0-9]/g, ""))
                               }
                               className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-12 sm:w-16 h-9 sm:h-10 text-center font-black focus:outline-none focus:bg-blue-50 text-gray-700"
                               style={{ MozAppearance: "textfield" }}
@@ -702,14 +764,26 @@ export default function CartPage() {
                     <span className="text-[#FF6600]">
                       $
                       {(orderData.metodoEntrega === "retiro"
-                        ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
+                        ? getCartTotalWithDiscount(
+                            userProfile,
+                            orderData.metodoEntrega,
+                          ) +
                           (orderData.metodoPago === "mercadopago"
-                            ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08
+                            ? getCartTotalWithDiscount(
+                                userProfile,
+                                orderData.metodoEntrega,
+                              ) * 0.08
                             : 0)
-                        : getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
+                        : getCartTotalWithDiscount(
+                            userProfile,
+                            orderData.metodoEntrega,
+                          ) +
                           shippingPrice +
                           (orderData.metodoPago === "mercadopago"
-                            ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) * 0.08
+                            ? getCartTotalWithDiscount(
+                                userProfile,
+                                orderData.metodoEntrega,
+                              ) * 0.08
                             : 0)
                       ).toLocaleString("es-AR")}
                     </span>
@@ -755,6 +829,14 @@ export default function CartPage() {
           )}
         </div>
       </div>
+
+      <PriceChangeAlert
+        isOpen={priceChanges !== null}
+        changes={priceChanges || []}
+        onUpdateCart={handleUpdateCartPrices}
+        onClearCart={handleClearCart}
+        onClose={() => setPriceChanges(null)}
+      />
     </div>
   );
 }

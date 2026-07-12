@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useProducts } from "../contexts/ProductContext";
 import { ProductsGrid } from "../components/catalog";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -29,10 +29,18 @@ export default function ProductsPage() {
 
   const normalizeCategory = (cat) => {
     const map = {
-      soloofertas: "SoloOfertas", alimento: "ALIMENTO", bebidas: "BEBIDAS",
-      lacteos: "LACTEOS", harina: "HARINA", aceite: "ACEITE",
-      vinos: "VINOS", limpieza: "LIMPIEZA", sales: "SALES",
-      cervezas: "CERVEZAS", yerba: "YERBA", aperitivos: "APERITIVOS",
+      soloofertas: "SoloOfertas",
+      alimento: "ALIMENTO",
+      bebidas: "BEBIDAS",
+      lacteos: "LACTEOS",
+      harina: "HARINA",
+      aceite: "ACEITE",
+      vinos: "VINOS",
+      limpieza: "LIMPIEZA",
+      sales: "SALES",
+      cervezas: "CERVEZAS",
+      yerba: "YERBA",
+      aperitivos: "APERITIVOS",
       cigarrillos: "CIGARRILLOS",
     };
     return map[cat.toLowerCase()] || cat.toUpperCase();
@@ -54,7 +62,10 @@ export default function ProductsPage() {
       const params = new URLSearchParams(searchParams);
       if (value.trim()) params.set("search", value.trim());
       else params.delete("search");
-      navigate(params.toString() ? `/productos?${params.toString()}` : "/productos", { replace: true });
+      navigate(
+        params.toString() ? `/productos?${params.toString()}` : "/productos",
+        { replace: true },
+      );
     }, 400);
   };
   const handleCategoryChange = (newCategory) => {
@@ -91,11 +102,7 @@ export default function ProductsPage() {
   };
 
   // Get unique categories
-  const categorias = [
-    "Todas",
-    "SoloOfertas",
-    ...categoriasDb,
-  ];
+  const categorias = ["Todas", "SoloOfertas", ...categoriasDb];
 
   const productosFiltrados = (products || []).filter((product) => {
     if (!product) return false;
