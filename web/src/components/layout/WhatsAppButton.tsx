@@ -15,7 +15,7 @@ export default function WhatsAppButton() {
       aria-label="Escribinos por WhatsApp"
     >
       <MessageCircle size={24} />
-      <span className="hidden sm:inline">Escribinos</span>
+      <span className="hidden sm:inline"></span>
     </a>
   );
 }
