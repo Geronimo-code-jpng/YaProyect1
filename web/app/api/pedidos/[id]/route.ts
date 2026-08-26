@@ -7,6 +7,7 @@ const UPDATE_FIELDS = [
   "estado",
   "expira_en",
   "horario",
+  "notas",
   "pagado_manualmente",
   "fecha_pago",
   "modificado_por",

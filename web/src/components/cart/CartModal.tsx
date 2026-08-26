@@ -10,7 +10,6 @@ import {
   fetchConfiguracion,
   fetchPerfilByEmail,
   createPedido,
-  updatePedido,
   cleanupExpiredPedidos,
 } from "../../lib/catalogApi";
 import { getProductImageUrl } from "../../utils/productImageUtils";
@@ -36,7 +35,6 @@ export default function CartModal() {
   const { showSuccess, showError } = useAlert();
   const [showCheckout, setShowCheckout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pedidoTimeout, setPedidoTimeout] = useState(null);
   const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
   const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
   const [validatingPrices, setValidatingPrices] = useState(false);
@@ -118,12 +116,6 @@ export default function CartModal() {
       });
     }
   }, [user]);
-
-  useEffect(() => {
-    return () => {
-      if (pedidoTimeout) clearTimeout(pedidoTimeout);
-    };
-  }, [pedidoTimeout]);
 
   // Determinar si los campos están bloqueados (usuario logueado con datos de BD)
   const campoNombreBloqueado = !!(user && dbUserData?.nombre);
@@ -263,33 +255,11 @@ export default function CartModal() {
           expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
         }),
         fuente: "web",
-        horario: orderData.notas.trim() || "Sin notas",
+        notas: orderData.notas.trim() || null,
         user_id: user?.id || null,
       };
 
-      const data = await createPedido(pedidoData);
-
-      // Timeout para cancelación automática
-      const timeoutId = setTimeout(
-        async () => {
-          try {
-            await updatePedido(
-              data.id,
-              {
-                estado: "cancelado",
-                horario:
-                  "Pedido cancelado automáticamente por timeout de 10 minutos",
-              },
-              "pendiente",
-            );
-          } catch (error) {
-            console.error("Error cancelando pedido automáticamente:", error);
-          }
-        },
-        10 * 60 * 1000,
-      );
-
-      setPedidoTimeout(timeoutId);
+      await createPedido(pedidoData);
 
       clearCart();
       setShowCheckout(false);

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { fetchConfiguracion, fetchPedidosByUserId } from "../lib/catalogApi";
+import { formatFechaHora } from "../utils/formatFechaHora";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -311,14 +312,7 @@ export default function OrdersPage() {
                           Pedido #{pedido.numeroPedidoUsuario}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          ID: #{pedido.id} ·{" "}
-                          {new Date(pedido.created_at).toLocaleDateString("es-AR", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          ID: #{pedido.id} · {formatFechaHora(pedido.created_at)}
                         </p>
                       </div>
                     </div>
@@ -480,9 +474,9 @@ export default function OrdersPage() {
                       <span className="flex items-center gap-1">
                         📍 {pedido.direccion || "Sin dirección"}
                       </span>
-                      {pedido.horario && pedido.horario !== "Sin notas" && (
+                      {pedido.notas && (
                         <span className="flex items-center gap-1">
-                          📝 {pedido.horario}
+                          📝 {pedido.notas}
                         </span>
                       )}
                     </div>

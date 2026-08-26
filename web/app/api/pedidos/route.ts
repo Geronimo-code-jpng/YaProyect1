@@ -17,6 +17,7 @@ const CREATE_FIELDS = [
   "expira_en",
   "fuente",
   "horario",
+  "notas",
   "user_id",
 ] as const;
 

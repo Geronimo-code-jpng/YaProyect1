@@ -29,6 +29,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import Toast from "./Toast";
 import { validateCartItems } from "../../utils/validateCartItems";
 import type { PriceChange } from "../../utils/validateCartItems";
+import { formatFechaHora } from "../../utils/formatFechaHora";
 
 export default function AdminPanel() {
   const router = useRouter();
@@ -691,6 +692,27 @@ export default function AdminPanel() {
     }
   };
 
+  // Corrección manual de estado: sin las validaciones/notificaciones del flujo
+  // normal, para poder revertir un cambio de estado hecho por error (p. ej. un
+  // cancelado sin querer) sin tener que rehacer el pedido ni tocar la DB.
+  const forzarEstadoPedido = async (idPedido, nuevoEstado) => {
+    try {
+      await updatePedido(idPedido, {
+        estado: nuevoEstado,
+        modificado_por: currentUser?.email,
+        fecha_modificacion: new Date().toISOString(),
+      });
+      showToast(`Estado del pedido #${idPedido} cambiado a "${nuevoEstado}"`);
+      setPedidoEditando((prev) =>
+        prev && prev.id === idPedido ? { ...prev, estado: nuevoEstado } : prev,
+      );
+      cargarPedidosAdmin();
+    } catch (err) {
+      console.error(`Error forzando estado a ${nuevoEstado}:`, err);
+      showToast("Error al cambiar el estado: " + err.message, "error");
+    }
+  };
+
   const abrirModalModificar = (id) => {
     const pedido = pedidos.find((p) => p.id === id);
     if (!pedido) return;
@@ -919,24 +941,6 @@ export default function AdminPanel() {
     setPedidoEditando(nuevoPedido);
   };
 
-  const reactivarTemporizador = async (pedidoId) => {
-    try {
-      const timeMinutes = 15;
-      await updatePedido(pedidoId, {
-        estado: "configurado",
-        expira_en: new Date(Date.now() + timeMinutes * 60 * 1000).toISOString(),
-        horario: `Temporizador reactivado - ${timeMinutes} minutos para pagar`,
-      });
-
-      showToast(
-        `Temporizador reactivado. El cliente tiene ${timeMinutes} minutos para pagar.`,
-      );
-      cargarPedidosAdmin();
-    } catch (err) {
-      showToast("Error reactivando temporizador: " + err.message, "error");
-    }
-  };
-
   const guardarModificacionPedido = async () => {
     try {
       const carritoParaGuardar = Array.isArray(pedidoEditando.carrito)
@@ -1157,6 +1161,17 @@ export default function AdminPanel() {
   const cerrarSesionAdmin = async () => {
     router.push("/");
   };
+
+  const ESTADOS_PEDIDO = [
+    "pendiente",
+    "aprobado",
+    "configurado",
+    "modificado",
+    "rechazado",
+    "pagado",
+    "vencido",
+    "cancelado",
+  ];
 
   const getEstadoBadge = (estado) => {
     const badges = {
@@ -1428,7 +1443,7 @@ export default function AdminPanel() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 text-sm">
                       {pedidosFiltrados.map((p) => {
-                        const fecha = p.created_at.split("T")[0];
+                        const fecha = formatFechaHora(p.created_at);
                         const tiempoRestante =
                           p.fuente === "web" &&
                           (p.estado === "configurado" ||
@@ -1476,6 +1491,11 @@ export default function AdminPanel() {
                                 <p className="text-xs font-bold text-gray-500 mt-1">
                                   <i className="fas fa-store mr-1"></i>Retira en
                                   Sucursal
+                                </p>
+                              )}
+                              {p.notas && (
+                                <p className="text-xs font-bold text-amber-700 mt-1">
+                                  📝 {p.notas}
                                 </p>
                               )}
                               {p.fuente === "web" &&
@@ -1546,28 +1566,16 @@ export default function AdminPanel() {
                                 </button>
                                 {p.fuente === "web" &&
                                   p.estado === "pendiente" && (
-                                    <>
-                                      <button
-                                        onClick={() =>
-                                          reactivarTemporizador(p.id)
-                                        }
-                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg shadow text-xs font-bold transition flex items-center gap-1"
-                                        title="Reactivar temporizador"
-                                      >
-                                        <i className="fas fa-clock"></i>{" "}
-                                        Reactivar
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          cambiarEstado(p.id, "rechazado")
-                                        }
-                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg shadow text-xs font-bold transition flex items-center gap-1"
-                                        title="Rechazar"
-                                      >
-                                        <i className="fas fa-times"></i>{" "}
-                                        Rechazar
-                                      </button>
-                                    </>
+                                    <button
+                                      onClick={() =>
+                                        cambiarEstado(p.id, "rechazado")
+                                      }
+                                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg shadow text-xs font-bold transition flex items-center gap-1"
+                                      title="Rechazar"
+                                    >
+                                      <i className="fas fa-times"></i>{" "}
+                                      Rechazar
+                                    </button>
                                   )}
                               </div>
                             </td>
@@ -2225,6 +2233,19 @@ export default function AdminPanel() {
                 <p className="mt-0.5">
                   {getEstadoBadge(pedidoEditando.estado)}
                 </p>
+                <select
+                  value={pedidoEditando.estado || "pendiente"}
+                  onChange={(e) =>
+                    forzarEstadoPedido(pedidoEditando.id, e.target.value)
+                  }
+                  className="mt-1.5 text-xs border border-gray-300 rounded-lg px-2 py-1 font-bold text-gray-700 bg-white"
+                >
+                  {ESTADOS_PEDIDO.map((estado) => (
+                    <option key={estado} value={estado}>
+                      {estado}
+                    </option>
+                  ))}
+                </select>
               </div>
               {pedidoEditando.email && (
                 <div className="col-span-2">
@@ -2233,6 +2254,16 @@ export default function AdminPanel() {
                   </span>
                   <p className="font-bold text-gray-800">
                     {pedidoEditando.email}
+                  </p>
+                </div>
+              )}
+              {pedidoEditando.notas && (
+                <div className="col-span-2">
+                  <span className="text-gray-400 font-bold uppercase">
+                    Notas del cliente
+                  </span>
+                  <p className="font-bold text-gray-800">
+                    📝 {pedidoEditando.notas}
                   </p>
                 </div>
               )}

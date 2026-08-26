@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { fetchPerfilByEmail, createPedido, updatePedido } from "../lib/catalogApi";
+import { fetchPerfilByEmail, createPedido } from "../lib/catalogApi";
 import { getProductImageUrl } from "../utils/productImageUtils";
 import { getShippingPriceFromDB } from "../utils/getShippingPrice";
 import {
@@ -38,7 +38,6 @@ export default function CartPage() {
   const { user, userProfile } = useAuth();
   const { showSuccess, showError } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pedidoTimeout, setPedidoTimeout] = useState(null);
   const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
   const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
   const [validatingPrices, setValidatingPrices] = useState(false);
@@ -99,12 +98,6 @@ export default function CartPage() {
       });
     }
   }, [user]);
-
-  useEffect(() => {
-    return () => {
-      if (pedidoTimeout) clearTimeout(pedidoTimeout);
-    };
-  }, [pedidoTimeout]);
 
   // Determinar si los campos están bloqueados
   const campoNombreBloqueado = !!(user && dbUserData?.nombre);
@@ -225,33 +218,11 @@ export default function CartPage() {
           expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
         }),
         fuente: "web",
-        horario: orderData.notas.trim() || "Sin notas",
+        notas: orderData.notas.trim() || null,
         user_id: user?.id || null,
       };
 
       const data = await createPedido(pedidoData);
-
-      // Timeout para cancelación automática
-      const timeoutId = setTimeout(
-        async () => {
-          try {
-            await updatePedido(
-              data.id,
-              {
-                estado: "cancelado",
-                horario:
-                  "Pedido cancelado automáticamente por timeout de 10 minutos",
-              },
-              "pendiente",
-            );
-          } catch (error) {
-            console.error("Error cancelando pedido automáticamente:", error);
-          }
-        },
-        10 * 60 * 1000,
-      );
-
-      setPedidoTimeout(timeoutId);
 
       clearCart();
 

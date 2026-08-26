@@ -66,6 +66,7 @@ export const pedidos = pgTable("pedidos", {
   metodo: text("metodo"),
   direccion: text("direccion"),
   horario: text("horario"),
+  notas: text("notas"),
   total: numeric("total"),
   carrito: jsonb("carrito"),
   user_id: uuid("user_id").defaultRandom(),

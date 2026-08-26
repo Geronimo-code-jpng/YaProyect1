@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { fetchPerfilByEmail, fetchPedidosByUserId, updatePerfil } from "../lib/catalogApi";
+import { formatFechaCorta } from "../utils/formatFechaHora";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -417,12 +418,7 @@ export default function ProfilePage() {
                                 Pedido #{pedido.id}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(
-                                  pedido.created_at,
-                                ).toLocaleDateString("es-AR", {
-                                  day: "numeric",
-                                  month: "short",
-                                })}
+                                {formatFechaCorta(pedido.created_at)}
                               </p>
                             </div>
                           </div>

@@ -63,6 +63,7 @@ CREATE TABLE pedidos (
     metodo text,
     direccion text,
     horario text,
+    notas text,
     total numeric,
     carrito jsonb,
     user_id uuid DEFAULT gen_random_uuid(),
