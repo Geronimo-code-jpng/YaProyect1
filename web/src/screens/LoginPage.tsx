@@ -13,9 +13,13 @@ export default function LoginPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loginForm, setLoginForm] = useState({
-    email: "",
-    password: ""
+  const [loginForm, setLoginForm] = useState(() => {
+    // Los emails de recordatorio linkean a /login?email=... para dejar el form listo.
+    let email = "";
+    if (typeof window !== "undefined") {
+      email = new URLSearchParams(window.location.search).get("email") || "";
+    }
+    return { email, password: "" };
   });
 
   // Redirect if already logged in

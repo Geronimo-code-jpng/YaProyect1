@@ -32,6 +32,7 @@ export default function CartPage() {
     cartTotal,
     clearCart,
     replaceCart,
+    markCartAsConverted,
     getCartTotalWithDiscount,
     qualifiesForFirstBuyDiscount,
   } = useCart();
@@ -213,10 +214,6 @@ export default function CartPage() {
         )
           ? 1000
           : 0,
-        created_at: new Date().toISOString(),
-        ...(orderData.metodoPago !== "efectivo" && {
-          expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-        }),
         fuente: "web",
         notas: orderData.notas.trim() || null,
         user_id: user?.id || null,
@@ -224,6 +221,7 @@ export default function CartPage() {
 
       const data = await createPedido(pedidoData);
 
+      markCartAsConverted();
       clearCart();
 
       showSuccess("¡Pedido enviado! Lo revisaremos a la brevedad.");
@@ -326,20 +324,24 @@ export default function CartPage() {
                       <img
                         src={getProductImageUrl(item)}
                         alt={item.nombre}
+                        loading="lazy"
+                        decoding="async"
                         className="w-40 hidden sm:block rounded-xl bg-gray-50"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            "https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod";
+                            "/producto-placeholder.svg";
                         }}
                       />
                       <div className="sm:flex-1 flex flex-col items-center sm:items-baseline">
                         <img
                           src={getProductImageUrl(item)}
                           alt={item.nombre}
+                          loading="lazy"
+                          decoding="async"
                           className="w-50 h-50 sm:hidden object-contain rounded-xl bg-gray-50"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
-                              "https://via.placeholder.com/96/f3f4f6/a1a1aa?text=Prod";
+                              "/producto-placeholder.svg";
                           }}
                         />
                         <h4 className="font-bold text-lg mb-2">

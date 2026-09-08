@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { configuracion } from "@/db/schema";
-import { jsonCors } from "@/lib/cors";
+import { jsonCors, jsonCorsCached } from "@/lib/cors";
 
 export async function GET() {
   const [row] = await db.select().from(configuracion).where(eq(configuracion.id, 1));
-  return jsonCors(row ?? null);
+  return jsonCorsCached(row ?? null);
 }
 
 const UPDATE_FIELDS = ["precio_envio", "banco", "titular", "alias", "cbu"] as const;

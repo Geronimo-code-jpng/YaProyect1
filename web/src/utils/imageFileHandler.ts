@@ -13,10 +13,22 @@ interface ProcessResult {
   error?: string;
 }
 
+// El servidor igual redimensiona y comprime a WebP, pero rechazamos acá los
+// archivos obviamente inservibles para no subir 40 MB a la función.
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15 MB
+
 export async function processProductImageReplacement(imageFile: File, product: ProductWithId): Promise<ProcessResult> {
   try {
     if (!product.Id) {
       throw new Error('No se pudo determinar el ID del producto');
+    }
+
+    if (!imageFile.type.startsWith('image/')) {
+      throw new Error('El archivo seleccionado no es una imagen');
+    }
+
+    if (imageFile.size > MAX_UPLOAD_BYTES) {
+      throw new Error('La imagen es demasiado grande (máx. 15 MB). Probá con una foto más liviana.');
     }
 
     const result = await uploadProductoImage(product.Id, imageFile);

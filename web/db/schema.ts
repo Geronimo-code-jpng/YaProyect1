@@ -57,6 +57,7 @@ export const perfiles = pgTable("perfiles", {
   rol: text("rol").default("cliente"),
   email: text("email"),
   password: text("password"),
+  created_at: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow(),
 });
 
 export const pedidos = pgTable("pedidos", {
@@ -80,6 +81,25 @@ export const pedidos = pgTable("pedidos", {
   metodo_pago: text("metodo_pago"),
   fecha_pago: timestamp("fecha_pago", { withTimezone: true, mode: "string" }),
   pagado_manualmente: boolean("pagado_manualmente"),
+});
+
+// Actividad de carrito para analítica del admin (carritos abandonados,
+// conversión). Se escribe con upsert por `session_id` desde CartContext cada
+// vez que cambia el carrito en el navegador. No reemplaza al carrito real
+// (sigue viviendo en localStorage); es solo un espejo para métricas.
+export const carrito_actividad = pgTable("carrito_actividad", {
+  id: bigint("id", { mode: "number" }).generatedByDefaultAsIdentity().primaryKey(),
+  session_id: text("session_id").notNull().unique(),
+  user_id: uuid("user_id"),
+  nombre: text("nombre"),
+  telefono: text("telefono"),
+  email: text("email"),
+  items: jsonb("items").default([]),
+  item_count: integer("item_count").notNull().default(0),
+  total: numeric("total").default("0"),
+  convertido: boolean("convertido").notNull().default(false),
+  created_at: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow(),
 });
 
 export const email_recovery = pgTable("email_recovery", {

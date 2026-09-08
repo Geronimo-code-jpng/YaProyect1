@@ -162,6 +162,8 @@ function InlineProduct({
           <img
             src={matchedProduct.Imagen}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="h-20 w-20 sm:h-24 sm:w-24 object-cover rounded-xl shrink-0 border border-gray-100"
           />
         )}

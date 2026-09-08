@@ -45,10 +45,6 @@ export async function updateConfiguracion(data: Partial<Configuracion>): Promise
   return api("/api/configuracion", { method: "PATCH", body: JSON.stringify(data) });
 }
 
-export async function fetchOfertasAleatorias(): Promise<Product[]> {
-  return api("/api/ofertas-aleatorias");
-}
-
 // --- Auth ---
 
 export interface AuthResult {
@@ -102,10 +98,6 @@ export async function fetchPerfilById(id: string): Promise<any | null> {
   return api(`/api/perfiles/${id}`);
 }
 
-export async function fetchPerfilesAdmin(): Promise<any[]> {
-  return api("/api/admin/perfiles");
-}
-
 export async function updatePerfil(id: string, data: Record<string, unknown>): Promise<any> {
   return api(`/api/perfiles/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
@@ -120,13 +112,6 @@ export async function fetchPedidosByUserId(userId: string): Promise<any[]> {
   return api(`/api/pedidos?user_id=${encodeURIComponent(userId)}`);
 }
 
-export async function fetchPedidosByContact(nombre?: string, telefono?: string): Promise<any[]> {
-  const params = new URLSearchParams();
-  if (nombre) params.set("nombre", nombre);
-  if (telefono) params.set("telefono", telefono);
-  return api(`/api/pedidos?${params.toString()}`);
-}
-
 export async function fetchPedidoById(id: number | string): Promise<any | null> {
   return api(`/api/pedidos/${id}`);
 }
@@ -136,15 +121,77 @@ export async function updatePedido(id: number | string, data: Record<string, unk
   return api(`/api/pedidos/${id}${query}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
-export async function fetchPedidosAdmin(): Promise<any[]> {
-  return api("/api/admin/pedidos");
+export async function fetchPedidosAdmin(signal?: AbortSignal): Promise<any[]> {
+  return api("/api/admin/pedidos", signal ? { signal } : undefined);
 }
 
 export async function cleanupExpiredPedidos(): Promise<{ success: boolean }> {
   return api("/api/pedidos/cleanup-expired", { method: "POST" });
 }
 
+// --- Actividad de carrito / analítica de clientes ---
+
+// Best-effort: espeja el carrito del navegador para métricas del admin. Nunca
+// tira el flujo del usuario si falla, y usa keepalive para sobrevivir a una
+// navegación inmediata.
+export async function trackCartActivity(data: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${BASE}/api/carrito-actividad`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      keepalive: true,
+    });
+  } catch {
+    /* ignorar: es solo telemetría */
+  }
+}
+
+export async function markCartConverted(sessionId: string): Promise<void> {
+  try {
+    await fetch(`${BASE}/api/carrito-actividad/convertir`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId }),
+      keepalive: true,
+    });
+  } catch {
+    /* ignorar */
+  }
+}
+
+export async function fetchClientesAdmin(): Promise<any> {
+  return api("/api/admin/clientes");
+}
+
+// Recordatorio "todavía no compraste" con el descuento de primera compra.
+export async function enviarRecordatorioSinCompra(
+  email: string,
+  nombre?: string | null,
+): Promise<{ success: boolean; error?: string }> {
+  return api("/api/admin/recordatorio-sin-compra", {
+    method: "POST",
+    body: JSON.stringify({ email, nombre }),
+  });
+}
+
+// Recordatorio de carrito abandonado. El server relee el carrito por session_id.
+export async function enviarRecordatorioCarritoAbandonado(
+  sessionId: string,
+): Promise<{ success: boolean; error?: string }> {
+  return api("/api/admin/recordatorio-carrito-abandonado", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
+
 // --- Admin: productos / categorías / imágenes ---
+
+// Igual que fetchProductos() pero además trae unidades_vendidas / ingresos_generados
+// reales (pedidos pagados). Sin caché de CDN: solo lo usa el panel.
+export async function fetchProductosAdmin(): Promise<Product[]> {
+  return api("/api/admin/productos");
+}
 
 export async function createProductoAdmin(data: Record<string, unknown>): Promise<Product> {
   return api("/api/admin/productos", { method: "POST", body: JSON.stringify(data) });

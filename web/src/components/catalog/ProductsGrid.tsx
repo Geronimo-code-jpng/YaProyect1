@@ -3,17 +3,38 @@
 import React, { useState, useEffect } from "react"
 import type { Product, CartItem } from "../../types";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "../../contexts/CartContext";
 
-// Función para generar URL de imagen por defecto si no hay imagen personalizada
-export const getDefaultProductImage = (productId: number) => {
-  return `https://via.placeholder.com/300x300/f3f4f6/a1a1aa?text=Producto+${productId}`;
+// Imagen por defecto (estática, servida desde /public) cuando el producto no
+// tiene una imagen cargada.
+export const getDefaultProductImage = (_productId?: number) => {
+  return "/producto-placeholder.svg";
 };
+
+// Cuántas tarjetas se muestran de entrada y cuántas suma cada "Ver más".
+// Limita el DOM y, sobre todo, cuántas imágenes puede llegar a pedir el
+// navegador al optimizador / a Blob de una sola vez.
+const PAGE_SIZE = 24;
 
 export default function ProductsGrid({ products }: { products: any; onAddToCart?: (product: any) => void }) {
   const { addToCart } = useCart();
   const [addedToCart, setAddedToCart] = useState(new Set());
   const [selectedTypes, setSelectedTypes] = useState({});
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Firma estable del listado filtrado: cambia sólo cuando cambia el resultado
+  // (categoría / búsqueda), no en cada render. Al cambiar, volvemos a la
+  // primera página.
+  const listSignature = `${products.length}:${products[0]?.Id ?? ""}:${
+    products[products.length - 1]?.Id ?? ""
+  }`;
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [listSignature]);
+
+  const visibleProducts = products.slice(0, visibleCount);
+  const hasMore = visibleCount < products.length;
 
   // Initialize selectedTypes to "Bulto" for products with solo_bulto
   useEffect(() => {
@@ -104,11 +125,12 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
   }
 
   return (
+    <>
     <div
       id="productsGrid"
       className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-6"
     >
-      {products.map((producto: Product) => {
+      {visibleProducts.map((producto: Product) => {
         const nombreSeguro = producto.nombre
           ? producto.nombre
               .replace(/"/g, "&quot;")
@@ -138,9 +160,11 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                   producto.imagen ||
                   getDefaultProductImage(producto.Id);
                 return (
-                  <img
+                  <Image
                     src={imgSrc}
-                    className="absolute inset-0 w-full h-full object-contain p-5 mix-blend-multiply"
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                    className="object-contain p-5 mix-blend-multiply"
                     alt={nombreSeguro}
                     onError={(e) => {
                       // Si falla la imagen, usar placeholder
@@ -291,5 +315,21 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
         );
       })}{" "}
     </div>
+
+    {hasMore && (
+      <div className="flex flex-col items-center gap-2 mt-8">
+        <p className="text-sm font-bold text-gray-400">
+          Mostrando {visibleProducts.length} de {products.length}
+        </p>
+        <button
+          type="button"
+          onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+          className="px-6 py-3 rounded-xl bg-[#FF6600] text-white font-black hover:bg-orange-700 transition shadow-lg"
+        >
+          Ver más productos
+        </button>
+      </div>
+    )}
+    </>
   );
 }

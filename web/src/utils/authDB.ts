@@ -1,4 +1,5 @@
 import { apiLogin } from '../lib/catalogApi';
+import { clearProductCache } from '../lib/productCache';
 import { UserSession } from '../types';
 
 export const loginWithDB = async (email: string, password: string): Promise<{success: boolean, user?: UserSession, error?: string}> => {
@@ -20,17 +21,18 @@ export const loginWithDB = async (email: string, password: string): Promise<{suc
 
     localStorage.setItem('userSession', JSON.stringify(session));
 
+    // Si entra un admin, borrar el cache de productos para que vea los cambios
+    // en vivo (sin esperar a que expire el cache de 5 min).
+    if (session.rol === 'admin') {
+      clearProductCache();
+    }
+
     return { success: true, user: session };
 
   } catch (error) {
     console.error('Error en loginWithDB:', error);
     return { success: false, error: 'Error en el servidor' };
   }
-};
-
-export const logoutFromDB = (): void => {
-  localStorage.removeItem('userSession');
-  window.location.reload();
 };
 
 export const getCurrentUserFromDB = (): UserSession | null => {

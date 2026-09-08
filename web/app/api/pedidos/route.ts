@@ -3,6 +3,9 @@ import { db } from "@/db/client";
 import { pedidos } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
 
+// created_at lo pone la DB (defaultNow) — nunca el cliente: el reloj del
+// dispositivo puede estar desfasado y el pedido aparecería fuera de orden en el
+// panel. expira_en solo lo setea el admin al pasar a "configurado" (PATCH).
 const CREATE_FIELDS = [
   "nombre_cliente",
   "telefono",
@@ -13,8 +16,6 @@ const CREATE_FIELDS = [
   "descuento_aplicado",
   "estado",
   "metodo",
-  "created_at",
-  "expira_en",
   "fuente",
   "horario",
   "notas",

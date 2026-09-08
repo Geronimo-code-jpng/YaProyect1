@@ -11,7 +11,12 @@ export interface Product {
   quantity?: number;
   solo_bulto?: boolean;
   oferta_express?: boolean;
+  /** Flag manual: destaca el producto en el carrusel "Más Vendidos" del inicio. */
   mas_vendido?: boolean;
+  /** Unidades reales vendidas en pedidos pagados (lo calcula /api/admin/productos). */
+  unidades_vendidas?: number;
+  /** Ingresos reales generados en pedidos pagados (lo calcula /api/admin/productos). */
+  ingresos_generados?: number;
   tipo?: string;
   precio_unitario?: number;
   quantity_per_bundle?: number;

@@ -49,10 +49,7 @@ export default function OfertasExpress() {
               id: p.Id,
               name: p.nombre,
               price: mainPrice,
-              image:
-                p.Imagen ||
-                p.imagen ||
-                `https://via.placeholder.com/300/f3f4f6/a1a1aa?text=${p.Id}`,
+              image: p.Imagen || p.imagen || "/producto-placeholder.svg",
               originalPrice: crossedPrice,
               discount: validDiscount,
             };

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, createContext, useContext, useEffect, useCallback, type ReactNode } from "react";
-import { fetchProductos } from "../lib/catalogApi";
+import { fetchProductos, fetchProductosAdmin } from "../lib/catalogApi";
+import { PRODUCT_CACHE_KEY as CACHE_KEY, PRODUCT_CACHE_TIMESTAMP_KEY as CACHE_TIMESTAMP_KEY, isAdminSession } from "../lib/productCache";
 import type { Product } from '../types';
 
-const CACHE_KEY = "ya_mayorista_products_cache";
-const CACHE_TIMESTAMP_KEY = "ya_mayorista_products_timestamp";
 const CACHE_DURATION = 5 * 60 * 1000;
 
 interface CacheStatus {
@@ -47,6 +46,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const isCacheValid = useCallback(() => {
     if (typeof window === "undefined") return false;
+    // El admin siempre trabaja sin cache para ver los cambios en vivo.
+    if (isAdminSession()) return false;
     const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
     if (!timestamp) return false;
     return Date.now() - parseInt(timestamp) < CACHE_DURATION;
@@ -69,6 +70,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   }, [isCacheValid]);
 
   const saveProductsToCache = useCallback((productsToCache: Product[]) => {
+    // No guardar cache mientras haya sesion de admin.
+    if (isAdminSession()) return;
     try {
       const now = Date.now();
       localStorage.setItem(CACHE_KEY, JSON.stringify(productsToCache));
@@ -98,7 +101,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const data = await fetchProductos();
+      const data = await (isAdmin ? fetchProductosAdmin() : fetchProductos());
       data.sort((a, b) => {
         if (a.Stock !== b.Stock) return a.Stock ? -1 : 1;
         return (a.nombre || "").localeCompare(b.nombre || "");
