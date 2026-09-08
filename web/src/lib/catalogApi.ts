@@ -45,10 +45,6 @@ export async function updateConfiguracion(data: Partial<Configuracion>): Promise
   return api("/api/configuracion", { method: "PATCH", body: JSON.stringify(data) });
 }
 
-export async function fetchOfertasAleatorias(): Promise<Product[]> {
-  return api("/api/ofertas-aleatorias");
-}
-
 // --- Auth ---
 
 export interface AuthResult {
@@ -102,10 +98,6 @@ export async function fetchPerfilById(id: string): Promise<any | null> {
   return api(`/api/perfiles/${id}`);
 }
 
-export async function fetchPerfilesAdmin(): Promise<any[]> {
-  return api("/api/admin/perfiles");
-}
-
 export async function updatePerfil(id: string, data: Record<string, unknown>): Promise<any> {
   return api(`/api/perfiles/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
@@ -120,13 +112,6 @@ export async function fetchPedidosByUserId(userId: string): Promise<any[]> {
   return api(`/api/pedidos?user_id=${encodeURIComponent(userId)}`);
 }
 
-export async function fetchPedidosByContact(nombre?: string, telefono?: string): Promise<any[]> {
-  const params = new URLSearchParams();
-  if (nombre) params.set("nombre", nombre);
-  if (telefono) params.set("telefono", telefono);
-  return api(`/api/pedidos?${params.toString()}`);
-}
-
 export async function fetchPedidoById(id: number | string): Promise<any | null> {
   return api(`/api/pedidos/${id}`);
 }
@@ -136,8 +121,8 @@ export async function updatePedido(id: number | string, data: Record<string, unk
   return api(`/api/pedidos/${id}${query}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
-export async function fetchPedidosAdmin(): Promise<any[]> {
-  return api("/api/admin/pedidos");
+export async function fetchPedidosAdmin(signal?: AbortSignal): Promise<any[]> {
+  return api("/api/admin/pedidos", signal ? { signal } : undefined);
 }
 
 export async function cleanupExpiredPedidos(): Promise<{ success: boolean }> {
@@ -201,6 +186,12 @@ export async function enviarRecordatorioCarritoAbandonado(
 }
 
 // --- Admin: productos / categorías / imágenes ---
+
+// Igual que fetchProductos() pero además trae unidades_vendidas / ingresos_generados
+// reales (pedidos pagados). Sin caché de CDN: solo lo usa el panel.
+export async function fetchProductosAdmin(): Promise<Product[]> {
+  return api("/api/admin/productos");
+}
 
 export async function createProductoAdmin(data: Record<string, unknown>): Promise<Product> {
   return api("/api/admin/productos", { method: "POST", body: JSON.stringify(data) });

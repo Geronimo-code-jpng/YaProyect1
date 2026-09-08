@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, createContext, useContext, useEffect, useCallback, type ReactNode } from "react";
-import { fetchProductos } from "../lib/catalogApi";
+import { fetchProductos, fetchProductosAdmin } from "../lib/catalogApi";
 import { PRODUCT_CACHE_KEY as CACHE_KEY, PRODUCT_CACHE_TIMESTAMP_KEY as CACHE_TIMESTAMP_KEY, isAdminSession } from "../lib/productCache";
 import type { Product } from '../types';
 
@@ -101,7 +101,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const data = await fetchProductos();
+      const data = await (isAdmin ? fetchProductosAdmin() : fetchProductos());
       data.sort((a, b) => {
         if (a.Stock !== b.Stock) return a.Stock ? -1 : 1;
         return (a.nombre || "").localeCompare(b.nombre || "");

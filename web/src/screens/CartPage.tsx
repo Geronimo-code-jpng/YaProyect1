@@ -214,10 +214,6 @@ export default function CartPage() {
         )
           ? 1000
           : 0,
-        created_at: new Date().toISOString(),
-        ...(orderData.metodoPago !== "efectivo" && {
-          expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-        }),
         fuente: "web",
         notas: orderData.notas.trim() || null,
         user_id: user?.id || null,

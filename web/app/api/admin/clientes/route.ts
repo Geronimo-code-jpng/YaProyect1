@@ -1,6 +1,7 @@
 import { db } from "@/db/client";
 import { perfiles, pedidos, carrito_actividad } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
+import { acumularVentas } from "@/lib/ventasPorProducto";
 
 // Estados que cuentan como venta concretada / ingreso real.
 const ESTADOS_PAGADOS = new Set(["pagado"]);
@@ -137,10 +138,6 @@ export async function GET() {
     clienteDePerfil(p);
   }
 
-  const topProductos = new Map<
-    string,
-    { Id: number | string | null; nombre: string; unidades: number; ingresos: number }
-  >();
   const ingresosPorMes = new Map<
     string,
     {
@@ -243,19 +240,6 @@ export async function GET() {
           m.pedidos_invitado += 1;
         }
         ingresosPorMes.set(mes, m);
-      }
-
-      for (const it of items) {
-        const k = String(it.Id ?? it.nombre);
-        const tp = topProductos.get(k) || {
-          Id: it.Id,
-          nombre: it.nombre,
-          unidades: 0,
-          ingresos: 0,
-        };
-        tp.unidades += it.cantidad;
-        tp.ingresos += it.subtotal;
-        topProductos.set(k, tp);
       }
     } else if (!ESTADOS_MUERTOS.has(estado)) {
       c.total_pendiente += total;
@@ -371,7 +355,7 @@ export async function GET() {
       totalCarritos > 0
         ? Math.round((carritosConvertidos / totalCarritos) * 100)
         : 0,
-    top_productos: [...topProductos.values()]
+    top_productos: [...acumularVentas(pedidosRows).values()]
       .sort((a, b) => b.unidades - a.unidades)
       .slice(0, 15),
     ingresos_por_mes: [...ingresosPorMes.entries()]

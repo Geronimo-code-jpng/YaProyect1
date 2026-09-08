@@ -250,10 +250,6 @@ export default function CartModal() {
           : 0,
         estado: "pendiente",
         metodo: orderData.metodoEntrega,
-        created_at: new Date().toISOString(),
-        ...(orderData.metodoPago !== "efectivo" && {
-          expira_en: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-        }),
         fuente: "web",
         notas: orderData.notas.trim() || null,
         user_id: user?.id || null,

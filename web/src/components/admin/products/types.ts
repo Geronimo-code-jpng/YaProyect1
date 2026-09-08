@@ -22,7 +22,20 @@ export interface ProductFormValues {
 }
 
 export type StockFilter = "todos" | "con" | "sin";
-export type SortKey = "nombre" | "precio-asc" | "precio-desc" | "stock";
+export type SortKey =
+  | "nombre"
+  | "precio-asc"
+  | "precio-desc"
+  | "stock"
+  | "vendidos";
+
+export interface ProductRowHandlers {
+  onEdit: (id: number) => void;
+  onRemove: (id: number) => void;
+  onFlag: (id: number, flag: ProductFlag, value: boolean) => void;
+  onQuantity: (id: number, quantity: number) => void;
+  onQuantityCommit: (id: number) => void;
+}
 
 export const FLAG_META: Record<
   ProductFlag,

@@ -15,7 +15,11 @@ type ToastType = "success" | "error" | "info";
 
 interface Options {
   showToast: (message: string, type?: ToastType) => void;
-  showConfirm: (message: string, onConfirm: () => void) => void;
+  showConfirm: (
+    message: string,
+    onConfirm: () => void,
+    tone?: "brand" | "danger",
+  ) => void;
 }
 
 const QUANTITY_COMMIT_DELAY = 700;
@@ -229,6 +233,7 @@ export function useAdminProducts({ showToast, showConfirm }: Options) {
             showToast("Error al eliminar el producto", "error");
           }
         },
+        "danger",
       );
     },
     [showConfirm, showToast],

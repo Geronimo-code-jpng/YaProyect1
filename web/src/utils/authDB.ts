@@ -35,11 +35,6 @@ export const loginWithDB = async (email: string, password: string): Promise<{suc
   }
 };
 
-export const logoutFromDB = (): void => {
-  localStorage.removeItem('userSession');
-  window.location.reload();
-};
-
 export const getCurrentUserFromDB = (): UserSession | null => {
   try {
     const session = localStorage.getItem('userSession');
