@@ -1,10 +1,30 @@
 "use client";
 
-import { useState, createContext, useContext, useEffect, type ReactNode } from "react";
+import { useState, useRef, useCallback, createContext, useContext, useEffect, type ReactNode } from "react";
 import type { Product } from '../types';
+import { useAuth } from "./AuthContext";
+import { trackCartActivity, markCartConverted } from "../lib/catalogApi";
 
 const CART_EXPIRATION = 1000 * 60 * 60;
 const STORAGE_KEY = "yaCart";
+const SESSION_KEY = "yaCartSession";
+const TRACK_DEBOUNCE = 1500;
+
+function getCartSessionId(): string | null {
+  try {
+    let sid = localStorage.getItem(SESSION_KEY);
+    if (!sid) {
+      sid =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(SESSION_KEY, sid);
+    }
+    return sid;
+  } catch {
+    return null;
+  }
+}
 
 interface CartItem extends Product {
   cantidad: number;
@@ -22,6 +42,7 @@ interface CartContextValue {
   updateQuantity: (id: number | string, cantidad: number, tipo?: string | null) => void;
   clearCart: () => void;
   replaceCart: (items: CartItem[]) => void;
+  markCartAsConverted: () => void;
   cartTotal: number;
   cartCount: number;
   isCartOpen: boolean;
@@ -36,6 +57,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const { user, userProfile } = useAuth();
+  // Solo empezamos a espejar el carrito una vez que tuvo items, para no crear
+  // una fila de telemetría por cada visitante que nunca agrega nada.
+  const trackedRef = useRef(false);
 
   // Cargar el carrito guardado recién en el cliente (localStorage no existe en SSR)
   useEffect(() => {
@@ -68,6 +93,42 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   }, [cart, hydrated]);
+
+  // Espejo del carrito en el servidor para la analítica del admin (carritos
+  // abandonados, conversión). Debounced; best-effort; nunca bloquea la UI.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (cart.length > 0) trackedRef.current = true;
+    if (!trackedRef.current) return;
+
+    const t = setTimeout(() => {
+      const sid = getCartSessionId();
+      if (!sid) return;
+      trackCartActivity({
+        session_id: sid,
+        user_id: user?.id ?? null,
+        nombre: userProfile?.nombre ?? null,
+        telefono: userProfile?.telefono ?? null,
+        email: userProfile?.email ?? user?.email ?? null,
+        items: cart.map((item) => ({
+          Id: item.Id,
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio: item.precio,
+          tipo: item.tipo || "Bulto",
+        })),
+      });
+    }, TRACK_DEBOUNCE);
+
+    return () => clearTimeout(t);
+  }, [cart, hydrated, user, userProfile]);
+
+  // Se llama al confirmar un pedido: marca la sesión como convertida para que
+  // su carrito no figure como abandonado.
+  const markCartAsConverted = useCallback(() => {
+    const sid = getCartSessionId();
+    if (sid) markCartConverted(sid);
+  }, []);
 
   const addToCart = (product: Product & { cantidad?: number; tipo?: string }) => {
     if (!product.Id) {
@@ -153,6 +214,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     <CartContext.Provider
       value={{
         cart, addToCart, removeFromCart, updateQuantity, clearCart, replaceCart,
+        markCartAsConverted,
         cartTotal, cartCount, isCartOpen, setIsCartOpen,
         getCartTotalWithDiscount, qualifiesForFirstBuyDiscount,
       }}
