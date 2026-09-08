@@ -1,4 +1,8 @@
-import { useEffect } from "react"
+"use client";
+
+import { useEffect } from "react";
+import clsx from "clsx";
+import { CheckCircle2, XCircle, Info, X } from "lucide-react";
 
 interface ToastProps {
   message: string;
@@ -6,11 +10,11 @@ interface ToastProps {
   onClose: () => void;
 }
 
-const COLORS: Record<string, string> = {
-  success: "bg-green-500",
-  error: "bg-red-500",
-  info: "bg-blue-500",
-};
+const CONFIG = {
+  success: { bg: "bg-green-500", Icon: CheckCircle2 },
+  error: { bg: "bg-red-500", Icon: XCircle },
+  info: { bg: "bg-blue-500", Icon: Info },
+} as const;
 
 export default function Toast({ message, type, onClose }: ToastProps) {
   useEffect(() => {
@@ -18,14 +22,25 @@ export default function Toast({ message, type, onClose }: ToastProps) {
     return () => clearTimeout(t);
   }, [onClose]);
 
+  const { bg, Icon } = CONFIG[type] || CONFIG.info;
+
   return (
     <div
-      className={`fixed top-5 right-5 z-9999 ${COLORS[type] || COLORS.info} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold`}
+      role="status"
+      className={clsx(
+        "fixed top-5 right-5 z-9999 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 font-bold max-w-sm",
+        "motion-safe:animate-[popIn_140ms_ease-out]",
+        bg,
+      )}
     >
-      <i className={`fas ${type === "success" ? "fa-check-circle" : type === "error" ? "fa-times-circle" : "fa-info-circle"} text-xl`}></i>
-      <span>{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-70">
-        <i className="fas fa-times"></i>
+      <Icon size={20} className="shrink-0" />
+      <span className="text-sm">{message}</span>
+      <button
+        onClick={onClose}
+        aria-label="Cerrar"
+        className="ml-1 shrink-0 hover:opacity-70 transition-opacity"
+      >
+        <X size={16} />
       </button>
     </div>
   );

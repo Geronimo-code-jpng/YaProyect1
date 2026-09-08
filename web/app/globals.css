@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Brand tokens — enables bg-brand / text-brand / border-brand / ring-brand */
+@theme {
+  --color-brand: #ff6600;
+  --color-brand-hover: #e25c00;
+}
+
+/* Modal enter animations (respected only under motion-safe) */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* Custom utilities for scrollbar hiding */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* Internet Explorer 10+ */
