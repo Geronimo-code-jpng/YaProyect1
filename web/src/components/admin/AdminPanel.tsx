@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   fetchConfiguracion,
   updateConfiguracion,
@@ -21,6 +22,7 @@ import {
   fetchProductoById,
 } from "../../lib/catalogApi";
 import ProductModal from "./ProductModal";
+import ClientesTab from "./ClientesTab";
 import { useProducts } from "../../contexts/ProductContext";
 
 import { processProductImageReplacement } from "../../utils/imageFileHandler";
@@ -1397,6 +1399,16 @@ export default function AdminPanel() {
             >
               Perfiles
             </button>
+            <button
+              onClick={() => setActiveTab("clientes")}
+              className={`py-2 hover:cursor-pointer px-1 border-b-2 font-medium text-sm transition ${
+                activeTab === "clientes"
+                  ? "border-[#FF6600] text-[#FF6600]"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Clientes
+            </button>
           </nav>
         </div>
 
@@ -1684,24 +1696,26 @@ export default function AdminPanel() {
                           >
                             <td className="p-4 font-medium">{product.Id}</td>
                             <td className="p-4">
-                              <img
+                              <Image
                                 src={
                                   product.Imagen ||
                                   product.imagen ||
-                                  `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${product.Id}`
+                                  "/producto-placeholder.svg"
                                 }
                                 alt={product.nombre}
+                                width={48}
+                                height={48}
                                 className="w-12 h-12 object-contain rounded-lg"
                                 onError={(e) => {
                                   console.error(
                                     `Error cargando imagen para producto ${(product as any).Id}`,
                                   );
                                   (e.target as HTMLImageElement).src =
-                                    `https://via.placeholder.com/48/f3f4f6/a1a1aa?text=${(product as any).Id}`;
+                                    "/producto-placeholder.svg";
                                 }}
                                 title={
                                   product.Imagen || product.imagen
-                                    ? "Imagen de Supabase Storage"
+                                    ? "Imagen del producto"
                                     : "Sin imagen"
                                 }
                               />
@@ -2170,6 +2184,8 @@ export default function AdminPanel() {
             </p>
           </div>
         )}
+
+        {activeTab === "clientes" && <ClientesTab />}
       </main>
 
       {/* Modal de edición */}

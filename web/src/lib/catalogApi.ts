@@ -144,6 +144,62 @@ export async function cleanupExpiredPedidos(): Promise<{ success: boolean }> {
   return api("/api/pedidos/cleanup-expired", { method: "POST" });
 }
 
+// --- Actividad de carrito / analítica de clientes ---
+
+// Best-effort: espeja el carrito del navegador para métricas del admin. Nunca
+// tira el flujo del usuario si falla, y usa keepalive para sobrevivir a una
+// navegación inmediata.
+export async function trackCartActivity(data: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${BASE}/api/carrito-actividad`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      keepalive: true,
+    });
+  } catch {
+    /* ignorar: es solo telemetría */
+  }
+}
+
+export async function markCartConverted(sessionId: string): Promise<void> {
+  try {
+    await fetch(`${BASE}/api/carrito-actividad/convertir`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId }),
+      keepalive: true,
+    });
+  } catch {
+    /* ignorar */
+  }
+}
+
+export async function fetchClientesAdmin(): Promise<any> {
+  return api("/api/admin/clientes");
+}
+
+// Recordatorio "todavía no compraste" con el descuento de primera compra.
+export async function enviarRecordatorioSinCompra(
+  email: string,
+  nombre?: string | null,
+): Promise<{ success: boolean; error?: string }> {
+  return api("/api/admin/recordatorio-sin-compra", {
+    method: "POST",
+    body: JSON.stringify({ email, nombre }),
+  });
+}
+
+// Recordatorio de carrito abandonado. El server relee el carrito por session_id.
+export async function enviarRecordatorioCarritoAbandonado(
+  sessionId: string,
+): Promise<{ success: boolean; error?: string }> {
+  return api("/api/admin/recordatorio-carrito-abandonado", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
+
 // --- Admin: productos / categorías / imágenes ---
 
 export async function createProductoAdmin(data: Record<string, unknown>): Promise<Product> {
