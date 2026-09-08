@@ -339,9 +339,11 @@ export default function CartModal() {
                 <img
                   src={getProductImageUrl(item)}
                   alt={item.nombre}
+                  loading="lazy"
+                  decoding="async"
                   className="w-20 h-20 lg:w-28 lg:h-28 object-cover rounded-lg"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80/f3f4f6/a1a1aa?text=Prod';
+                    (e.target as HTMLImageElement).src = '/producto-placeholder.svg';
                   }}
                 />
                 <div className="flex-1 min-w-0">

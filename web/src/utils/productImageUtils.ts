@@ -25,5 +25,5 @@ export function getProductImageUrl(product: Product): string {
     if (imagePath) return imagePath;
   }
 
-  return 'https://via.placeholder.com/200/f3f4f6/a1a1aa?text=Prod';
+  return '/producto-placeholder.svg';
 }

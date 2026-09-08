@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { productos } from "@/db/schema";
-import { jsonCors } from "@/lib/cors";
+import { jsonCorsCached } from "@/lib/cors";
 
 export async function GET(
   _request: Request,
@@ -12,5 +12,5 @@ export async function GET(
     .select()
     .from(productos)
     .where(eq(productos.Id, Number(id)));
-  return jsonCors(row ?? null);
+  return jsonCorsCached(row ?? null);
 }

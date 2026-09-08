@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import Image from "next/image";
 import { useCart } from '../../contexts/CartContext';
 
 /**
@@ -68,13 +69,15 @@ export default function HomeProductCard({ product, compact = false }) {
             <i className="fas fa-fire mr-1"></i> OFERTA
           </div>
         )}
-        <div className="h-40 sm:h-52 bg-gray-100 rounded-xl mb-3 overflow-hidden">
-          <img
-            src={product.image}
+        <div className="relative h-40 sm:h-52 bg-gray-100 rounded-xl mb-3 overflow-hidden">
+          <Image
+            src={product.image || "/producto-placeholder.svg"}
             alt={product.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            sizes="(max-width: 640px) 50vw, 300px"
+            className="object-cover hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x300/f3f4f6/a1a1aa?text=Producto';
+              (e.target as HTMLImageElement).src = '/producto-placeholder.svg';
             }}
           />
         </div>
@@ -120,10 +123,12 @@ export default function HomeProductCard({ product, compact = false }) {
       )}
 
       <div className="h-32 bg-gray-100 rounded-lg mb-3 overflow-hidden relative">
-        <img
-          src={product.image || product.imagen || "https://via.placeholder.com/150x150"}
+        <Image
+          src={product.image || product.imagen || "/producto-placeholder.svg"}
           alt={product.name || product.nombre || "Producto"}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          fill
+          sizes="(max-width: 768px) 50vw, 300px"
+          className="object-cover hover:scale-105 transition-transform duration-300"
         />
 
         {/* Indicador de stock */}

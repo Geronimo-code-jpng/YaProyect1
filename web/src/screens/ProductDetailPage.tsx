@@ -3,11 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "../contexts/CartContext";
+import { useProducts } from "../contexts/ProductContext";
 import { fetchProductoById } from "../lib/catalogApi";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { products } = useProducts();
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [typeOfQuantity, setTypeOfQuantity] = useState("Unidad");
@@ -22,19 +25,36 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
 
   useEffect(() => {
+    // 1) Si el catálogo ya está en memoria (contexto), usamos ese producto y
+    //    no hacemos ninguna llamada al backend. Es el caso normal: el usuario
+    //    llega desde /productos, donde ya se cargó todo.
+    const fromContext = (products || []).find(
+      (p) => p && Number(p.Id) === Number(id),
+    );
+    if (fromContext) {
+      setProduct(fromContext);
+      setIsLoading(false);
+      return;
+    }
+
+    // 2) Fallback: entrada directa por URL con el catálogo todavía sin cargar.
+    let cancelled = false;
     const loadProduct = async () => {
       try {
         const data = await fetchProductoById(id);
-        setProduct(data);
-        setIsLoading(false);
+        if (!cancelled) setProduct(data);
       } catch (error) {
         console.error("Error loading product:", error);
-        setIsLoading(false);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadProduct();
-  }, [id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, products]);
 
   const getDiscountAmount = () => {
     if (!product) return 0;
@@ -138,17 +158,16 @@ export default function ProductDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Product Image */}
-        <div className="bg-gray-100 rounded-2xl overflow-hidden aspect-square">
-          <img
-            src={
-              product.Imagen ||
-              "https://via.placeholder.com/600/f3f4f6/a1a1aa?text=Producto"
-            }
+        <div className="relative bg-gray-100 rounded-2xl overflow-hidden aspect-square">
+          <Image
+            src={product.Imagen || "/producto-placeholder.svg"}
             alt={product.nombre}
-            className="w-full h-full object-contain"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-contain"
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                "https://via.placeholder.com/600/f3f4f6/a1a1aa?text=Producto";
+              (e.target as HTMLImageElement).src = "/producto-placeholder.svg";
             }}
           />
         </div>

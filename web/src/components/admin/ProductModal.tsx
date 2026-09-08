@@ -309,24 +309,16 @@ export default function ProductModal({
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800 mb-2">
                         <i className="fas fa-cloud mr-2"></i>
-                        <strong>Almacenamiento en Supabase Storage:</strong>
+                        <strong>Optimización automática:</strong>
                       </p>
                       <div className="text-sm text-blue-700 space-y-2">
                         <p>
-                          <strong>Sistema:</strong> La imagen se sube a Supabase
-                          Storage (1 GB gratuito).
+                          Subí la foto en la calidad que tengas: el servidor la
+                          redimensiona y la convierte a WebP antes de guardarla.
                         </p>
                         <p>
-                          <strong>Proceso:</strong> Subida directa con URL
-                          pública automática.
-                        </p>
-                        <p>
-                          <strong>Resultado:</strong> La imagen se almacenará en
-                          la nube y será visible inmediatamente.
-                        </p>
-                        <p className="text-xs text-blue-600 mt-2">
-                          Espacio ilimitado para imágenes. Profesional y
-                          escalable. Ideal para Vercel.
+                          El archivo final pesa unos pocos KB, así que el consumo
+                          de datos es mínimo.
                         </p>
                       </div>
                     </div>
