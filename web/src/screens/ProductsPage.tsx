@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useProducts } from "../contexts/ProductContext";
 import { ProductsGrid } from "../components/catalog";
 import { useSearchParams, useRouter } from "next/navigation";
-import { fetchCategorias } from "../lib/catalogApi";
 
 export default function ProductsPage() {
   const { products, isLoading } = useProducts();
@@ -17,14 +16,19 @@ export default function ProductsPage() {
 
   const [searchTerm, setSearchTerm] = useState(searchFromUrl);
   const [categoriaActual, setCategoriaActual] = useState("Todas");
-  const [categoriasDb, setCategoriasDb] = useState([]);
+  const subFromUrl = searchParams.get("subcategoria") || "";
 
-  useEffect(() => {
-    fetchCategorias().then((data) => {
-      const nombres = data.map((c) => c.categoria).sort();
-      setCategoriasDb(nombres);
-    });
-  }, []);
+  // La categoría es el RUBRO del sistema del negocio (BEBIDAS, ALIMENTOS…) y
+  // adentro se filtra por sub-rubro. Salen de los productos mismos: ya no hay
+  // una lista de categorías aparte que mantener a mano.
+  const categoriasDb = useMemo(
+    () =>
+      [...new Set((products || []).map((p) => p?.Categoria).filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b)),
+      ) as string[],
+    [products],
+  );
+  const mismaCategoria = (a, b) => String(a || "").toUpperCase() === String(b || "").toUpperCase();
 
   const normalizeCategory = (cat) => {
     const map = {
@@ -66,6 +70,13 @@ export default function ProductsPage() {
       );
     }, 400);
   };
+  const handleSubcategoryChange = (sub) => {
+    const params = new URLSearchParams(searchParams);
+    if (sub) params.set("subcategoria", sub);
+    else params.delete("subcategoria");
+    router.push(params.toString() ? `/productos?${params.toString()}` : "/productos");
+  };
+
   const handleCategoryChange = (newCategory) => {
     setCategoriaActual(newCategory);
 
@@ -86,6 +97,8 @@ export default function ProductsPage() {
     };
 
     const params = new URLSearchParams(searchParams);
+    // Al cambiar de rubro, el sub-rubro de antes ya no corresponde
+    params.delete("subcategoria");
 
     if (newCategory === "Todas" || newCategory === "Todas_Filtro") {
       params.delete("categoria");
@@ -101,6 +114,21 @@ export default function ProductsPage() {
 
   // Get unique categories
   const categorias = ["Todas", "SoloOfertas", ...categoriasDb];
+  const categoriaSeleccionada =
+    categorias.find((c) => mismaCategoria(c, categoriaActual)) ?? categoriaActual;
+
+  // Los sub-rubros del rubro elegido
+  const subcategorias = useMemo(() => {
+    if (categoriaActual === "Todas" || categoriaActual === "Todas_Filtro" || categoriaActual === "SoloOfertas") return [];
+    return [
+      ...new Set(
+        (products || [])
+          .filter((p) => p && mismaCategoria(p.Categoria, categoriaActual))
+          .map((p) => p.subcategoria)
+          .filter(Boolean),
+      ),
+    ].sort((a, b) => String(a).localeCompare(String(b))) as string[];
+  }, [products, categoriaActual]);
 
   const productosFiltrados = (products || []).filter((product) => {
     if (!product) return false;
@@ -126,8 +154,9 @@ export default function ProductsPage() {
       return matchesSearch;
     }
 
-    const matchesCategory = product.Categoria === categoriaActual;
-    return matchesCategory && matchesSearch;
+    const matchesCategory = mismaCategoria(product.Categoria, categoriaActual);
+    const matchesSub = !subFromUrl || product.subcategoria === subFromUrl;
+    return matchesCategory && matchesSub && matchesSearch;
   });
 
   return (
@@ -150,7 +179,7 @@ export default function ProductsPage() {
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
               />
               <select
-                value={categoriaActual}
+                value={categoriaSeleccionada}
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
               >
@@ -170,6 +199,21 @@ export default function ProductsPage() {
                   );
                 })}
               </select>
+              {subcategorias.length > 0 && (
+                <select
+                  value={subFromUrl}
+                  onChange={(e) => handleSubcategoryChange(e.target.value)}
+                  aria-label="Filtrar por sub-rubro"
+                  className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
+                >
+                  <option value="">Todos los sub-rubros</option>
+                  {subcategorias.map((sub) => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </div>

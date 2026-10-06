@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:diff": "node scripts/db-diff.mjs",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.3.1",

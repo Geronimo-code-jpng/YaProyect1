@@ -7,19 +7,29 @@ import Image from "next/image";
 import { useCart } from "../contexts/CartContext";
 import { useProducts } from "../contexts/ProductContext";
 import { fetchProductoById } from "../lib/catalogApi";
+import {
+  hay,
+  hayBulto,
+  hayUnidad,
+  precioDe,
+  precioBulto,
+  tieneUnidad,
+  tipoInicial,
+  unidadesPorBulto,
+  type Tipo,
+} from "../lib/presentaciones";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { products } = useProducts();
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [typeOfQuantity, setTypeOfQuantity] = useState("Unidad");
+  const [typeOfQuantity, setTypeOfQuantity] = useState<Tipo>("Bulto");
 
-  // Set default to "Bulto" if solo_bulto is true
+  // Al cargar el producto se elige el bulto, salvo que solo queden unidades
+  // sueltas. "Unidad" solo existe si el sistema dice que el artículo tiene suelto.
   useEffect(() => {
-    if (product && product.solo_bulto) {
-      setTypeOfQuantity("Bulto");
-    }
+    if (product) setTypeOfQuantity(tipoInicial(product));
   }, [product]);
   const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
@@ -63,19 +73,11 @@ export default function ProductDetailPage() {
     return d > 0 && d < original ? d : 0;
   };
 
+  // El precio de cada presentación lo manda el sistema del negocio: la página
+  // ya no inventa el de la unidad.
   const calculatePrice = () => {
     if (!product) return 0;
-
-    const bundleOriginal = product.precio || 0;
-    const quantityPerBundle = product.quantity || 1;
-    const discount = getDiscountAmount();
-    const isBulto = typeOfQuantity === "Bulto";
-    const bundlePrice =
-      isBulto && discount > 0 ? bundleOriginal : bundleOriginal;
-    const unitPrice =
-      Math.ceil(((bundleOriginal / quantityPerBundle) * 1.2) / 10) * 10;
-
-    return isBulto ? bundlePrice : unitPrice;
+    return precioDe(product, typeOfQuantity);
   };
 
   const calculateOriginalPrice = () => {
@@ -83,11 +85,15 @@ export default function ProductDetailPage() {
     const discount = getDiscountAmount();
     if (discount <= 0 || typeOfQuantity !== "Bulto") return null;
 
-    return product.precio || 0;
+    return precioBulto(product);
   };
 
+  // Sin nada que vender de la presentación elegida (o sin stock del todo)
+  const sinStock = !!product
+    && ((!product.Stock && product.Stock !== undefined) || !hay(product, typeOfQuantity));
+
   const handleAddToCart = () => {
-    if (product && (!product.Stock || product.Stock === undefined)) {
+    if (!product || sinStock) {
       return;
     }
     if (product) {
@@ -97,7 +103,7 @@ export default function ProductDetailPage() {
         tipo: typeOfQuantity,
         precio: calculatePrice(),
         precio_unitario: calculatePrice(),
-        quantity_per_bundle: product?.quantity || 1,
+        quantity_per_bundle: unidadesPorBulto(product),
       });
     }
   };
@@ -214,13 +220,16 @@ export default function ProductDetailPage() {
               Tipo de compra
             </h3>
             <div className="flex gap-3">
-              {!product.solo_bulto && (
+              {tieneUnidad(product) && (
                 <button
+                  disabled={!hayUnidad(product)}
                   onClick={() => setTypeOfQuantity("Unidad")}
                   className={`flex-1 py-3 px-4 rounded-xl font-black transition ${
-                    typeOfQuantity === "Unidad"
-                      ? "bg-[#FF6600] text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    !hayUnidad(product)
+                      ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
+                      : typeOfQuantity === "Unidad"
+                        ? "bg-[#FF6600] text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <i className="fas fa-box mr-2"></i>
@@ -228,28 +237,25 @@ export default function ProductDetailPage() {
                 </button>
               )}
               <button
+                disabled={!hayBulto(product)}
                 onClick={() => setTypeOfQuantity("Bulto")}
                 className={`flex-1 py-3 px-4 rounded-xl font-black transition ${
-                  typeOfQuantity === "Bulto"
-                    ? "bg-[#FF6600] text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  !hayBulto(product)
+                    ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
+                    : typeOfQuantity === "Bulto"
+                      ? "bg-[#FF6600] text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 <i className="fas fa-boxes mr-2"></i>
                 Por Bulto
-                {product && product.quantity > 1 && (
+                {tieneUnidad(product) && unidadesPorBulto(product) > 1 && (
                   <span className="ml-2 text-xs">
-                    ({product.quantity} unidades)
+                    ({unidadesPorBulto(product)} unidades)
                   </span>
                 )}
               </button>
             </div>
-            {product.solo_bulto && (
-              <p className="text-sm text-blue-600 mt-2 font-medium">
-                <i className="fas fa-info-circle mr-1"></i>
-                Este producto solo se vende por bulto
-              </p>
-            )}
           </div>
 
           {/* Quantity Selector */}
@@ -277,21 +283,21 @@ export default function ProductDetailPage() {
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}
-            disabled={!product.Stock && product.Stock !== undefined}
+            disabled={sinStock}
             className={`w-full text-lg font-black py-4 rounded-xl transition shadow-lg ${
-              !product.Stock && product.Stock !== undefined
+              sinStock
                 ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed"
                 : "bg-[#FF6600] text-white hover:bg-orange-700"
             }`}
           >
             <i
               className={`fas mr-2 ${
-                !product.Stock && product.Stock !== undefined
+                sinStock
                   ? "fa-ban"
                   : "fa-shopping-cart"
               }`}
             ></i>
-            {!product.Stock && product.Stock !== undefined
+            {sinStock
               ? "NO DISPONIBLE"
               : "Agregar al Carrito"}
           </button>

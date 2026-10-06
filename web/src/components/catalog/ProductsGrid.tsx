@@ -5,6 +5,17 @@ import type { Product, CartItem } from "../../types";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "../../contexts/CartContext";
+import {
+  hay,
+  hayBulto,
+  hayUnidad,
+  precioDe,
+  precioBulto,
+  tieneUnidad,
+  tipoValido,
+  unidadesPorBulto,
+  type Tipo,
+} from "../../lib/presentaciones";
 
 // Imagen por defecto (estática, servida desde /public) cuando el producto no
 // tiene una imagen cargada.
@@ -36,27 +47,25 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
   const visibleProducts = products.slice(0, visibleCount);
   const hasMore = visibleCount < products.length;
 
-  // Initialize selectedTypes to "Bulto" for products with solo_bulto
-  useEffect(() => {
-    const initialTypes = {};
-    products.forEach((producto: Product) => {
-      if (producto.solo_bulto) {
-        initialTypes[producto.Id] = "Bulto";
-      }
-    });
-    if (Object.keys(initialTypes).length > 0) {
-      setSelectedTypes((prev) => ({ ...prev, ...initialTypes }));
-    }
-  }, [products]);
+  // Qué presentación está elegida en cada tarjeta. Si nadie eligió nada: el
+  // bulto, salvo que solo queden unidades sueltas. "Unidad" solo existe si el
+  // sistema dice que el artículo tiene suelto.
+  const tipoElegido = (producto: Product): Tipo => tipoValido(producto, selectedTypes[producto.Id]);
+
+  // Sin nada que vender de la presentación elegida (o sin stock del todo)
+  const sinStock = (producto: Product) =>
+    (!producto.Stock && producto.Stock !== undefined) || !hay(producto, tipoElegido(producto));
 
   const getDiscount = (producto) => {
     const d = parseInt(producto.Oferta) || 0;
     return d > 0 && d < Number(producto.precio) ? d : 0;
   };
 
-  const handleAddToCart = (producto, event, tipo = "Bulto") => {
+  const handleAddToCart = (producto, event, tipo: Tipo = "Bulto") => {
     event.preventDefault();
     event.stopPropagation();
+    // No se agrega una presentación de la que no hay
+    if (!hay(producto, tipo)) return;
 
     const nombreSeguro = producto.nombre
       ? producto.nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, "").trim()
@@ -64,14 +73,10 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
     const imgSrc =
       producto.Imagen || producto.imagen || getDefaultProductImage(producto.Id);
 
-    const bundleOriginal = Number(producto.precio) || 0;
     const discount = getDiscount(producto);
-    const quantityPerBundle = producto.quantity || 1;
-    const unitOriginal =
-      Math.ceil(((bundleOriginal / quantityPerBundle) * 1.2) / 10) * 10;
-    const bundlePrice =
-      discount > 0 ? bundleOriginal : bundleOriginal;
-    const finalPrice = tipo === "Bulto" ? bundlePrice : unitOriginal;
+    const quantityPerBundle = unidadesPorBulto(producto);
+    // El precio de cada presentación lo manda el sistema: ya no se calcula acá
+    const finalPrice = precioDe(producto, tipo);
 
     addToCart({
       Id: producto.Id,
@@ -195,10 +200,11 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                 {nombreSeguro}
               </h3>
               <div className="mt-auto">
-                {/* Unit/Bundle Selector */}
+                {/* Unit/Bundle Selector: cada presentación se deshabilita si no hay de ella */}
                 <div className="flex gap-2 mb-3">
-                  {!producto.solo_bulto && (
+                  {tieneUnidad(producto) && (
                     <button
+                      disabled={!hayUnidad(producto)}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -208,9 +214,11 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                         }));
                       }}
                       className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-black transition ${
-                        (selectedTypes[producto.Id] || "Bulto") === "Unidad"
-                          ? "bg-[#FF6600] text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        !hayUnidad(producto)
+                          ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
+                          : tipoElegido(producto) === "Unidad"
+                            ? "bg-[#FF6600] text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       <i className="fas fa-box text-xs mr-1"></i>
@@ -218,6 +226,7 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                     </button>
                   )}
                   <button
+                    disabled={!hayBulto(producto)}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -227,36 +236,26 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                       }));
                     }}
                     className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-black transition ${
-                      (selectedTypes[producto.Id] || "Bulto") === "Bulto"
-                        ? "bg-[#FF6600] text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      !hayBulto(producto)
+                        ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
+                        : tipoElegido(producto) === "Bulto"
+                          ? "bg-[#FF6600] text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
                     <i className="fas fa-boxes text-xs mr-1"></i>
                     Bulto
                   </button>
                 </div>
-                {producto.solo_bulto && (
-                  <p className="text-xs text-blue-600 mb-2 font-medium">
-                    <i className="fas fa-info-circle mr-1"></i>
-                    Solo bulto
-                  </p>
-                )}
 
                 {/* Dynamic Price */}
                 {(() => {
-                  const bundleOriginal = precioNumero;
+                  const bundleOriginal = precioBulto(producto);
                   const discount = getDiscount(producto);
-                  const quantityPerBundle = producto.quantity || 1;
-                  const unitOriginal =
-                    Math.ceil(
-                      ((bundleOriginal / quantityPerBundle) * 1.2) / 10,
-                    ) * 10;
-                  const selectedType = selectedTypes[producto.Id] || "Bulto";
-                  const isBulto = selectedType === "Bulto";
+                  const isBulto = tipoElegido(producto) === "Bulto";
                   const applyDiscount = discount > 0;
                   const bundleSale = bundleOriginal + discount;
-                  const displayPrice = isBulto ? bundleOriginal : unitOriginal;
+                  const displayPrice = precioDe(producto, tipoElegido(producto));
                   const displayOriginal = isBulto ? bundleOriginal : null;
 
                   return (
@@ -278,16 +277,10 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                 })()}
 
                 <button
-                  onClick={(e) =>
-                    handleAddToCart(
-                      producto,
-                      e,
-                      selectedTypes[producto.Id] || "Bulto",
-                    )
-                  }
-                  disabled={!producto.Stock && producto.Stock !== undefined}
+                  onClick={(e) => handleAddToCart(producto, e, tipoElegido(producto))}
+                  disabled={sinStock(producto)}
                   className={`mt-2 w-full border-2 py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700 ${
-                    !producto.Stock && producto.Stock !== undefined
+                    sinStock(producto)
                       ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed"
                       : addedToCart.has(producto.Id)
                         ? "bg-[#FF6600] text-white border-[#FF6600]"
@@ -296,14 +289,14 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                 >
                   <i
                     className={`fas ${
-                      !producto.Stock && producto.Stock !== undefined
+                      sinStock(producto)
                         ? "fa-ban"
                         : addedToCart.has(producto.Id)
                           ? "fa-check"
                           : "fa-cart-plus"
                     }`}
                   ></i>
-                  {!producto.Stock && producto.Stock !== undefined
+                  {sinStock(producto)
                     ? "NO DISPONIBLE"
                     : addedToCart.has(producto.Id)
                       ? "AGREGADO"

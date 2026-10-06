@@ -1,26 +1,17 @@
 "use client";
 
-import { MapPin, Store } from "lucide-react";
-import { Badge } from "../../ui";
+import { Eye, MapPin, Store } from "lucide-react";
+import { Badge, Button } from "../../ui";
 import { formatFechaHora } from "../../../utils/formatFechaHora";
-import { formatMoneda, statusLabel, statusTone } from "../lib";
-import Countdown from "./Countdown";
-import OrderActions, { type OrderActionHandlers } from "./OrderActions";
+import { formatMoneda, sistemaEstadoLabel, statusLabel, statusTone } from "../lib";
 import type { AdminOrder } from "./types";
 
-interface OrdersTableProps extends OrderActionHandlers {
+interface OrdersTableProps {
   orders: AdminOrder[];
+  onView: (order: AdminOrder) => void;
 }
 
-function showsCountdown(o: AdminOrder): boolean {
-  return (
-    o.fuente === "web" &&
-    (o.estado === "configurado" || o.estado === "vencido") &&
-    Boolean(o.expira_en)
-  );
-}
-
-export default function OrdersTable({ orders, ...handlers }: OrdersTableProps) {
+export default function OrdersTable({ orders, onView }: OrdersTableProps) {
   return (
     <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200">
       <table className="w-full text-left text-sm">
@@ -31,7 +22,7 @@ export default function OrdersTable({ orders, ...handlers }: OrdersTableProps) {
             <th className="p-3 font-black">Fecha</th>
             <th className="p-3 font-black text-right">Total</th>
             <th className="p-3 font-black">Estado</th>
-            <th className="p-3 font-black text-right">Acciones</th>
+            <th className="p-3 font-black text-right"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -83,14 +74,20 @@ export default function OrdersTable({ orders, ...handlers }: OrdersTableProps) {
                 <Badge tone={statusTone(o.estado)}>
                   {statusLabel(o.estado)}
                 </Badge>
-                {showsCountdown(o) && o.expira_en && (
-                  <div className="mt-1">
-                    <Countdown expiraEn={o.expira_en} />
-                  </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  {sistemaEstadoLabel(o.sistema_estado)}
+                  {o.sistema_numero ? ` · N° ${o.sistema_numero}` : ""}
+                </div>
+                {o.sistema_motivo && (
+                  <div className="mt-1 text-xs text-red-600 font-medium">{o.sistema_motivo}</div>
                 )}
               </td>
               <td className="p-3 align-top">
-                <OrderActions order={o} labels {...handlers} />
+                <div className="flex justify-end">
+                  <Button size="sm" variant="secondary" icon={Eye} aria-label="Ver pedido" onClick={() => onView(o)}>
+                    Ver
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}

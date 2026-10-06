@@ -5,7 +5,13 @@ import { fetchProductos, fetchProductosAdmin } from "../lib/catalogApi";
 import { PRODUCT_CACHE_KEY as CACHE_KEY, PRODUCT_CACHE_TIMESTAMP_KEY as CACHE_TIMESTAMP_KEY, isAdminSession } from "../lib/productCache";
 import type { Product } from '../types';
 
-const CACHE_DURATION = 5 * 60 * 1000;
+// El stock lo manda el sistema del negocio y cambia con cada venta: el
+// navegador guarda el catálogo solo 1 minuto (el CDN, otro minuto: ver
+// lib/cors.ts). Con 5 minutos acá y 5+10 allá, el stock podía verse con hasta 15
+// minutos de atraso.
+const CACHE_DURATION = 60 * 1000;
+// Faltan menos de esto para que venza
+const NEAR_EXPIRY = 20 * 1000;
 
 interface CacheStatus {
   isValid: boolean;
@@ -172,7 +178,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return true;
     const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
     if (!timestamp) return true;
-    return CACHE_DURATION - (Date.now() - parseInt(timestamp)) < 5 * 60 * 1000;
+    return CACHE_DURATION - (Date.now() - parseInt(timestamp)) < NEAR_EXPIRY;
   }, []);
 
   const cacheStatus: CacheStatus = {

@@ -1,4 +1,4 @@
-import { isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { productos } from "@/db/schema";
 import { jsonCorsCached } from "@/lib/cors";
@@ -8,7 +8,7 @@ export async function GET() {
   const rows = await db
     .select()
     .from(productos)
-    .where(isNotNull(productos.Oferta))
+    .where(and(isNotNull(productos.Oferta), eq(productos.publicado, true)))
     .orderBy(sql`random()`)
     .limit(4);
   // Cache corto: rota cada ~2 min pero absorbe las ráfagas de la home.

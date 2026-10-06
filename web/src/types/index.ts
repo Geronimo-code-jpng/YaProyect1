@@ -8,9 +8,22 @@ export interface Product {
   imagen?: string;
   Oferta?: string;
   descripcion?: string;
+  /** Unidades que trae cada bulto (lo manda el sistema; 1 si no tiene unidad suelta). */
   quantity?: number;
-  solo_bulto?: boolean;
   oferta_express?: boolean;
+  // --- Lo manda el sistema del negocio (deposito-ia) ---
+  /** Precio de la unidad suelta. */
+  precio_unidad?: number | null;
+  /** El artículo tiene unidad suelta: sin esto no hay opción "Unidad". */
+  tiene_unidad?: boolean;
+  /** Bultos que hay. */
+  stock_actual?: number | null;
+  /** Unidades que se pueden vender (sueltas + bultos × unidades por bulto). */
+  stock_unidades?: number | null;
+  /** Sub-rubro, dentro de la categoría (el rubro). */
+  subcategoria?: string | null;
+  /** false = oculto (el sistema lo dio de baja o su rubro no va a la tienda). */
+  publicado?: boolean;
   /** Flag manual: destaca el producto en el carrusel "Más Vendidos" del inicio. */
   mas_vendido?: boolean;
   /** Unidades reales vendidas en pedidos pagados (lo calcula /api/admin/productos). */
@@ -66,6 +79,13 @@ export interface Order {
   descuento_aplicado?: number;
   created_at?: string;
   user_id?: string;
+  // --- Lo que el sistema del negocio hizo con el pedido ---
+  /** recibido | aceptado | modificado | cobrado | rechazado | anulado */
+  sistema_estado?: string | null;
+  /** N° del pedido en el sistema (6 cifras). */
+  sistema_numero?: string | null;
+  /** Por qué se rechazó, si se rechazó. */
+  sistema_motivo?: string | null;
 }
 
 export interface CartItem extends Product {

@@ -1,18 +1,17 @@
 "use client";
 
-import { MapPin, Store } from "lucide-react";
-import { Badge } from "../../ui";
+import { Eye, MapPin, Store } from "lucide-react";
+import { Badge, Button } from "../../ui";
 import { formatFechaHora } from "../../../utils/formatFechaHora";
-import { formatMoneda, statusLabel, statusTone } from "../lib";
-import Countdown from "./Countdown";
-import OrderActions, { type OrderActionHandlers } from "./OrderActions";
+import { formatMoneda, sistemaEstadoLabel, statusLabel, statusTone } from "../lib";
 import type { AdminOrder } from "./types";
 
-interface OrderListProps extends OrderActionHandlers {
+interface OrderListProps {
   orders: AdminOrder[];
+  onView: (order: AdminOrder) => void;
 }
 
-export default function OrderList({ orders, ...handlers }: OrderListProps) {
+export default function OrderList({ orders, onView }: OrderListProps) {
   return (
     <div className="md:hidden space-y-3">
       {orders.map((o) => (
@@ -60,16 +59,22 @@ export default function OrderList({ orders, ...handlers }: OrderListProps) {
             </span>
           </div>
 
-          {o.fuente === "web" &&
-            (o.estado === "configurado" || o.estado === "vencido") &&
-            o.expira_en && <Countdown expiraEn={o.expira_en} />}
+          <div className="text-xs text-gray-500">
+            {sistemaEstadoLabel(o.sistema_estado)}
+            {o.sistema_numero ? ` · N° ${o.sistema_numero}` : ""}
+            {o.sistema_motivo && (
+              <span className="block text-red-600 font-medium">{o.sistema_motivo}</span>
+            )}
+          </div>
 
           {o.notas && (
             <div className="text-xs text-amber-700 font-medium">📝 {o.notas}</div>
           )}
 
           <div className="border-t border-gray-100 pt-3">
-            <OrderActions order={o} labels {...handlers} />
+            <Button size="sm" variant="secondary" icon={Eye} fullWidth onClick={() => onView(o)}>
+              Ver
+            </Button>
           </div>
         </div>
       ))}

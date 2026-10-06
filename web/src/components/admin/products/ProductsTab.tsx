@@ -14,17 +14,15 @@ type ToastType = "success" | "error" | "info";
 
 interface ProductsTabProps {
   showToast: (message: string, type?: ToastType) => void;
-  showConfirm: (
+  // El panel todavía lo pasa; ya no hace falta (no hay baja de productos desde acá)
+  showConfirm?: (
     message: string,
     onConfirm: () => void,
     tone?: "brand" | "danger",
   ) => void;
 }
 
-export default function ProductsTab({
-  showToast,
-  showConfirm,
-}: ProductsTabProps) {
+export default function ProductsTab({ showToast }: ProductsTabProps) {
   const {
     products,
     loading,
@@ -34,19 +32,15 @@ export default function ProductsTab({
     editingLoading,
     load,
     updateFlag,
-    setQuantity,
-    flushQuantity,
-    openNew,
     openEdit,
     closeForm,
     save,
-    remove,
-  } = useAdminProducts({ showToast, showConfirm });
+  } = useAdminProducts({ showToast });
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [stock, setStock] = useState<StockFilter>("todos");
-  const [flag, setFlag] = useState<ProductFlag | "todos">("todos");
+  const [flag, setFlag] = useState<ProductFlag | "todos" | "sin_foto">("todos");
   const [sort, setSort] = useState<SortKey>("stock");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
@@ -80,7 +74,9 @@ export default function ProductsTab({
       if (category && p.Categoria !== category) return false;
       if (stock === "con" && !p.Stock) return false;
       if (stock === "sin" && p.Stock) return false;
-      if (flag === "mas_vendido") {
+      if (flag === "sin_foto") {
+        if (p.Imagen || p.imagen) return false;
+      } else if (flag === "mas_vendido") {
         if (!p.mas_vendido && (p.unidades_vendidas || 0) === 0) return false;
       } else if (flag !== "todos" && !p[flag]) {
         return false;
@@ -129,10 +125,7 @@ export default function ProductsTab({
 
   const rowHandlers = {
     onEdit: openEdit,
-    onRemove: remove,
     onFlag: updateFlag,
-    onQuantity: setQuantity,
-    onQuantityCommit: flushQuantity,
   };
 
   return (
@@ -152,7 +145,6 @@ export default function ProductsTab({
         total={products.length}
         shown={filtered.length}
         loading={loading}
-        onNew={openNew}
         onRefresh={load}
       />
 

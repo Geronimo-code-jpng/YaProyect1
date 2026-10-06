@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { productos } from "@/db/schema";
-import { jsonCorsCached } from "@/lib/cors";
+import { jsonCors, jsonCorsCached } from "@/lib/cors";
 
 export async function GET(
   _request: Request,
@@ -11,6 +11,8 @@ export async function GET(
   const [row] = await db
     .select()
     .from(productos)
-    .where(eq(productos.Id, Number(id)));
-  return jsonCorsCached(row ?? null);
+    .where(and(eq(productos.Id, Number(id)), eq(productos.publicado, true)));
+  // Un producto que no existe o no está publicado es un 404 (no se cachea)
+  if (!row) return jsonCors({ error: "Producto no encontrado" }, 404);
+  return jsonCorsCached(row);
 }
