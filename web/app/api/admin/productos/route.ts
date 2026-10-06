@@ -6,6 +6,11 @@ import { ventasPorProducto } from "@/lib/ventasPorProducto";
 // Catálogo para el panel: cada producto llega con las unidades e ingresos
 // reales acumulados de los pedidos pagados. El filtro/orden "Más vendido" del
 // admin se calcula con esto, no con el flag manual `mas_vendido`.
+//
+// Acá llegan TODOS los productos, también los que están sin publicar: el
+// panel los muestra para poder ponerles foto antes de que salgan. No hay
+// alta de productos desde la página: el catálogo lo maneja el sistema del
+// negocio (deposito-ia), que crea y actualiza los productos solo.
 export async function GET() {
   const [rows, ventas] = await Promise.all([
     db.select().from(productos),
@@ -22,25 +27,4 @@ export async function GET() {
   });
 
   return jsonCors(enriched);
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-
-  const values = {
-    Id: Date.now(),
-    nombre: body.nombre,
-    precio: body.precio,
-    Categoria: body.Categoria,
-    Oferta: body.Oferta || null,
-    Stock: Boolean(body.Stock),
-    quantity: body.quantity || 1,
-    oferta_express: Boolean(body.oferta_express),
-    mas_vendido: Boolean(body.mas_vendido),
-    solo_bulto: Boolean(body.solo_bulto),
-    Imagen: body.Imagen || null,
-  };
-
-  const [created] = await db.insert(productos).values(values).returning();
-  return jsonCors(created);
 }

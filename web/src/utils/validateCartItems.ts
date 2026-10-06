@@ -1,4 +1,5 @@
 import { fetchProductos } from "../lib/catalogApi";
+import { hay, precioDe, tieneUnidad, unidadesPorBulto, type Tipo } from "../lib/presentaciones";
 
 export interface CartValidationItem {
   Id: number;
@@ -83,27 +84,35 @@ export async function validateCartItems(
     }
 
     const itemChanges: PriceChange["cambios"] = [];
+    const tipo: Tipo = item.tipo === "Unidad" ? "Unidad" : "Bulto";
 
-    if (!db.Stock) {
+    if (tipo === "Unidad" && !tieneUnidad(db)) {
+      // El sistema dejó de ofrecer la unidad suelta de este artículo
       itemChanges.push({
-        campo: "stock",
-        valorViejo: "Disponible",
-        valorNuevo: "Sin stock",
+        campo: "existencia",
+        valorViejo: "Por unidad",
+        valorNuevo: "Ya no se vende por unidad",
       });
-    }
+    } else {
+      // Stock de LA presentación que está en el carrito: puede quedar sin
+      // bultos cerrados y todavía haber unidades sueltas, o al revés
+      if (!db.Stock || !hay(db, tipo)) {
+        itemChanges.push({
+          campo: "stock",
+          valorViejo: "Disponible",
+          valorNuevo: "Sin stock",
+        });
+      }
 
-    const quantityPerBundle = db.quantity || 1;
-    const dbBundlePrice = Number(db.precio);
-    const dbUnitPrice =
-      Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
-    const currentPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
-
-    if (currentPrice !== item.precio) {
-      itemChanges.push({
-        campo: "precio",
-        valorViejo: `$${item.precio.toLocaleString("es-AR")}`,
-        valorNuevo: `$${currentPrice.toLocaleString("es-AR")}`,
-      });
+      // El precio de cada presentación lo manda el sistema del negocio
+      const currentPrice = precioDe(db, tipo);
+      if (currentPrice !== item.precio) {
+        itemChanges.push({
+          campo: "precio",
+          valorViejo: `$${item.precio.toLocaleString("es-AR")}`,
+          valorNuevo: `$${currentPrice.toLocaleString("es-AR")}`,
+        });
+      }
     }
 
     if (itemChanges.length > 0) {
@@ -127,15 +136,14 @@ export function computeUpdatedCart(
     const db = dbProducts[item.Id];
     if (!db) return item;
 
-    if (!db.Stock) {
+    const tipo: Tipo = item.tipo === "Unidad" ? "Unidad" : "Bulto";
+
+    // Sin stock de esa presentación, o ya no se vende por unidad: se saca
+    if (!db.Stock || !hay(db, tipo)) {
       return { ...item, cantidad: 0, Stock: false };
     }
 
-    const quantityPerBundle = db.quantity || 1;
-    const dbBundlePrice = Number(db.precio);
-    const dbUnitPrice =
-      Math.ceil(((dbBundlePrice / quantityPerBundle) * 1.2) / 10) * 10;
-    const finalPrice = item.tipo === "Bulto" ? dbBundlePrice : dbUnitPrice;
+    const finalPrice = precioDe(db, tipo);
 
     return {
       ...item,
@@ -144,7 +152,7 @@ export function computeUpdatedCart(
       oferta: item.oferta || item.Oferta,
       descuento: item.descuento || item.discount,
       Stock: db.Stock,
-      quantity_per_bundle: quantityPerBundle,
+      quantity_per_bundle: unidadesPorBulto(db),
       nombre: db.nombre || item.nombre,
     };
   }) as CartValidationItem[];

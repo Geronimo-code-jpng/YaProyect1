@@ -5,19 +5,16 @@ export type AdminProduct = Product & {
   imagen?: string;
 };
 
-export type ProductFlag = "oferta_express" | "mas_vendido" | "solo_bulto";
+// El catálogo (nombre, precio, rubro, stock, unidades) lo maneja el sistema del
+// negocio. Desde la página solo se tocan estas dos marcas, la foto y el precio
+// tachado (Oferta).
+export type ProductFlag = "oferta_express" | "mas_vendido";
 
-/** Payload handed to `onSave` by <ProductForm>. Matches the previous ProductModal contract. */
+/** Payload handed to `onSave` by <ProductForm>. */
 export interface ProductFormValues {
-  nombre: string;
-  precio: number;
-  Categoria: string;
   Oferta: string;
-  Stock: boolean;
-  quantity: number;
   oferta_express: boolean;
   mas_vendido: boolean;
-  solo_bulto: boolean;
   imageFile?: File | null;
 }
 
@@ -31,17 +28,13 @@ export type SortKey =
 
 export interface ProductRowHandlers {
   onEdit: (id: number) => void;
-  onRemove: (id: number) => void;
   onFlag: (id: number, flag: ProductFlag, value: boolean) => void;
-  onQuantity: (id: number, quantity: number) => void;
-  onQuantityCommit: (id: number) => void;
 }
 
 export const FLAG_META: Record<
   ProductFlag,
-  { label: string; tone: "green" | "yellow" | "blue" }
+  { label: string; tone: "green" | "yellow" }
 > = {
   oferta_express: { label: "Oferta Express", tone: "green" },
   mas_vendido: { label: "Más Vendido", tone: "yellow" },
-  solo_bulto: { label: "Solo Bulto", tone: "blue" },
 };

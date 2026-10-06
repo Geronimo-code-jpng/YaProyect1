@@ -1,5 +1,8 @@
 // Claves y helpers del cache de productos en localStorage.
 // Se centralizan aca para que login/admin puedan invalidarlo.
+//
+// El cache dura 1 minuto (ver CACHE_DURATION en contexts/ProductContext.tsx):
+// el stock lo manda el sistema del negocio y cambia con cada venta.
 
 export const PRODUCT_CACHE_KEY = "ya_mayorista_products_cache";
 export const PRODUCT_CACHE_TIMESTAMP_KEY = "ya_mayorista_products_timestamp";

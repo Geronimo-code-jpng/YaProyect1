@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import clsx from "clsx";
-import { ORDER_STATUSES, ORDER_STATUS_META } from "../lib";
+import { ORDER_STATUS_META, type OrderStatus } from "../lib";
+
+const CARD_STATUSES: OrderStatus[] = ["pendiente", "aprobado", "pagado", "rechazado", "cancelado"];
 import type { AdminOrder } from "./types";
 
 interface OrderStatsCardsProps {
@@ -30,8 +32,10 @@ export default function OrderStatsCards({
     return acc;
   }, [orders]);
 
+  // Las tarjetas son de los estados que hoy produce el sistema; los viejos
+  // (configurado, vencido, modificado) se filtran desde el selector
   const cards = [
-    ...ORDER_STATUSES.map((s) => ({
+    ...CARD_STATUSES.map((s) => ({
       key: s,
       label: ORDER_STATUS_META[s].label,
       count: counts[s] || 0,

@@ -3,13 +3,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Loader2, Upload } from "lucide-react";
-import { fetchCategorias } from "../../../lib/catalogApi";
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
 import Input from "../../ui/Input";
-import Select from "../../ui/Select";
 import Toggle from "../../ui/Toggle";
-import { FLAG_META, type AdminProduct, type ProductFormValues } from "./types";
+import { FLAG_META, type AdminProduct, type ProductFlag, type ProductFormValues } from "./types";
+import { tieneUnidad } from "../../../lib/presentaciones";
 
 interface ProductFormProps {
   open: boolean;
@@ -21,22 +20,20 @@ interface ProductFormProps {
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-type FieldErrors = Partial<Record<"nombre" | "precio" | "quantity" | "Stock" | "Categoria" | "imageFile", string>>;
+const FLAGS = Object.keys(FLAG_META) as ProductFlag[];
 
 const emptyValues: ProductFormValues = {
-  nombre: "",
-  precio: 0,
-  Categoria: "",
   Oferta: "",
-  Stock: true,
-  quantity: 1,
   oferta_express: false,
   mas_vendido: false,
-  solo_bulto: false,
   imageFile: null,
 };
 
+const plata = (n: unknown) => `$${Number(n ?? 0).toLocaleString("es-AR")}`;
+
+// Del producto, desde la página solo se cargan la foto, el precio tachado y las
+// marcas. Lo demás (nombre, precio, rubro, stock, unidades) lo maneja el
+// sistema del negocio: se muestra, pero no se edita.
 export default function ProductForm({
   open,
   onClose,
@@ -46,42 +43,23 @@ export default function ProductForm({
   onSave,
 }: ProductFormProps) {
   const [values, setValues] = useState<ProductFormValues>(emptyValues);
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [categorias, setCategorias] = useState<{ id: string; categoria: string }[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isEdit = Boolean(product);
   const existingImage = product?.Imagen || product?.imagen || null;
-
-  useEffect(() => {
-    if (!open) return;
-    fetchCategorias()
-      .then((data) =>
-        setCategorias(
-          [...data].sort((a, b) => a.categoria.localeCompare(b.categoria)),
-        ),
-      )
-      .catch(() => setCategorias([]));
-  }, [open]);
 
   // Sync form state whenever the target product (or open) changes.
   useEffect(() => {
     if (!open) return;
-    setErrors({});
+    setImageError(null);
     setPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (product) {
       setValues({
-        nombre: product.nombre ?? "",
-        precio: Number(product.precio) || 0,
-        Categoria: product.Categoria ?? "",
         Oferta: product.Oferta ?? "",
-        Stock: product.Stock ?? true,
-        quantity: product.quantity ?? 1,
         oferta_express: product.oferta_express ?? false,
         mas_vendido: product.mas_vendido ?? false,
-        solo_bulto: product.solo_bulto ?? false,
         imageFile: null,
       });
     } else {
@@ -100,50 +78,30 @@ export default function ProductForm({
   const set = <K extends keyof ProductFormValues>(
     key: K,
     value: ProductFormValues[K],
-  ) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
-  };
+  ) => setValues((prev) => ({ ...prev, [key]: value }));
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
+    setImageError(null);
     if (!file) {
       set("imageFile", null);
       setPreview(null);
       return;
     }
     if (!file.type.startsWith("image/")) {
-      setErrors((p) => ({ ...p, imageFile: "El archivo debe ser una imagen." }));
+      setImageError("El archivo debe ser una imagen.");
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setErrors((p) => ({ ...p, imageFile: "La imagen no puede superar 5 MB." }));
+      setImageError("La imagen no puede superar 5 MB.");
       return;
     }
     set("imageFile", file);
   };
 
-  const validate = (): boolean => {
-    const next: FieldErrors = {};
-    if (!values.nombre.trim()) next.nombre = "El nombre es obligatorio.";
-    if (!(values.precio > 0)) next.precio = "El precio debe ser mayor a 0.";
-    if (!values.quantity || values.quantity < 1)
-      next.quantity = "Debe ser 1 o más.";
-    if (!values.Categoria.trim()) next.Categoria = "Elegí una categoría.";
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-    onSave({
-      ...values,
-      nombre: values.nombre.trim(),
-      precio: Number(values.precio),
-      quantity: Number(values.quantity) || 1,
-      Oferta: values.Oferta.trim(),
-    });
+    onSave({ ...values, Oferta: values.Oferta.trim() });
   };
 
   const shownImage = useMemo(
@@ -155,25 +113,20 @@ export default function ProductForm({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? "Editar producto" : "Nuevo producto"}
+      title="Foto y precio tachado"
       size="lg"
       footer={
         <div className="flex gap-3">
           <Button variant="secondary" fullWidth onClick={onClose} type="button">
             Cancelar
           </Button>
-          <Button
-            type="submit"
-            form="product-form"
-            fullWidth
-            loading={saving}
-          >
-            {isEdit ? "Guardar cambios" : "Crear producto"}
+          <Button type="submit" form="product-form" fullWidth loading={saving} disabled={!product}>
+            Guardar cambios
           </Button>
         </div>
       }
     >
-      {loading ? (
+      {loading || !product ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <Loader2 size={32} className="animate-spin text-brand mb-3" />
           <p className="font-bold">Cargando producto…</p>
@@ -184,74 +137,40 @@ export default function ProductForm({
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          <div className="md:col-span-2">
-            <Input
-              label="Nombre del producto *"
-              name="nombre"
-              value={values.nombre}
-              onChange={(e) => set("nombre", e.target.value)}
-              placeholder="Ej: Coca Cola 2.25L"
-              error={errors.nombre}
-            />
+          {/* Lo que manda el sistema: solo se muestra */}
+          <div className="md:col-span-2 rounded-xl bg-gray-50 border border-gray-200 p-4">
+            <p className="text-xs font-black uppercase tracking-wider text-gray-400 mb-1">
+              Lo maneja el sistema del negocio
+            </p>
+            <p className="font-black text-gray-800">{product.nombre}</p>
+            <p className="text-sm text-gray-500">
+              #{product.Id} · {product.Categoria || "sin categoría"}
+              {product.subcategoria ? ` · ${product.subcategoria}` : ""}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Bulto {plata(product.precio)}
+              {tieneUnidad(product) && ` · Unidad ${plata(product.precio_unidad)}`}
+              {product.stock_actual != null &&
+                ` · Stock: ${Number(product.stock_actual).toLocaleString("es-AR")} bulto(s)${
+                  tieneUnidad(product) && product.stock_unidades != null
+                    ? ` y ${Number(product.stock_unidades).toLocaleString("es-AR")} unidades`
+                    : ""
+                }`}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Para cambiar el nombre, el precio, el rubro o el stock, se hace en el sistema:
+              la tienda se actualiza sola.
+            </p>
           </div>
 
-          <Input
-            label="Precio *"
-            name="precio"
-            type="number"
-            step="0.01"
-            min="0"
-            value={values.precio || ""}
-            onChange={(e) => set("precio", parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-            error={errors.precio}
-          />
-
-          <Input
-            label="Cantidad por bulto *"
-            name="quantity"
-            type="number"
-            min="1"
-            value={values.quantity || ""}
-            onChange={(e) => set("quantity", parseInt(e.target.value) || 1)}
-            placeholder="1"
-            hint="¿Cuántas unidades trae el bulto?"
-            error={errors.quantity}
-          />
-
-          <Select
-            label="Stock *"
-            name="Stock"
-            value={values.Stock ? "true" : "false"}
-            onChange={(e) => set("Stock", e.target.value === "true")}
-          >
-            <option value="true">Hay stock</option>
-            <option value="false">Sin stock</option>
-          </Select>
-
-          <Select
-            label="Categoría *"
-            name="Categoria"
-            value={values.Categoria}
-            onChange={(e) => set("Categoria", e.target.value)}
-            error={errors.Categoria}
-          >
-            <option value="">Seleccionar categoría</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.categoria}>
-                {c.categoria}
-              </option>
-            ))}
-          </Select>
-
           <div className="md:col-span-2">
             <Input
-              label="Texto de oferta (opcional)"
+              label="Precio tachado (opcional)"
               name="Oferta"
               value={values.Oferta}
               onChange={(e) => set("Oferta", e.target.value)}
               placeholder="Ej: 500"
-              hint="Pesos de descuento que se restan del precio del bulto."
+              hint="Pesos que se suman al precio del bulto para mostrarlo tachado (el precio de lista de antes)."
             />
           </div>
 
@@ -303,20 +222,18 @@ export default function ProductForm({
                     {values.imageFile.name}
                   </p>
                 )}
-                {errors.imageFile && (
+                {imageError && (
                   <p className="text-xs text-red-500 font-medium mt-1">
-                    {errors.imageFile}
+                    {imageError}
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Flags */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {(
-              Object.keys(FLAG_META) as (keyof typeof FLAG_META)[]
-            ).map((flag) => (
+          {/* Marcas de la tienda */}
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {FLAGS.map((flag) => (
               <label
                 key={flag}
                 className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 cursor-pointer"

@@ -3,46 +3,27 @@ import { db } from "@/db/client";
 import { pedidos } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
 
-const UPDATE_FIELDS = [
-  "estado",
-  "expira_en",
-  "horario",
-  "notas",
-  "pagado_manualmente",
-  "fecha_pago",
-  "modificado_por",
-  "fecha_modificacion",
-  "carrito",
-  "total",
-] as const;
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const [row] = await db.select().from(pedidos).where(eq(pedidos.id, Number(id)));
+  // Solo pedidos de la tienda: los del sistema del negocio no se muestran en la web.
+  const [row] = await db
+    .select()
+    .from(pedidos)
+    .where(and(eq(pedidos.id, Number(id)), eq(pedidos.fuente, "web")));
   return jsonCors(row ?? null);
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const body = await request.json();
-  const ifEstado = new URL(request.url).searchParams.get("if_estado");
-
-  const values: Record<string, unknown> = {};
-  for (const field of UPDATE_FIELDS) {
-    if (field in body) values[field] = body[field];
-  }
-
-  const condition = ifEstado
-    ? and(eq(pedidos.id, Number(id)), eq(pedidos.estado, ifEstado))
-    : eq(pedidos.id, Number(id));
-
-  const [updated] = await db.update(pedidos).set(values).where(condition).returning();
-
-  return jsonCors(updated ?? null);
+// Los pedidos ya no se modifican desde la página: los acepta, rechaza, corrige
+// y cobra el sistema del negocio (deposito-ia), que le cuenta a la tienda cómo
+// quedó cada uno (estado, sistema_estado, sistema_numero, sistema_motivo). Dejar
+// esta ruta abierta, sin autenticación, permitía que cualquiera marcara un
+// pedido como pagado.
+export async function PATCH() {
+  return jsonCors(
+    { error: "Los pedidos los maneja el sistema del negocio: no se modifican desde la página" },
+    410,
+  );
 }

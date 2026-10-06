@@ -116,17 +116,8 @@ export async function fetchPedidoById(id: number | string): Promise<any | null> 
   return api(`/api/pedidos/${id}`);
 }
 
-export async function updatePedido(id: number | string, data: Record<string, unknown>, ifEstado?: string): Promise<any> {
-  const query = ifEstado ? `?if_estado=${encodeURIComponent(ifEstado)}` : "";
-  return api(`/api/pedidos/${id}${query}`, { method: "PATCH", body: JSON.stringify(data) });
-}
-
 export async function fetchPedidosAdmin(signal?: AbortSignal): Promise<any[]> {
   return api("/api/admin/pedidos", signal ? { signal } : undefined);
-}
-
-export async function cleanupExpiredPedidos(): Promise<{ success: boolean }> {
-  return api("/api/pedidos/cleanup-expired", { method: "POST" });
 }
 
 // --- Actividad de carrito / analítica de clientes ---
@@ -193,16 +184,11 @@ export async function fetchProductosAdmin(): Promise<Product[]> {
   return api("/api/admin/productos");
 }
 
-export async function createProductoAdmin(data: Record<string, unknown>): Promise<Product> {
-  return api("/api/admin/productos", { method: "POST", body: JSON.stringify(data) });
-}
-
+// Solo se editan la foto, "más vendido", "oferta express" y el precio tachado
+// (Oferta): lo demás lo maneja el sistema del negocio. No hay alta ni baja de
+// productos desde la página.
 export async function updateProductoAdmin(id: number | string, data: Record<string, unknown>): Promise<Product> {
   return api(`/api/admin/productos/${id}`, { method: "PATCH", body: JSON.stringify(data) });
-}
-
-export async function deleteProductoAdmin(id: number | string): Promise<{ success: boolean }> {
-  return api(`/api/admin/productos/${id}`, { method: "DELETE" });
 }
 
 export async function uploadProductoImage(id: number | string, file: File): Promise<{ success: boolean; imageUrl?: string; error?: string }> {

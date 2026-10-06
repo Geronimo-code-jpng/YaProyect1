@@ -15,6 +15,11 @@ export interface AdminOrder {
   metodo: string; // "envio" | "retiro"
   metodo_pago?: string;
   pagado_manualmente?: boolean;
+  // Lo que el sistema del negocio hizo con el pedido
+  sistema_estado?: string | null;
+  sistema_numero?: string | null;
+  sistema_motivo?: string | null;
+  sistema_recibido_en?: string | null;
 }
 
 export type SourceFilter = "todos" | "web" | "manual";

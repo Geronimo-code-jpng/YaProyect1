@@ -402,6 +402,32 @@ export default function OrdersPage() {
                       </div>
                     )}
 
+                    {/* Lo que el negocio hizo con el pedido (lo cuenta el sistema) */}
+                    {pedido.estado === "rechazado" && (
+                      <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-200">
+                        <h4 className="font-bold text-red-700 flex items-center gap-2">
+                          <XCircle size={18} />
+                          Pedido rechazado
+                        </h4>
+                        <p className="text-sm text-red-700 mt-1">
+                          {pedido.sistema_motivo || "El negocio no pudo tomar este pedido."}
+                        </p>
+                      </div>
+                    )}
+                    {(pedido.estado === "aprobado" || pedido.estado === "modificado") && (
+                      <div className="mb-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                        <h4 className="font-bold text-green-700 flex items-center gap-2">
+                          <CheckCircle size={18} />
+                          {pedido.estado === "modificado" ? "Pedido aceptado, con cambios" : "Pedido aceptado"}
+                        </h4>
+                        <p className="text-sm text-green-700 mt-1">
+                          {pedido.estado === "modificado"
+                            ? "Se ajustó lo que pediste (por ejemplo, por falta de stock). Revisá el detalle de abajo."
+                            : "Tu pedido fue aceptado y lo estamos preparando."}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Products List */}
                     <div className="space-y-3">
                       {carritoArray.slice(0, expandedOrders[pedido.id] ? undefined : 3).map((item, index) => (

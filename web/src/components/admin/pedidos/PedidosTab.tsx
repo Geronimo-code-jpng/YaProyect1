@@ -3,14 +3,12 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
 import { Pagination, PAGE_SIZES } from "../../ui";
-import RejectDialog from "../RejectDialog";
-import { statusLabel } from "../lib";
 import { useAdminOrders } from "./useAdminOrders";
 import OrderStatsCards from "./OrderStatsCards";
 import OrdersToolbar from "./OrdersToolbar";
 import OrdersTable from "./OrdersTable";
 import OrderList from "./OrderList";
-import OrderEditModal from "./OrderEditModal";
+import OrderDetailModal from "./OrderDetailModal";
 import type {
   AdminOrder,
   DateRange,
@@ -22,7 +20,8 @@ type ToastType = "success" | "error" | "info";
 
 interface PedidosTabProps {
   showToast: (message: string, type?: ToastType) => void;
-  showConfirm: (
+  // El panel todavía lo pasa; ya no hace falta (los pedidos no se modifican desde acá)
+  showConfirm?: (
     message: string,
     onConfirm: () => void,
     tone?: "brand" | "danger",
@@ -31,7 +30,7 @@ interface PedidosTabProps {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export default function PedidosTab({ showToast, showConfirm }: PedidosTabProps) {
+export default function PedidosTab({ showToast }: PedidosTabProps) {
   const orders = useAdminOrders({ showToast });
 
   const [search, setSearch] = useState("");
@@ -44,7 +43,6 @@ export default function PedidosTab({ showToast, showConfirm }: PedidosTabProps) 
 
   const [editing, setEditing] = useState<AdminOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [reject, setReject] = useState<{ order: AdminOrder } | null>(null);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -113,49 +111,9 @@ export default function PedidosTab({ showToast, showConfirm }: PedidosTabProps) 
     setEditing(null);
   };
 
-  const handleConfigurar = (order: AdminOrder) => {
-    showConfirm(
-      `¿Aceptar el pedido #${order.id}? Se inician 15 minutos para pagar y se notifica al cliente por WhatsApp.`,
-      () => {
-        const win = window.open("", "_blank");
-        orders.configurar(order.id, win);
-      },
-    );
-  };
-
-  const handleMarcarPagado = (order: AdminOrder) => {
-    showConfirm(
-      `¿Marcar el pedido #${order.id} como pagado? Se notifica al cliente por WhatsApp.`,
-      () => {
-        const win = window.open("", "_blank");
-        orders.marcarPagado(order.id, win);
-      },
-    );
-  };
-
-  const handleRechazar = (order: AdminOrder) => setReject({ order });
-
   const handleView = (order: AdminOrder) => {
     setEditing(order);
     setModalOpen(true);
-  };
-
-  const handleTransition = (order: AdminOrder, next: string) => {
-    closeModal();
-    if (next === "configurado") return handleConfigurar(order);
-    if (next === "pagado") return handleMarcarPagado(order);
-    if (next === "rechazado") return handleRechazar(order);
-    showConfirm(
-      `¿Cambiar el pedido #${order.id} a "${statusLabel(next)}"? No se notifica al cliente.`,
-      () => orders.forzarEstado(order.id, next),
-    );
-  };
-
-  const rowHandlers = {
-    onView: handleView,
-    onConfigurar: handleConfigurar,
-    onMarcarPagado: handleMarcarPagado,
-    onRechazar: handleRechazar,
   };
 
   return (
@@ -205,8 +163,8 @@ export default function PedidosTab({ showToast, showConfirm }: PedidosTabProps) 
         </div>
       ) : (
         <>
-          <OrdersTable orders={paged} {...rowHandlers} />
-          <OrderList orders={paged} {...rowHandlers} />
+          <OrdersTable orders={paged} onView={handleView} />
+          <OrderList orders={paged} onView={handleView} />
           <Pagination
             page={safePage}
             pageSize={pageSize}
@@ -218,29 +176,7 @@ export default function PedidosTab({ showToast, showConfirm }: PedidosTabProps) 
         </>
       )}
 
-      <OrderEditModal
-        order={editing}
-        open={modalOpen}
-        onClose={closeModal}
-        shippingPrice={orders.shippingPrice}
-        onTransition={handleTransition}
-        onSaveEdits={orders.saveEdits}
-        onSaveAndNotify={orders.saveAndNotify}
-        showToast={showToast}
-      />
-
-      {reject && (
-        <RejectDialog
-          message={`¿Rechazar el pedido #${reject.order.id}? Indicá el motivo (se guarda y se envía al cliente).`}
-          onCancel={() => setReject(null)}
-          onConfirm={(motivo: string) => {
-            const order = reject.order;
-            setReject(null);
-            const win = window.open("", "_blank");
-            orders.rechazar(order.id, motivo, win);
-          }}
-        />
-      )}
+      <OrderDetailModal order={editing} open={modalOpen} onClose={closeModal} />
     </div>
   );
 }

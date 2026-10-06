@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
 import clsx from "clsx";
 import Button from "../../ui/Button";
 import Input from "../../ui/Input";
@@ -20,22 +20,22 @@ interface ProductsToolbarProps {
   categories: string[];
   stock: StockFilter;
   onStock: (v: StockFilter) => void;
-  flag: ProductFlag | "todos";
-  onFlag: (v: ProductFlag | "todos") => void;
+  flag: ProductFlag | "todos" | "sin_foto";
+  onFlag: (v: ProductFlag | "todos" | "sin_foto") => void;
   sort: SortKey;
   onSort: (v: SortKey) => void;
   total: number;
   shown: number;
   loading: boolean;
-  onNew: () => void;
   onRefresh: () => void;
 }
 
-const FLAG_TABS: { value: ProductFlag | "todos"; label: string }[] = [
+const FLAG_TABS: { value: ProductFlag | "todos" | "sin_foto"; label: string }[] = [
   { value: "todos", label: "Todos" },
   { value: "oferta_express", label: FLAG_META.oferta_express.label },
   { value: "mas_vendido", label: FLAG_META.mas_vendido.label },
-  { value: "solo_bulto", label: FLAG_META.solo_bulto.label },
+  // Los productos nuevos llegan del sistema sin foto: es lo que hay que cargar acá
+  { value: "sin_foto", label: "Sin foto" },
 ];
 
 export default function ProductsToolbar({
@@ -53,7 +53,6 @@ export default function ProductsToolbar({
   total,
   shown,
   loading,
-  onNew,
   onRefresh,
 }: ProductsToolbarProps) {
   return (
@@ -66,6 +65,10 @@ export default function ProductsToolbar({
               ? `${total} producto${total !== 1 ? "s" : ""}`
               : `${shown} de ${total} productos`}
           </p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            El catálogo, el precio y el stock los maneja el sistema del negocio.
+            Desde acá se cargan la foto, el precio tachado y las marcas.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -76,9 +79,6 @@ export default function ProductsToolbar({
             loading={loading}
           >
             Refrescar
-          </Button>
-          <Button size="sm" icon={Plus} onClick={onNew}>
-            Nuevo producto
           </Button>
         </div>
       </div>

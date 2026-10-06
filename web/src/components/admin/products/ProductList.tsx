@@ -1,17 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 import Badge from "../../ui/Badge";
 import Button from "../../ui/Button";
 import Toggle from "../../ui/Toggle";
-import QuantityStepper from "./QuantityStepper";
 import {
   FLAG_META,
   type AdminProduct,
   type ProductFlag,
   type ProductRowHandlers,
 } from "./types";
+import { tieneUnidad } from "../../../lib/presentaciones";
 
 const PLACEHOLDER = "/producto-placeholder.svg";
 const FLAGS = Object.keys(FLAG_META) as ProductFlag[];
@@ -23,10 +23,7 @@ interface ProductListProps extends ProductRowHandlers {
 export default function ProductList({
   products,
   onEdit,
-  onRemove,
   onFlag,
-  onQuantity,
-  onQuantityCommit,
 }: ProductListProps) {
   return (
     <div className="md:hidden space-y-3">
@@ -47,29 +44,30 @@ export default function ProductList({
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-gray-800 leading-tight">{p.nombre}</p>
-              <p className="text-xs text-gray-400 tabular-nums mb-1">#{p.Id}</p>
+              <p className="text-xs text-gray-400 tabular-nums mb-1">
+                #{p.Id}
+                {!(p.Imagen || p.imagen) && " · sin foto"}
+              </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge>{p.Categoria || "—"}</Badge>
-                {p.Stock ? (
+                {p.publicado === false ? (
+                  <Badge tone="danger">Sin publicar</Badge>
+                ) : p.Stock ? (
                   <Badge tone="success">En stock</Badge>
                 ) : (
                   <Badge tone="danger">Sin stock</Badge>
                 )}
-                {p.Oferta && <Badge tone="brand">{p.Oferta}</Badge>}
+                {p.Oferta && <Badge tone="brand">${p.Oferta}</Badge>}
               </div>
             </div>
-            <p className="font-black text-gray-800 tabular-nums whitespace-nowrap">
+            <p className="font-black text-gray-800 tabular-nums whitespace-nowrap text-right">
               ${Number(p.precio || 0).toLocaleString("es-AR")}
+              {tieneUnidad(p) && (
+                <span className="block text-[11px] font-medium text-gray-400">
+                  ${Number(p.precio_unidad).toLocaleString("es-AR")} c/u
+                </span>
+              )}
             </p>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">Cant. por bulto</span>
-            <QuantityStepper
-              value={p.quantity || 1}
-              onChange={(v) => onQuantity(p.Id, v)}
-              onCommit={() => onQuantityCommit(p.Id)}
-            />
           </div>
 
           <div className="mt-2 flex items-center justify-between">
@@ -101,16 +99,7 @@ export default function ProductList({
               fullWidth
               onClick={() => onEdit(p.Id)}
             >
-              Editar
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={Trash2}
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-              onClick={() => onRemove(p.Id)}
-            >
-              Eliminar
+              Foto y precio tachado
             </Button>
           </div>
         </div>

@@ -10,7 +10,6 @@ import {
   fetchConfiguracion,
   fetchPerfilByEmail,
   createPedido,
-  cleanupExpiredPedidos,
 } from "../../lib/catalogApi";
 import { getProductImageUrl } from "../../utils/productImageUtils";
 import { validateCartItems, computeUpdatedCart } from "../../utils/validateCartItems";
@@ -122,14 +121,6 @@ export default function CartModal() {
   const campoTelefonoBloqueado = !!(user && dbUserData?.telefono);
   const campoDireccionBloqueado = !!(user && dbUserData?.direccion);
 
-  const verificarPedidosVencidos = async () => {
-    try {
-      await cleanupExpiredPedidos();
-    } catch (error) {
-      console.error("Error verificando pedidos vencidos:", error);
-    }
-  };
-
   const toggleCart = () => {
     setIsCartOpen(!isCartOpen);
   };
@@ -221,8 +212,6 @@ export default function CartModal() {
         setIsSubmitting(false);
         return;
       }
-
-      await verificarPedidosVencidos();
 
       const baseTotal = getCartTotalWithDiscount(userProfile, orderData.metodoEntrega);
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
