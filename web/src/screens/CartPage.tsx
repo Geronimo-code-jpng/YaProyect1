@@ -22,6 +22,7 @@ import {
 } from "../utils/validateCartItems";
 import type { PriceChange } from "../utils/validateCartItems";
 import PriceChangeAlert from "../components/cart/PriceChangeAlert";
+import { RECARGO_TRANSFERENCIA, recargoDe } from "../utils/recargoTransferencia";
 
 export default function CartPage() {
   const router = useRouter();
@@ -127,6 +128,11 @@ export default function CartPage() {
     }));
   };
 
+  // Productos (con el descuento) más el envío: sobre esto va el recargo
+  const totalAntesDeRecargo = () =>
+    getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
+    (orderData.metodoEntrega === "retiro" ? 0 : shippingPrice);
+
   const sendOrderToAdmin = async () => {
     setIsSubmitting(true);
 
@@ -186,6 +192,7 @@ export default function CartPage() {
         orderData.metodoEntrega,
       );
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
+      const recargo = recargoDe(orderData.metodoPago, baseTotal + shipping);
 
       const pedidoData = {
         nombre_cliente: orderData.nombre.trim(),
@@ -205,7 +212,8 @@ export default function CartPage() {
           tipo: item.tipo || "Bulto",
           oferta: item.descuento || 0,
         })),
-        total: baseTotal + shipping,
+        total: baseTotal + shipping + recargo,
+        recargo,
         estado: "pendiente",
         metodo: orderData.metodoEntrega,
         descuento_aplicado: qualifiesForFirstBuyDiscount(
@@ -231,7 +239,7 @@ export default function CartPage() {
           "thankyouData",
           JSON.stringify({
             datosCliente: orderData.nombre,
-            totalAbonado: baseTotal + shipping,
+            totalAbonado: baseTotal + shipping + recargo,
             pedidoId: data.id,
             items: cart,
           }),
@@ -582,7 +590,7 @@ export default function CartPage() {
                             Transferencia bancaria
                           </div>
                           <div className="text-sm text-gray-500">
-                            Transferencia o depósito
+                            Transferencia o depósito (+{RECARGO_TRANSFERENCIA}% de recargo)
                           </div>
                         </div>
                       </label>
@@ -708,19 +716,22 @@ export default function CartPage() {
                     </div>
                   )}
 
+{recargoDe(orderData.metodoPago, totalAntesDeRecargo()) > 0 && (
+                    <div className="flex justify-between text-sm font-medium mb-2">
+                      <span>Recargo transferencia ({RECARGO_TRANSFERENCIA}%):</span>
+                      <span className="text-gray-600">
+                        ${recargoDe(orderData.metodoPago, totalAntesDeRecargo()).toLocaleString("es-AR")}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="border-t pt-2 flex justify-between text-xl font-black">
                     <span>Total:</span>
                     <span className="text-[#FF6600]">
                       $
-                      {(orderData.metodoEntrega === "retiro"
-                        ? getCartTotalWithDiscount(
-                            userProfile,
-                            orderData.metodoEntrega,
-                          )
-                        : getCartTotalWithDiscount(
-                            userProfile,
-                            orderData.metodoEntrega,
-                          ) + shippingPrice
+                      {(
+                        totalAntesDeRecargo() +
+                        recargoDe(orderData.metodoPago, totalAntesDeRecargo())
                       ).toLocaleString("es-AR")}
                     </span>
                   </div>

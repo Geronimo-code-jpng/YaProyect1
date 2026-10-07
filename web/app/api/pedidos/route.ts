@@ -18,6 +18,7 @@ const CREATE_FIELDS = [
   "metodo_pago",
   "carrito",
   "total",
+  "recargo",
   "descuento_aplicado",
   "metodo",
   "horario",

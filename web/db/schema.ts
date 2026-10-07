@@ -122,6 +122,8 @@ export const pedidos = pgTable("pedidos", {
   metodo_pago: text("metodo_pago"),
   fecha_pago: timestamp("fecha_pago", { withTimezone: true, mode: "string" }),
   pagado_manualmente: boolean("pagado_manualmente"),
+  /** Recargo por transferencia (2 %), ya incluido en `total`. 0 si paga en efectivo. */
+  recargo: numeric("recargo").default("0"),
 
   // --- Lo que el sistema del negocio hizo con cada pedido ---
   // Los pedidos de la tienda los maneja el sistema (se aceptan, se rechazan, se

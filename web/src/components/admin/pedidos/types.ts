@@ -7,6 +7,8 @@ export interface AdminOrder {
   direccion: string;
   notas?: string;
   total: number;
+  /** Recargo por transferencia, ya incluido en total */
+  recargo?: number | string | null;
   carrito: OrderItem[];
   estado: string;
   created_at?: string;

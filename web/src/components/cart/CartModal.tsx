@@ -15,6 +15,7 @@ import { getProductImageUrl } from "../../utils/productImageUtils";
 import { validateCartItems, computeUpdatedCart } from "../../utils/validateCartItems";
 import type { PriceChange } from "../../utils/validateCartItems";
 import PriceChangeAlert from "./PriceChangeAlert";
+import { RECARGO_TRANSFERENCIA, recargoDe } from "../../utils/recargoTransferencia";
 
 export default function CartModal() {
   const router = useRouter();
@@ -148,6 +149,11 @@ export default function CartModal() {
     }));
   };
 
+  // Productos (con el descuento) más el envío: sobre esto va el recargo
+  const totalAntesDeRecargo = () =>
+    getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
+    (orderData.metodoEntrega === "retiro" ? 0 : shippingPrice);
+
   const sendOrderToAdmin = async () => {
     setIsSubmitting(true);
 
@@ -215,6 +221,7 @@ export default function CartModal() {
 
       const baseTotal = getCartTotalWithDiscount(userProfile, orderData.metodoEntrega);
       const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
+      const recargo = recargoDe(orderData.metodoPago, baseTotal + shipping);
 
       const pedidoData = {
         nombre_cliente: orderData.nombre.trim(),
@@ -233,7 +240,8 @@ export default function CartModal() {
           subtotal: item.precio * item.cantidad,
           tipo: item.tipo || "Bulto",
         })),
-        total: baseTotal + shipping,
+        total: baseTotal + shipping + recargo,
+        recargo,
         descuento_aplicado: qualifiesForFirstBuyDiscount(userProfile, orderData.metodoEntrega)
           ? 1000
           : 0,
@@ -599,7 +607,7 @@ export default function CartModal() {
                     />
                     <div className="flex-1">
                       <span className="font-medium">Transferencia bancaria</span>
-                      <span className="text-sm text-gray-500 ml-2">Pagás cuando aceptemos el pedido</span>
+                      <span className="text-sm text-gray-500 ml-2">Pagás cuando aceptemos el pedido (+{RECARGO_TRANSFERENCIA}% de recargo)</span>
                     </div>
                   </label>
                 </div>
@@ -679,13 +687,20 @@ export default function CartModal() {
                   </div>
                 )}
 
+{recargoDe(orderData.metodoPago, totalAntesDeRecargo()) > 0 && (
+                  <div className="flex justify-between text-sm font-medium mb-2">
+                    <span>Recargo transferencia ({RECARGO_TRANSFERENCIA}%):</span>
+                    <span className="text-gray-600">
+                      ${recargoDe(orderData.metodoPago, totalAntesDeRecargo()).toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                )}
+
                 <div className="border-t pt-2 flex justify-between text-xl font-black">
                   <span>Total:</span>
                   <span className="text-[#FF6600]">
                     ${(
-                      orderData.metodoEntrega === "retiro"
-                        ? getCartTotalWithDiscount(userProfile, orderData.metodoEntrega)
-                        : getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + shippingPrice
+                      totalAntesDeRecargo() + recargoDe(orderData.metodoPago, totalAntesDeRecargo())
                     ).toLocaleString("es-AR")}
                   </span>
                 </div>

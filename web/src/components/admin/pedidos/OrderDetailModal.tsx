@@ -24,7 +24,8 @@ export default function OrderDetailModal({ order, open, onClose }: OrderDetailMo
 
   const items = order.carrito.filter((i) => (i.cantidad || 0) > 0);
   const subtotal = items.reduce((a, i) => a + lineTotal(i), 0);
-  const envio = Math.max(0, order.total - subtotal);
+  const recargo = Number(order.recargo) || 0;
+  const envio = Math.max(0, order.total - recargo - subtotal);
 
   return (
     <Modal open={open} onClose={onClose} title={`Pedido #${order.id}`} size="lg">
@@ -89,6 +90,12 @@ export default function OrderDetailModal({ order, open, onClose }: OrderDetailMo
             <div className="flex justify-between text-gray-500">
               <span>Envío y ajustes</span>
               <span className="tabular-nums">{formatMoneda(envio)}</span>
+            </div>
+          )}
+          {recargo > 0 && (
+            <div className="flex justify-between text-gray-500">
+              <span>Recargo transferencia</span>
+              <span className="tabular-nums">{formatMoneda(recargo)}</span>
             </div>
           )}
           <div className="flex justify-between text-lg font-black text-gray-800">
