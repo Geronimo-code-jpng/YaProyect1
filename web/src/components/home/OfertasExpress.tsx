@@ -34,7 +34,9 @@ export default function OfertasExpress() {
       try {
         const all = await fetchProductos();
         const data = all
-          .filter((p) => p.oferta_express && p.Stock)
+          // Con unidad suelta, hace falta al menos un bulto entero: si quedan
+          // solo sueltos no se muestra (el tilde queda y vuelve solo con stock)
+          .filter((p) => p.oferta_express && p.Stock && (!p.tiene_unidad || Number(p.stock_actual) >= 1))
           .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
 
         if (data) {
