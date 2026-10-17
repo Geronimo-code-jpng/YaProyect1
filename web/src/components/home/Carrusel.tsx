@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { ChevronRight, ChevronLeft } from "lucide-react";
+import { getImageProps } from "next/image";
 
 export default function Carrusel() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -21,26 +22,26 @@ export default function Carrusel() {
 
   const slides = [
     {
-      desktop: "./Carrusel1.png",
-      mobile: "./Carrusel1-mobile.png",
+      desktop: "/Carrusel1.png",
+      mobile: "/Carrusel1-mobile.png",
       alt: "CarruselSlide1",
       bg: "from-blue-700 to-blue-900",
     },
     {
-      desktop: "./Carrusel2.png",
-      mobile: "./Carrusel2-mobile.png",
+      desktop: "/Carrusel2.png",
+      mobile: "/Carrusel2-mobile.png",
       alt: "CarruselSlide2",
       bg: "from-green-600 to-emerald-800",
     },
     {
-      desktop: "./Carrusel3.png",
-      mobile: "./Carrusel3-mobile.png",
+      desktop: "/Carrusel3.png",
+      mobile: "/Carrusel3-mobile.png",
       alt: "CarruselSlide3",
       bg: "from-orange-500 to-orange-800",
     },
     {
-      desktop: "./Carrusel4.png",
-      mobile: "./Carrusel4-mobile.png",
+      desktop: "/Carrusel4.png",
+      mobile: "/Carrusel4-mobile.png",
       alt: "CarruselSlide4",
       bg: "from-orange-500 to-orange-800",
     },
@@ -49,34 +50,40 @@ export default function Carrusel() {
   return (
     <div
       id="heroCarousel"
-      className="relative w-full overflow-hidden
-        h-[13vh]
-        sm:h-[28vh]
-        md:h-[35vh]
-        lg:h-[45vh]
-        xl:h-[52vh]
-        2xl:h-[58vh]"
+      // La caja tiene la misma forma que las fotos (las del celular son más altas): así no se estiran ni se cortan
+      className="relative w-full overflow-hidden aspect-[3125/1156] sm:aspect-[3528/869]"
     >
       {/* Tira de slides */}
       <div
         className="flex transition-transform duration-700 ease-in-out h-full"
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
       >
-        {slides.map((slide, i) => (
-          <div
-            key={i}
-            className={`w-full flex-none h-full bg-linear-to-r ${slide.bg} relative overflow-hidden`}
-          >
-            <picture>
-              <source media="(max-width: 640px)" srcSet={slide.mobile} />
-              <img
-                src={slide.desktop}
-                alt={slide.alt}
-                className="absolute inset-0 w-full h-full object-fit object-center"
-              />
-            </picture>
-          </div>
-        ))}
+        {slides.map((slide, i) => {
+          // Next achica las fotos (pesan varios MB) y elige la de celular o la de computadora
+          const { props: { srcSet: desktop } } = getImageProps({
+            src: slide.desktop, alt: slide.alt, width: 3528, height: 869, sizes: "100vw",
+          });
+          const { props: { srcSet: mobile, ...img } } = getImageProps({
+            src: slide.mobile, alt: slide.alt, width: 3125, height: 1156, sizes: "100vw",
+          });
+          return (
+            <div
+              key={i}
+              className={`w-full flex-none h-full bg-linear-to-r ${slide.bg} relative overflow-hidden`}
+            >
+              <picture>
+                <source media="(min-width: 640px)" srcSet={desktop} />
+                <source srcSet={mobile} />
+                <img
+                  {...img}
+                  alt={slide.alt}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+              </picture>
+            </div>
+          );
+        })}
       </div>
 
       {/* Botón anterior */}

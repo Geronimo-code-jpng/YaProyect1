@@ -4,6 +4,54 @@
 @theme {
   --color-brand: #ff6600;
   --color-brand-hover: #e25c00;
+
+  /* Cinta del envío en el día: el contenido va duplicado, así que correr la mitad empalma sin salto */
+  --animate-marquee: marquee 35s linear infinite;
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* Cada 8 s la motito levanta la rueda, sale al
+     palo hacia la derecha, desaparece y vuelve a entrar por la izquierda. */
+  --animate-arranque: arranque 8s infinite;
+  @keyframes arranque {
+    0%, 50% { transform: translateX(0) rotate(0deg); }
+    53% { transform: translateX(-3px) rotate(-14deg); }
+    55% { transform: translateX(-5px) rotate(-18deg); }
+    57% { transform: translateX(-2px) rotate(-10deg); animation-timing-function: cubic-bezier(0.6, 0, 1, 1); }
+    /* Distancia fija: cada motito cruza solo su frase y se esfuma en el espacio
+       hasta la siguiente (con la cinta corriendo, ir más lejos la mezcla con otras) */
+    66% { transform: translateX(380px) rotate(-2deg); opacity: 1; }
+    68% { transform: translateX(440px) rotate(-2deg); opacity: 0; }
+    68.1% { transform: translateX(-60px) rotate(0deg); opacity: 0; }
+    71% { transform: translateX(-45px) rotate(0deg); opacity: 1; animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+    84%, 100% { transform: translateX(0) rotate(0deg); }
+  }
+
+  /* El humo: aparece donde arrancó, crece, sube un poco y se disipa */
+  --animate-humo: humo 8s infinite;
+  @keyframes humo {
+    0%, 53% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+    57% { opacity: 0.9; transform: translate(-6px, -2px) scale(0.9); }
+    76% { opacity: 0; transform: translate(-30px, -10px) scale(2.6); }
+    100% { opacity: 0; transform: translate(-30px, -10px) scale(2.6); }
+  }
+
+  /* La motito "andando": salta un poquito en los pozos y se inclina */
+  --animate-moto: moto 0.7s ease-in-out infinite;
+  @keyframes moto {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-2px) rotate(-4deg); }
+    50% { transform: translateY(0) rotate(0deg); }
+    75% { transform: translateY(-1px) rotate(3deg); }
+  }
+}
+
+/* Menú del celular entrando desde la izquierda */
+@keyframes entrarIzquierda {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
 /* Modal enter animations (respected only under motion-safe) */
