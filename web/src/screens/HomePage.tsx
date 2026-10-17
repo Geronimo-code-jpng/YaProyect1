@@ -1,6 +1,6 @@
 "use client";
 
-import { Carrusel, OfertasExpress, ProductosMasVendidos, ReviewsSection } from '../components/home';
+import { Carrusel, CategoriesSection, OfertasExpress, ProductosMasVendidos, ReviewsSection } from '../components/home';
 import React from "react";
 
 export default function HomePage() {
@@ -16,7 +16,7 @@ export default function HomePage() {
 
       {/* Secciones sin wrappers redundantes — cada componente maneja su propio max-width */}
       <OfertasExpress />
-      {/* Categorías oculta: quedó en desuso con la conexión al sistema */}
+      <CategoriesSection />
       <ProductosMasVendidos />
       <ReviewsSection />
 

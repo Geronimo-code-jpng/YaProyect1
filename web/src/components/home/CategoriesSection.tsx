@@ -102,32 +102,11 @@ export default function CategoriesSection() {
           </button>
         </div>
 
-        {/* ── MOBILE: 2 tarjetas grandes (comportamiento original) ─────────── */}
-        <div className="grid grid-cols-2 gap-3 lg:hidden">
+        {/* Solo las 2 destacadas: Ofertas y Todos los productos */}
+        <div className="grid grid-cols-2 gap-3 lg:gap-4">
           {CATEGORIAS.slice(0, 2).map((cat) => (
             <CategoriaCard key={cat.id} categoria={cat} size="lg" />
           ))}
-        </div>
-
-        {/* ── DESKTOP: grilla completa con todas las categorías ─────────────
-              Fila 1: 2 destacadas más grandes
-              Fila 2+: resto en grid de 5 columnas
-        ──────────────────────────────────────────────────────────────────── */}
-        <div className="hidden lg:flex flex-col gap-4">
-
-          {/* Fila destacada: las 2 primeras más grandes */}
-          <div className="grid grid-cols-2 gap-4">
-            {CATEGORIAS.slice(0, 2).map((cat) => (
-              <CategoriaCard key={cat.id} categoria={cat} size="lg" />
-            ))}
-          </div>
-
-          {/* Resto de categorías en grid de 5 columnas */}
-          <div className="grid grid-cols-5 gap-3">
-            {CATEGORIAS.slice(2).map((cat) => (
-              <CategoriaCard key={cat.id} categoria={cat} size="md" />
-            ))}
-          </div>
         </div>
 
       </div>
