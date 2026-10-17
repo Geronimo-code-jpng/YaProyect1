@@ -47,52 +47,27 @@ export default function NavBar() {
   const hoverTimeoutRef = useRef(null);
   const [productos, setProductos] = useState<Product[]>([]);
   const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false);
-  const esperaBusqueda = useRef(null);
+  // En /productos no va: la página tiene su propio buscador
   const enProductos = pathname === "/productos";
-
-  // En /productos el buscador muestra lo que se está buscando; en otra página,
-  // vacío. Lo que el mismo buscador acaba de poner en la URL no se vuelve a
-  // copiar: mientras tanto se pudo haber seguido escribiendo.
-  const busquedaUrl = enProductos ? searchParams.get("search") || "" : "";
-  const [busqueda, setBusqueda] = useState(busquedaUrl);
-  const [busquedaUrlAnterior, setBusquedaUrlAnterior] = useState(busquedaUrl);
-  const [busquedaEnviada, setBusquedaEnviada] = useState<string | null>(null);
-  if (busquedaUrl !== busquedaUrlAnterior) {
-    setBusquedaUrlAnterior(busquedaUrl);
-    if (busquedaUrl !== busquedaEnviada) setBusqueda(busquedaUrl);
-  }
-
-  // En /productos la grilla se filtra mientras se escribe (sin sacar del buscador)
-  const ponerEnUrl = (texto: string) => {
-    const q = texto.trim();
-    const params = new URLSearchParams(searchParams.toString());
-    if (q) params.set("search", q);
-    else params.delete("search");
-    setBusquedaEnviada(q);
-    router.replace(`/productos${params.toString() ? `?${params}` : ""}`, { scroll: false });
-  };
+  const [busqueda, setBusqueda] = useState("");
 
   const escribir = (texto: string) => {
     setBusqueda(texto);
     setSugerenciasAbiertas(true);
-    if (!enProductos) return;
-    clearTimeout(esperaBusqueda.current);
-    esperaBusqueda.current = setTimeout(() => ponerEnUrl(texto), 300);
   };
 
   const buscar = (e: React.FormEvent) => {
     e.preventDefault();
-    clearTimeout(esperaBusqueda.current);
     setSugerenciasAbiertas(false);
-    if (enProductos) return ponerEnUrl(busqueda);
     const q = busqueda.trim();
+    setBusqueda("");
     router.push(q ? `/productos?search=${encodeURIComponent(q)}` : "/productos");
   };
 
-  // Fuera de /productos, los que coinciden aparecen abajo del buscador
+  // Los que coinciden aparecen abajo del buscador
   const textoBuscado = busqueda.trim().toLowerCase();
   const sugerencias =
-    enProductos || textoBuscado.length < 2
+    textoBuscado.length < 2
       ? []
       : productos
           .filter((p) => (p.nombre || "").toLowerCase().includes(textoBuscado))
@@ -116,7 +91,7 @@ export default function NavBar() {
         aria-label="Buscar productos"
         className="w-full h-11 pl-11 pr-4 rounded-full bg-white text-sm text-gray-800 placeholder:text-gray-400 shadow-sm outline-none focus:ring-4 focus:ring-white/30"
       />
-      {sugerenciasAbiertas && !enProductos && textoBuscado.length >= 2 && (
+      {sugerenciasAbiertas && textoBuscado.length >= 2 && (
         // onMouseDown: que el clic no le saque el foco al buscador antes de navegar
         <div
           onMouseDown={(e) => e.preventDefault()}
@@ -325,9 +300,13 @@ export default function NavBar() {
             </nav>
 
             {/* Buscador: en computadora va en la barra; en el celular, abajo */}
-            <form onSubmit={buscar} className="hidden md:flex flex-1 max-w-xl mx-auto">
-              {buscador}
-            </form>
+            {enProductos ? (
+              <div className="hidden md:block flex-1" />
+            ) : (
+              <form onSubmit={buscar} className="hidden md:flex flex-1 max-w-xl mx-auto">
+                {buscador}
+              </form>
+            )}
 
             <div className="flex items-center shrink-0 ml-auto md:ml-0 gap-1">
               {!user ? (
@@ -394,9 +373,11 @@ export default function NavBar() {
               </button>
             </div>
           </div>
-          <form onSubmit={buscar} className="md:hidden px-3 pb-3">
-            {buscador}
-          </form>
+          {!enProductos && (
+            <form onSubmit={buscar} className="md:hidden px-3 pb-3">
+              {buscador}
+            </form>
+          )}
         </div>
       </div>
       {/* Menú del celular: panel que entra desde la izquierda */}
