@@ -73,6 +73,15 @@
   display: none;  /* Safari and Chrome */
 }
 
+/* En el celular, el iPhone hace zoom al tocar un cuadro de texto con letra de
+   menos de 16px. Esta regla va fuera de las capas de Tailwind, así que le gana
+   a text-sm y similares. */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 /* Mobile-first responsive adjustments */
 @media (max-width: 640px) {
   .hero-text {
