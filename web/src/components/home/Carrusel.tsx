@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { ChevronRight, ChevronLeft } from "lucide-react";
-import { getImageProps } from "next/image";
+import { staticSrcSet, staticVariantPath } from "../../../lib/imageVariants";
 
 export default function Carrusel() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -59,23 +59,22 @@ export default function Carrusel() {
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
       >
         {slides.map((slide, i) => {
-          // Next achica las fotos (pesan varios MB) y elige la de celular o la de computadora
-          const { props: { srcSet: desktop } } = getImageProps({
-            src: slide.desktop, alt: slide.alt, width: 3528, height: 869, sizes: "100vw",
-          });
-          const { props: { srcSet: mobile, ...img } } = getImageProps({
-            src: slide.mobile, alt: slide.alt, width: 3125, height: 1156, sizes: "100vw",
-          });
+          // Los PNG originales pesan varios MB: se usan las copias WebP de
+          // public/optimized/ (scripts/resize-static-images.mts) y el navegador
+          // elige la de celular o la de computadora
           return (
             <div
               key={i}
               className={`w-full flex-none h-full bg-linear-to-r ${slide.bg} relative overflow-hidden`}
             >
               <picture>
-                <source media="(min-width: 640px)" srcSet={desktop} />
-                <source srcSet={mobile} />
+                <source media="(min-width: 640px)" srcSet={staticSrcSet(slide.desktop)} sizes="100vw" />
+                <source srcSet={staticSrcSet(slide.mobile)} sizes="100vw" />
                 <img
-                  {...img}
+                  src={staticVariantPath(slide.mobile, 1080)}
+                  width={3125}
+                  height={1156}
+                  decoding="async"
                   alt={slide.alt}
                   loading={i === 0 ? "eager" : "lazy"}
                   className="absolute inset-0 w-full h-full object-cover object-center"

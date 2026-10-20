@@ -1,14 +1,15 @@
 import { del, list, put } from "@vercel/blob";
 import sharp from "sharp";
 import { jsonCors } from "@/lib/cors";
+import { MAX_WIDTH, isVariantPath } from "@/lib/imageVariants";
+import { putProductImageVariants } from "@/lib/productImageVariants";
 
 // sharp necesita el runtime de Node (no Edge).
 export const runtime = "nodejs";
 
-// Ancho máximo que realmente se muestra en la tienda. Las fotos que suben los
-// admins (celular, 1-5 MB) se redimensionan y se pasan a WebP antes de guardar
-// en Blob, para que el egreso de datos sea mínimo.
-const MAX_WIDTH = 900;
+// Las fotos que suben los admins (celular, 1-5 MB) se redimensionan a
+// MAX_WIDTH y se pasan a WebP antes de guardar en Blob, para que el egreso de
+// datos sea mínimo.
 const WEBP_QUALITY = 72;
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
@@ -53,13 +54,15 @@ export async function POST(
     allowOverwrite: true,
     cacheControlMaxAge: ONE_YEAR,
   });
+  // Copias chicas para listados y miniaturas (las elige lib/imageLoader.ts).
+  await putProductImageVariants(pathname, optimized);
 
   // Borra blobs viejos de este producto con otra extensión (.png/.jpg) para no
   // dejar archivos grandes huérfanos consumiendo almacenamiento.
   try {
     const { blobs } = await list({ prefix: `product-images/producto${id}.` });
     const stale = blobs
-      .filter((b) => b.pathname !== pathname)
+      .filter((b) => b.pathname !== pathname && !isVariantPath(b.pathname))
       .map((b) => b.url);
     if (stale.length) await del(stale);
   } catch {
