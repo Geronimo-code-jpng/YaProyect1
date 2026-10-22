@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { productos } from "@/db/schema";
 import { jsonCorsCached } from "@/lib/cors";
+import { subrubroWeb } from "@/lib/subrubrosWeb";
 
 export async function GET() {
   // Solo lo que el sistema del negocio dejó a la vista: un producto dado de
@@ -10,5 +11,7 @@ export async function GET() {
   // con el cartel de "SIN STOCK".
   const rows = await db.select().from(productos).where(eq(productos.publicado, true));
   // Catálogo completo: caché corto en el CDN (ver lib/cors.ts) porque trae el stock.
-  return jsonCorsCached(rows);
+  return jsonCorsCached(
+    rows.map((p) => ({ ...p, subcategoria: subrubroWeb(p.subcategoria, p.nombre) })),
+  );
 }

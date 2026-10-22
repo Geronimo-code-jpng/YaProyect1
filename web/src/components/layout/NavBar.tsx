@@ -43,6 +43,7 @@ export default function NavBar() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [subcategorias, setSubcategorias] = useState<Record<string, string[]>>({});
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const hoverTimeoutRef = useRef(null);
   const [productos, setProductos] = useState<Product[]>([]);
@@ -148,6 +149,13 @@ export default function NavBar() {
           ...new Set(data.map((p) => p.Categoria).filter(Boolean)),
         ].sort();
         setCategories(uniqueCategories);
+        const subs: Record<string, string[]> = {};
+        for (const cat of uniqueCategories) {
+          subs[cat] = [
+            ...new Set(data.filter((p) => p.Categoria === cat).map((p) => p.subcategoria).filter(Boolean)),
+          ].sort();
+        }
+        setSubcategorias(subs);
       } catch (err) {
         console.error("Error cargando categorías:", err);
       }
@@ -271,16 +279,29 @@ export default function NavBar() {
                       Todos los productos
                     </Link>
                     <div className="border-t border-gray-100 my-1" />
-                    {categories.map((cat) => (
-                      <Link
-                        key={cat}
-                        href={`/productos?categoria=${cat}`}
-                        onClick={() => setCategoriesOpen(false)}
-                        className="block px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-orange-50 hover:text-[#FF6600] transition"
-                      >
-                        {cat}
-                      </Link>
-                    ))}
+                    <div className="flex">
+                      {categories.map((cat) => (
+                        <div key={cat} className="min-w-[200px] pb-1">
+                          <Link
+                            href={`/productos?categoria=${cat}`}
+                            onClick={() => setCategoriesOpen(false)}
+                            className="block px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-orange-50 hover:text-[#FF6600] transition"
+                          >
+                            {cat}
+                          </Link>
+                          {subcategorias[cat]?.map((sub) => (
+                            <Link
+                              key={sub}
+                              href={`/productos?categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`}
+                              onClick={() => setCategoriesOpen(false)}
+                              className="block pl-6 pr-4 py-1.5 text-sm font-medium text-gray-600 capitalize hover:bg-orange-50 hover:text-[#FF6600] transition"
+                            >
+                              {sub.toLowerCase()}
+                            </Link>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -490,6 +511,27 @@ export default function NavBar() {
                       </Link>
                     ))}
                   </div>
+                  {categories.map((cat) =>
+                    subcategorias[cat]?.length ? (
+                      <div key={cat} className="mt-3">
+                        <h4 className="px-1 mb-1.5 text-xs font-bold text-gray-500 capitalize">
+                          {String(cat).toLowerCase()}
+                        </h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {subcategorias[cat].map((sub) => (
+                            <Link
+                              key={sub}
+                              href={`/productos?categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 capitalize active:border-[#f74d00] active:text-[#f74d00]"
+                            >
+                              {sub.toLowerCase()}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null,
+                  )}
                 </div>
               )}
 
