@@ -26,11 +26,9 @@ const Frase = ({ demora }: { demora: number }) => (
         className="absolute inset-0 z-10 origin-[20%_90%] motion-safe:animate-arranque"
         style={{ animationDelay: `${demora}s` }}
       >
-        <img
-          className="w-7 h-7 mix-blend-multiply motion-safe:animate-moto"
-          src="https://diaio.vtexassets.com/arquivos/envio-moto-header_bajo.gif"
-          alt=""
-        />
+        {/* Foto quieta y liviana (13 KB): el GIF de antes pesaba 3,4 MB y con 8 a la vez trababa el celular.
+            El movimiento lo dan las animaciones de CSS */}
+        <img className="w-7 h-7 motion-safe:animate-moto" src="/moto-envio.png" alt="" />
       </span>
     </span>
     <p className="text-sm py-1.5 text-gray-700">

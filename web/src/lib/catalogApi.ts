@@ -20,6 +20,18 @@ export async function fetchProductos(): Promise<Product[]> {
   return api("/api/productos");
 }
 
+// Para las secciones del inicio y el buscador, que piden la lista a la vez:
+// un solo pedido y se reusa 30 segundos (antes eran 5 pedidos iguales al abrir).
+let compartido: { cuando: number; pedido: Promise<Product[]> } | null = null;
+export function fetchProductosCompartido(): Promise<Product[]> {
+  if (!compartido || Date.now() - compartido.cuando > 30_000) {
+    const pedido = fetchProductos();
+    compartido = { cuando: Date.now(), pedido };
+    pedido.catch(() => { if (compartido?.pedido === pedido) compartido = null; });
+  }
+  return compartido.pedido;
+}
+
 export async function fetchProductoById(id: number | string): Promise<Product | null> {
   return api(`/api/productos/${id}`);
 }

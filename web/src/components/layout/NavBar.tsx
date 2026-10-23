@@ -12,7 +12,6 @@ import {
   PackageOpen,
   Menu,
   X,
-  Phone,
   Mail,
   MapPin,
   Tag,
@@ -29,7 +28,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
-import { fetchProductos } from "../../lib/catalogApi";
+import { fetchProductosCompartido } from "../../lib/catalogApi";
 import PhraseGroup from "./BucleSlogan";
 import { precioBulto } from "../../lib/presentaciones";
 import type { Product } from "../../types";
@@ -143,7 +142,7 @@ export default function NavBar() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const data = await fetchProductos();
+        const data = await fetchProductosCompartido();
         setProductos(data);
         const uniqueCategories = [
           ...new Set(data.map((p) => p.Categoria).filter(Boolean)),
@@ -540,22 +539,14 @@ export default function NavBar() {
                 <h3 className="px-1 mb-2 text-xs font-black uppercase tracking-wider text-gray-400">
                   Contacto
                 </h3>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <a
-                    href="https://wa.me/3425084197"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-500 text-white font-bold text-sm shadow-sm"
-                  >
-                    <MessageCircle size={18} /> WhatsApp
-                  </a>
-                  <a
-                    href="tel:3425084197"
-                    className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-gray-800 font-bold text-sm shadow-sm"
-                  >
-                    <Phone size={18} /> Llamar
-                  </a>
-                </div>
+                <a
+                  href="https://wa.me/3425084197"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-3 mb-2 rounded-2xl bg-green-500 text-white font-bold text-sm shadow-sm"
+                >
+                  <MessageCircle size={18} /> WhatsApp
+                </a>
                 <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3 text-sm text-gray-600">
                   <p className="flex items-start gap-3">
                     <MapPin size={18} className="text-[#f74d00] shrink-0" />

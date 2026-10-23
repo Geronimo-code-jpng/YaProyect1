@@ -4,19 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { fetchProductos } from "../../lib/catalogApi";
+import { fetchProductosCompartido } from "../../lib/catalogApi";
 
 type Subrubro = { categoria: string; nombre: string; imagen: string; cantidad: number };
 
 // Los sub-rubros salen de los productos (los manda el sistema): no hay lista a
 // mano. La foto de cada círculo es la de un producto de ese sub-rubro, de
 // preferencia uno de los "más vendidos".
+// Foto elegida a mano para un sub-rubro (id del producto). Si ese producto se
+// queda sin stock o sin foto, vuelve a elegirse sola.
+const FOTO_ELEGIDA: Record<string, number> = {
+  APERITIVOS: 1585, // CAJA FERNET BRANCA 750CC X12
+};
+
 export default function SubrubrosSection() {
   const [subrubros, setSubrubros] = useState<Subrubro[]>([]);
   const fila = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchProductos()
+    fetchProductosCompartido()
       .then((productos) => {
         const grupos = new Map<string, Subrubro & { masVendido: boolean }>();
         for (const p of productos) {
@@ -32,6 +38,12 @@ export default function SubrubrosSection() {
             g.masVendido = !!p.mas_vendido;
           }
           grupos.set(clave, g);
+        }
+        for (const p of productos) {
+          const g = grupos.get(`${p.Categoria}|${p.subcategoria}`);
+          if (g && p.Stock && FOTO_ELEGIDA[p.subcategoria] === p.Id && (p.Imagen || p.imagen)) {
+            g.imagen = p.Imagen || p.imagen;
+          }
         }
         // Solo cuentan los productos con stock: un sub-rubro sin nada no aparece. Los que más tienen, primero
         setSubrubros([...grupos.values()].sort((a, b) => b.cantidad - a.cantidad));
@@ -66,7 +78,7 @@ export default function SubrubrosSection() {
         </div>
       </div>
 
-      <div ref={fila} className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide snap-x pb-2 -mx-1 px-1">
+      <div ref={fila} className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide snap-x pt-1.5 pb-2 -mx-1 px-1">
         {subrubros.map((s) => (
           <Link
             key={`${s.categoria}|${s.nombre}`}
@@ -82,8 +94,9 @@ export default function SubrubrosSection() {
                 className="object-contain p-2.5 mix-blend-multiply"
               />
             </div>
-            <span className="text-[11px] sm:text-xs font-bold text-gray-700 leading-tight line-clamp-2 capitalize group-hover:text-[#f74d00]">
-              {s.nombre.toLowerCase()}
+            <span className="w-full text-[11px] sm:text-xs font-bold text-gray-700 leading-tight line-clamp-2 break-words capitalize group-hover:text-[#f74d00]">
+              {/* Corte después de la "/" para que un nombre largo baje de renglón y no pise al de al lado */}
+              {s.nombre.toLowerCase().replace(/\//g, "/\u200b")}
             </span>
           </Link>
         ))}
