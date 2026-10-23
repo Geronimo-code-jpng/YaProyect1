@@ -59,7 +59,7 @@ export default function OfertasExpress() {
           </div>
 
           <div className="relative">
-            {ofertas ? <FilaProductos productos={ofertas} oscuro /> : <FilaCargando />}
+            {ofertas ? <FilaProductos productos={ofertas} /> : <FilaCargando />}
           </div>
         </div>
       </div>
