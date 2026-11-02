@@ -1,6 +1,6 @@
-import { and, desc, eq, or, ilike } from "drizzle-orm";
+import { and, desc, eq, or, ilike, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { pedidos } from "@/db/schema";
+import { pedidos, perfiles } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
 
 // created_at lo pone la DB (defaultNow) — nunca el cliente: el reloj del
@@ -38,6 +38,22 @@ export async function POST(request: Request) {
   values.fuente = "web";
 
   const [created] = await db.insert(pedidos).values(values as any).returning();
+
+  // Las cuentas de Google nacen sin teléfono ni dirección: el primer pedido los
+  // completa en el perfil. Solo llena los vacíos, nunca pisa lo que ya tiene.
+  if (created.user_id) {
+    const telefono = created.telefono?.trim() || null;
+    const direccion =
+      created.metodo === "envio" ? created.direccion?.trim() || null : null;
+    await db
+      .update(perfiles)
+      .set({
+        telefono: sql`coalesce(nullif(${perfiles.telefono}, ''), ${telefono})`,
+        direccion: sql`coalesce(nullif(${perfiles.direccion}, ''), ${direccion})`,
+      })
+      .where(eq(perfiles.id, created.user_id));
+  }
+
   return jsonCors(created);
 }
 
