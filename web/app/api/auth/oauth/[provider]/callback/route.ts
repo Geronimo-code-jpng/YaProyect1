@@ -78,7 +78,8 @@ export async function GET(
     .limit(1);
 
   if (!user) {
-    // Registro: el teléfono se pide al hacer el primer pedido.
+    // Registro: teléfono, dirección y tipo de cliente se piden enseguida en
+    // /completar-perfil (ver `completar` más abajo).
     [user] = await db
       .insert(perfiles)
       .values({
@@ -95,10 +96,13 @@ export async function GET(
 
   // La sesión vive en localStorage (ver src/utils/authDB.ts): va en el #hash
   // para que no quede en logs del servidor ni se mande en el Referer.
+  // `completar`: el perfil todavía no tiene teléfono (cuenta recién creada con
+  // Google), así que antes de seguir se lo manda a /completar-perfil.
   const payload = Buffer.from(
     JSON.stringify({
       user: { id: user.id, email: user.email, nombre: user.nombre, rol: user.rol },
       next: flow.next,
+      completar: !user.telefono?.trim(),
     }),
   ).toString("base64url");
 

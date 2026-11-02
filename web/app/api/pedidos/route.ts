@@ -39,8 +39,9 @@ export async function POST(request: Request) {
 
   const [created] = await db.insert(pedidos).values(values as any).returning();
 
-  // Las cuentas de Google nacen sin teléfono ni dirección: el primer pedido los
-  // completa en el perfil. Solo llena los vacíos, nunca pisa lo que ya tiene.
+  // Las cuentas de Google se mandan a /completar-perfil al entrar, pero ese paso
+  // se puede saltear: si el perfil sigue sin teléfono o dirección, el pedido los
+  // completa. Solo llena los vacíos, nunca pisa lo que ya tiene.
   if (created.user_id) {
     const telefono = created.telefono?.trim() || null;
     const direccion =

@@ -28,7 +28,7 @@ Login y registro con Google usan el flujo Authorization Code + PKCE (`web/lib/oa
 - `http://localhost:3000/api/auth/oauth/google/callback`
 - `https://yamayorista.online/api/auth/oauth/google/callback`
 
-Si el email de Google ya tiene cuenta, entra a esa cuenta; si no, se crea el perfil sin contraseña ni teléfono (el teléfono se pide en el primer pedido). Sin las variables, el botón lleva a `/login` con un aviso.
+Si el email de Google ya tiene cuenta, entra a esa cuenta; si no, se crea el perfil sin contraseña y se lo manda a `/completar-perfil` a cargar tipo de cliente, teléfono, dirección (opcional) y, si hace falta, corregir el nombre. Si saltea ese paso, el primer pedido completa teléfono y dirección en el perfil. Sin las variables, el botón lleva a `/login` con un aviso.
 
 ## Deploy
 

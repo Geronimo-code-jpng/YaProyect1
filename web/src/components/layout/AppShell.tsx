@@ -25,6 +25,7 @@ const TITLES: Record<string, string> = {
   "/pedidos": "YA MAYORISTA! | Mis Pedidos",
   "/perfil": "YA MAYORISTA! | Mi Perfil",
   "/thankyoupage": "YA MAYORISTA! | Gracias por tu compra",
+  "/completar-perfil": "YA MAYORISTA! | Completá tu perfil",
 };
 
 function AppContent({ children }: { children: ReactNode }) {

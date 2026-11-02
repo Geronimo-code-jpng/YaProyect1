@@ -15,12 +15,14 @@ function decodePayload(hash: string) {
 export default function OAuthCallbackPage() {
   useEffect(() => {
     try {
-      const { user, next } = decodePayload(window.location.hash.slice(1));
+      const { user, next, completar } = decodePayload(window.location.hash.slice(1));
       if (!user?.id || !user?.email) throw new Error("payload inválido");
       saveSession(user);
       const destino = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
       // replace: que "atrás" no vuelva a esta página con la sesión en la URL.
-      window.location.replace(destino);
+      window.location.replace(
+        completar ? `/completar-perfil?next=${encodeURIComponent(destino)}` : destino,
+      );
     } catch (err) {
       console.error("Error en login con OAuth:", err);
       window.location.replace("/login?oauth_error=proveedor");
