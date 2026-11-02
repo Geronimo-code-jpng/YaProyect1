@@ -28,8 +28,10 @@ export async function POST(request: Request) {
   }
 
   if (!user) {
+    // Las cuentas creadas con Google no tienen contraseña (pueden crearse una con
+    // "¿Olvidaste tu contraseña?").
     if (candidatos.every((c) => !c.password)) {
-      return jsonCors({ success: false, error: "Usuario sin contraseña configurada" });
+      return jsonCors({ success: false, error: "Esta cuenta usa Google: iniciá sesión con el botón \"Continuar con Google\"" });
     }
     return jsonCors({ success: false, error: "Contraseña incorrecta" });
   }

@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 .tmp-drizzle/
+
+# copias de la base (scripts/db-export.mts): datos de clientes
+/.respaldos/

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { apiRegister } from "../lib/catalogApi";
 import { loginWithDB } from "../utils/authDB";
+import OAuthButtons from "../components/auth/OAuthButtons";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -152,6 +153,8 @@ export default function RegisterPage() {
               ))}
             </div>
           )}
+
+          <OAuthButtons label="Registrarme con Google" tipoCliente={formData.type} />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}

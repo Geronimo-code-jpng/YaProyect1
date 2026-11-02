@@ -1,6 +1,7 @@
 import { useAuth } from "../../contexts/AuthContext";
 import { useState } from "react"
 import PasswordResetModal from "./PasswordResetModal";
+import OAuthButtons from "./OAuthButtons";
 import { loginWithDB } from "../../utils/authDB";
 import { apiRegister } from "../../lib/catalogApi";
 
@@ -240,6 +241,8 @@ export default function AuthModal() {
                 ))}
               </div>
             )}
+
+            <OAuthButtons label={activeTab === "register" ? "Registrarme con Google" : "Continuar con Google"} />
 
             <form
               onSubmit={handleLoginSubmit}

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:diff": "node scripts/db-diff.mjs",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:export": "tsx scripts/db-export.mts",
+    "db:import": "tsx scripts/db-import.mts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.3.1",

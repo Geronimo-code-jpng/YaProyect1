@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { loginWithDB } from "../utils/authDB";
+import OAuthButtons, { OAUTH_ERRORS } from "../components/auth/OAuthButtons";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +22,12 @@ export default function LoginPage() {
     }
     return { email, password: "" };
   });
+
+  // El login con Google vuelve a /login?oauth_error=... si algo falla.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("oauth_error");
+    if (code) setLoginError(OAUTH_ERRORS[code] || OAUTH_ERRORS.proveedor);
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -100,6 +107,8 @@ export default function LoginPage() {
               {loginError}
             </div>
           )}
+
+          <OAuthButtons />
 
           <form onSubmit={handleLoginSubmit} className="space-y-6">
             {/* Email */}
