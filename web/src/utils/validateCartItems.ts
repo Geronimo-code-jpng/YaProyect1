@@ -1,5 +1,5 @@
 import { fetchProductos } from "../lib/catalogApi";
-import { hay, precioDe, tieneUnidad, unidadesPorBulto, type Tipo } from "../lib/presentaciones";
+import { escalasDe, hay, nombreDe, precioDe, tieneUnidad, unidadesPorBulto, type Tipo } from "../lib/presentaciones";
 
 export interface CartValidationItem {
   Id: number;
@@ -104,8 +104,9 @@ export async function validateCartItems(
         });
       }
 
-      // El precio de cada presentación lo manda el sistema del negocio
-      const currentPrice = precioDe(db, tipo);
+      // El precio de cada presentación lo manda el sistema del negocio, y con
+      // descuento por cantidad depende de cuántas lleva
+      const currentPrice = precioDe(db, tipo, item.cantidad);
       if (currentPrice !== item.precio) {
         itemChanges.push({
           campo: "precio",
@@ -143,17 +144,20 @@ export function computeUpdatedCart(
       return { ...item, cantidad: 0, Stock: false };
     }
 
-    const finalPrice = precioDe(db, tipo);
+    const finalPrice = precioDe(db, tipo, item.cantidad);
 
     return {
       ...item,
       precio: finalPrice,
       precio_unitario: finalPrice,
+      // Lo de hoy, para que el carrito siga acomodando el precio si cambia la cantidad
+      precio_base: precioDe(db, tipo),
+      escalas: escalasDe(db, tipo),
       oferta: item.oferta || item.Oferta,
       descuento: item.descuento || item.discount,
       Stock: db.Stock,
       quantity_per_bundle: unidadesPorBulto(db),
-      nombre: db.nombre || item.nombre,
+      nombre: nombreDe(db, tipo) || item.nombre,
     };
   }) as CartValidationItem[];
 }

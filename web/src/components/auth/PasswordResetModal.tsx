@@ -125,6 +125,9 @@ export default function PasswordResetModal() {
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <input
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 name="email"
                 placeholder="Tu Email"
                 className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"

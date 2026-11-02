@@ -18,7 +18,11 @@ import type { Product } from "../types";
 export type Tipo = "Bulto" | "Unidad";
 
 type Datos = Pick<Product, "precio" | "Stock"> &
-  Partial<Pick<Product, "quantity" | "precio_unidad" | "tiene_unidad" | "stock_actual" | "stock_unidades">>;
+  Partial<Pick<Product, "quantity" | "precio_unidad" | "tiene_unidad" | "stock_actual" | "stock_unidades"
+    | "precios_cantidad" | "precios_cantidad_unidad">>;
+
+/** Una escala del descuento por cantidad: llevando `desde` o más, cada una a `precio`. */
+export type Escala = { desde: number; precio: number };
 
 const num = (v: unknown): number => {
   const n = Number(v);
@@ -44,9 +48,44 @@ export const hayUnidad = (p: Datos): boolean =>
 
 export const hay = (p: Datos, tipo: Tipo): boolean => (tipo === "Unidad" ? hayUnidad(p) : hayBulto(p));
 
-/** Precio de la presentación elegida. */
-export const precioDe = (p: Datos, tipo: Tipo): number =>
-  tipo === "Unidad" ? precioUnidad(p) ?? 0 : precioBulto(p);
+// --------------------------------------------------- Descuento por cantidad
+// El sistema manda, por presentación, la lista de escalas (texto JSON, NULL si
+// no tiene): "llevando 10 o más, $11 c/u; llevando 90 o más, $10". Vale la
+// escala más alta a la que se llega; por debajo de la primera, el precio de
+// siempre. Es la misma cuenta que hace el mostrador del sistema
+// (SistemaYa/src/dominio/escalas.js).
+
+/** Lee una lista de escalas (texto JSON o ya leída), ordenada de menor a mayor. */
+export function leerEscalas(valor: unknown): Escala[] {
+  let lista = valor;
+  if (typeof lista === "string") {
+    try { lista = JSON.parse(lista); } catch { lista = null; }
+  }
+  if (!Array.isArray(lista)) return [];
+  return lista
+    .map((e) => ({ desde: Number(e?.desde), precio: Number(e?.precio) }))
+    .filter((e) => Number.isFinite(e.desde) && e.desde > 1 && Number.isFinite(e.precio) && e.precio > 0)
+    .sort((a, b) => a.desde - b.desde);
+}
+
+/** Las escalas de la presentación elegida. */
+export const escalasDe = (p: Datos, tipo: Tipo): Escala[] =>
+  leerEscalas(tipo === "Unidad" ? p.precios_cantidad_unidad : p.precios_cantidad);
+
+/** El precio de cada una llevando esa cantidad. */
+export function precioPorCantidad(base: number, escalas: Escala[] | undefined | null, cantidad: number): number {
+  let precio = base;
+  for (const e of escalas || []) if (cantidad >= e.desde) precio = e.precio;
+  return precio;
+}
+
+/** Precio de la presentación elegida (por cada una, llevando esa cantidad). */
+export const precioDe = (p: Datos, tipo: Tipo, cantidad = 1): number =>
+  precioPorCantidad(tipo === "Unidad" ? precioUnidad(p) ?? 0 : precioBulto(p), escalasDe(p, tipo), cantidad);
+
+/** Nombre de la presentación elegida: el del suelto si es "Unidad" y el sistema lo mandó. */
+export const nombreDe = (p: Pick<Product, "nombre"> & Partial<Pick<Product, "nombre_unidad">>, tipo: Tipo): string =>
+  (tipo === "Unidad" && p.nombre_unidad?.trim()) || p.nombre || "";
 
 /** Cuál se muestra elegida al principio: el bulto, salvo que solo haya unidades. */
 export const tipoInicial = (p: Datos): Tipo => (!hayBulto(p) && hayUnidad(p) ? "Unidad" : "Bulto");

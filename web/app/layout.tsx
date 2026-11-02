@@ -4,14 +4,14 @@ import "./globals.css";
 import AppShell from "@/src/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://yamayorista.com"),
+  metadataBase: new URL("https://yamayorista.online"),
   title: "YA MAYORISTA! | Distribuidor Mayorista",
   description:
     "YA MAYORISTA - Tu distribuidor mayorista de confianza. Amplio catálogo de alimentos, bebidas, lácteos y más.",
   icons: { icon: "/yafavicon.svg", shortcut: "/yafavicon.svg" },
   openGraph: {
     type: "website",
-    url: "https://yamayorista.com/",
+    url: "https://yamayorista.online/",
     title: "YA MAYORISTA! | Distribuidor Mayorista",
     description:
       "YA MAYORISTA - Tu distribuidor mayorista de confianza. Amplio catálogo de alimentos, bebidas, lácteos y más.",

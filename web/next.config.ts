@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
     imageSizes: [VARIANT_WIDTHS[0]],
     deviceSizes: [...VARIANT_WIDTHS.slice(1), MAX_WIDTH],
   },
+  // Solo para mirar la página en la compu sin base de datos: API_REMOTA (en
+  // .env.local) manda los /api/* a la tienda publicada. En Vercel no está.
+  async rewrites() {
+    const remota = process.env.API_REMOTA;
+    return remota ? { beforeFiles: [{ source: "/api/:path*", destination: `${remota}/api/:path*` }], afterFiles: [], fallback: [] } : [];
+  },
 };
 
 export default nextConfig;

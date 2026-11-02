@@ -1,18 +1,19 @@
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { perfiles } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
+import { mismoEmail, normalizarEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { email, password, nombre, telefono, direccion, tipo_cliente } = body;
+  const { password, nombre, telefono, direccion, tipo_cliente } = body;
+  const email = normalizarEmail(body.email);
 
   if (!email || !password || !nombre || !telefono) {
     return jsonCors({ success: false, error: "Faltan campos obligatorios" });
   }
 
-  const [existing] = await db.select().from(perfiles).where(eq(perfiles.email, email));
+  const [existing] = await db.select().from(perfiles).where(mismoEmail(perfiles.email, email));
   if (existing) {
     return jsonCors({ success: false, error: "Este email ya está registrado" });
   }

@@ -11,6 +11,8 @@ function agregarAlCarrito(addToCart, product, quantity) {
       nombre: product.name || product.nombre,
       precio: product.price || product.precio,
       precio_unitario: product.price || product.precio_unitario,
+      precio_base: product.price || product.precio,
+      escalas: product.escalas,
       cantidad: quantity,
       imagen: product.image || product.imagen,
       tipo: product.tipo || "Bulto",

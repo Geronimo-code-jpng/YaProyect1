@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import { fetchProductosCompartido } from "../../lib/catalogApi";
 
 type Subrubro = { categoria: string; nombre: string; imagen: string; cantidad: number };
 
 // Los sub-rubros salen de los productos (los manda el sistema): no hay lista a
-// mano. La foto de cada círculo es la de un producto de ese sub-rubro, de
+// mano. La foto de cada tarjeta es la de un producto de ese sub-rubro, de
 // preferencia uno de los "más vendidos".
 // Foto elegida a mano para un sub-rubro (id del producto). Si ese producto se
 // queda sin stock o sin foto, vuelve a elegirse sola.
@@ -20,6 +20,8 @@ const FOTO_ELEGIDA: Record<string, number> = {
 export default function SubrubrosSection() {
   const [subrubros, setSubrubros] = useState<Subrubro[]>([]);
   const fila = useRef<HTMLDivElement>(null);
+  const [alPrincipio, setAlPrincipio] = useState(true);
+  const [alFinal, setAlFinal] = useState(false);
 
   useEffect(() => {
     fetchProductosCompartido()
@@ -51,55 +53,85 @@ export default function SubrubrosSection() {
       .catch((err) => console.error("Error cargando sub-rubros:", err));
   }, []);
 
+  // Igual que en las filas de productos: la flecha de una punta se esconde al llegar
+  const medir = () => {
+    const f = fila.current;
+    if (!f) return;
+    setAlPrincipio(f.scrollLeft <= 1);
+    setAlFinal(f.scrollLeft + f.clientWidth >= f.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [subrubros]);
+
   if (!subrubros.length) return null;
 
   const mover = (lado: number) =>
     fila.current?.scrollBy({ left: lado * fila.current.clientWidth * 0.8, behavior: "smooth" });
 
+  const flecha = `hidden md:flex absolute top-[38%] -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center text-gray-700 hover:text-[#f74d00] hover:scale-105 transition disabled:opacity-0 disabled:pointer-events-none`;
+
   return (
-    <section className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-10 pt-6 lg:pt-10">
-      <div className="flex items-center justify-between mb-3 lg:mb-5">
-        <h2 className="text-xl lg:text-3xl font-black text-gray-800">¿Qué estás buscando?</h2>
-        <div className="hidden md:flex gap-2">
-          <button
-            onClick={() => mover(-1)}
-            aria-label="Anteriores"
-            className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-600 hover:text-[#f74d00] transition"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={() => mover(1)}
-            aria-label="Siguientes"
-            className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-600 hover:text-[#f74d00] transition"
-          >
-            <ChevronRight size={18} />
-          </button>
+    <section className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 lg:pt-12">
+      {/* Encabezado con el mismo formato que Ofertas Express y Comprá por bulto */}
+      <div className="flex items-center gap-3 lg:gap-4 mb-2 lg:mb-4">
+        <div className="w-11 h-11 lg:w-14 lg:h-14 bg-linear-to-br from-[#ff7a1a] to-[#f74d00] rounded-2xl flex items-center justify-center shadow-md shadow-orange-500/25 shrink-0">
+          <LayoutGrid className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-2xl lg:text-4xl font-black text-gray-900 leading-none tracking-tight">
+            ¿Qué estás buscando?
+          </h2>
+          <p className="text-xs sm:text-sm lg:text-base text-gray-500 mt-1">
+            Elegí un rubro y encontrá todo más rápido
+          </p>
         </div>
       </div>
 
-      <div ref={fila} className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide snap-x pt-1.5 pb-2 -mx-1 px-1">
-        {subrubros.map((s) => (
-          <Link
-            key={`${s.categoria}|${s.nombre}`}
-            href={`/productos?categoria=${encodeURIComponent(s.categoria)}&subcategoria=${encodeURIComponent(s.nombre)}`}
-            className="group snap-start shrink-0 w-20 sm:w-24 flex flex-col items-center gap-2 text-center"
-          >
-            <div className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-full bg-white border border-gray-200 shadow-sm overflow-hidden transition group-hover:border-[#f74d00] group-hover:shadow-md group-hover:-translate-y-0.5">
-              <Image
-                src={s.imagen || "/producto-placeholder.svg"}
-                alt=""
-                fill
-                sizes="96px"
-                className="object-contain p-2.5 mix-blend-multiply"
-              />
-            </div>
-            <span className="w-full text-[11px] sm:text-xs font-bold text-gray-700 leading-tight line-clamp-2 break-words capitalize group-hover:text-[#f74d00]">
-              {/* Corte después de la "/" para que un nombre largo baje de renglón y no pise al de al lado */}
-              {s.nombre.toLowerCase().replace(/\//g, "/\u200b")}
-            </span>
-          </Link>
-        ))}
+      <div className="relative">
+        <button onClick={() => mover(-1)} disabled={alPrincipio} aria-label="Anteriores" className={`${flecha} -left-4`}>
+          <ChevronLeft size={22} />
+        </button>
+        <button onClick={() => mover(1)} disabled={alFinal} aria-label="Siguientes" className={`${flecha} -right-4`}>
+          <ChevronRight size={22} />
+        </button>
+
+        {/* El relleno deja lugar a la sombra y al levante del hover: la fila que se desliza recorta lo que sobresale */}
+        <div
+          ref={fila}
+          onScroll={medir}
+          className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-2 pt-3 pb-4 -mx-2 px-2"
+        >
+          {subrubros.map((s) => (
+            <Link
+              key={`${s.categoria}|${s.nombre}`}
+              href={`/productos?categoria=${encodeURIComponent(s.categoria)}&subcategoria=${encodeURIComponent(s.nombre)}`}
+              className="group snap-start shrink-0 w-28 sm:w-32 lg:w-36 flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-orange-200 hover:-translate-y-0.5 transition duration-300 p-2 sm:p-2.5"
+            >
+              {/* Cuadro y no círculo: las botellas son altas y finitas, y en un círculo quedaban chiquitas */}
+              <div className="relative aspect-square rounded-xl bg-gray-50 overflow-hidden mb-2">
+                <Image
+                  src={s.imagen || "/producto-placeholder.svg"}
+                  alt=""
+                  fill
+                  sizes="144px"
+                  // Las fotos ya traen blanco alrededor: se agrandan un poco para que el producto llene el cuadro
+                  className="object-contain p-1.5 mix-blend-multiply scale-110 transition-transform duration-300 group-hover:scale-[1.18]"
+                />
+              </div>
+              <span className="text-xs sm:text-[13px] font-bold text-gray-800 leading-snug line-clamp-2 min-h-[2.6em] break-words capitalize group-hover:text-[#f74d00] transition-colors">
+                {/* Corte después de la "/" para que un nombre largo baje de renglón y no pise al de al lado */}
+                {s.nombre.toLowerCase().replace(/\//g, "/​")}
+              </span>
+              <span className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+                {s.cantidad} {s.cantidad === 1 ? "producto" : "productos"}
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );

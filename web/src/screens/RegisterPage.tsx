@@ -103,10 +103,9 @@ export default function RegisterPage() {
       const loginResult = await loginWithDB(email, pass);
 
       if (loginResult.success) {
-        setTimeout(() => {
-          router.push("/");
-          window.location.reload(); // Reload to update auth state
-        }, 1000);
+        // Carga completa del inicio para que tome la sesión (ver LoginPage)
+        window.location.replace("/");
+        return;
       } else {
         setTimeout(() => {
           router.push("/login");
@@ -187,6 +186,9 @@ export default function RegisterPage() {
               <input
                 id="email"
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}

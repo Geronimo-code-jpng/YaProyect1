@@ -4,8 +4,11 @@ import { useState, useRef, useCallback, createContext, useContext, useEffect, ty
 import type { Product } from '../types';
 import { useAuth } from "./AuthContext";
 import { trackCartActivity, markCartConverted } from "../lib/catalogApi";
+import { escalasDe, precioPorCantidad } from "../lib/presentaciones";
 
-const CART_EXPIRATION = 1000 * 60 * 60;
+// 24 h sin tocarlo. Con 1 h, quien armaba el pedido y volvía más tarde lo
+// encontraba vacío. Precio y stock se vuelven a chequear al enviar el pedido.
+const CART_EXPIRATION = 1000 * 60 * 60 * 24;
 const STORAGE_KEY = "yaCart";
 const SESSION_KEY = "yaCartSession";
 const TRACK_DEBOUNCE = 1500;
@@ -52,6 +55,15 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+// Cambia la cantidad de un renglón y, si tiene descuento por cantidad, el
+// precio de cada una. Un renglón sin escalas (o guardado antes de que
+// existieran) conserva su precio.
+function conPrecioPorCantidad(item: CartItem, cantidad: number): CartItem {
+  if (!item.escalas?.length) return { ...item, cantidad };
+  const precio = precioPorCantidad(Number(item.precio_base ?? item.precio) || 0, item.escalas, cantidad);
+  return { ...item, cantidad, precio, precio_unitario: precio };
+}
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -138,24 +150,35 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCart((prev) => {
       const productId = String(product.Id);
       const productType = product.tipo || "Bulto";
+      // Descuento por cantidad: el renglón guarda el precio de siempre y las
+      // escalas, y el precio de cada una sale de la cantidad que se lleva
+      const escalas = product.escalas ?? escalasDe(product, productType === "Unidad" ? "Unidad" : "Bulto");
+      const base = Number(product.precio_base ?? product.precio_unitario ?? product.precio) || 0;
       const exists = prev.find(
         (item) => String(item.Id) === productId && (item.tipo || "Bulto") === productType
       );
       if (exists) {
-        return prev.map((item) =>
-          String(item.Id) === productId && (item.tipo || "Bulto") === productType
-            ? { ...item, cantidad: item.cantidad + (product.cantidad || 1) }
-            : item
-        );
+        return prev.map((item) => {
+          if (String(item.Id) !== productId || (item.tipo || "Bulto") !== productType) return item;
+          return conPrecioPorCantidad(
+            { ...item, precio_base: item.precio_base ?? base, escalas: item.escalas ?? escalas },
+            item.cantidad + (product.cantidad || 1),
+          );
+        });
       }
+      const cantidad = product.cantidad || 1;
+      const precio = precioPorCantidad(base, escalas, cantidad);
       return [
         ...prev,
         {
           ...product,
           Id: Number(productId),
-          cantidad: product.cantidad || 1,
+          cantidad,
           tipo: productType,
-          precio_unitario: product.precio_unitario || product.precio,
+          precio,
+          precio_unitario: precio,
+          precio_base: base,
+          escalas,
           quantity_per_bundle: product.quantity_per_bundle || 1,
           oferta: product.Oferta,
           descuento: product.descuento,
@@ -181,7 +204,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       prev.map((item) => {
         const matchesId = String(item.Id) === String(id);
         const matchesType = !tipo || (item.tipo || "Bulto") === tipo;
-        return matchesId && matchesType ? { ...item, cantidad } : item;
+        return matchesId && matchesType ? conPrecioPorCantidad(item, cantidad) : item;
       })
     );
   };

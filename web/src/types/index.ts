@@ -16,6 +16,12 @@ export interface Product {
   precio_unidad?: number | null;
   /** El artículo tiene unidad suelta: sin esto no hay opción "Unidad". */
   tiene_unidad?: boolean;
+  /** Nombre del suelto: es el que se muestra al elegir "Unidad". */
+  nombre_unidad?: string | null;
+  /** Descuento por cantidad del bulto: JSON [{desde, precio}] o NULL (lo manda el sistema). */
+  precios_cantidad?: string | null;
+  /** Descuento por cantidad de la unidad suelta. */
+  precios_cantidad_unidad?: string | null;
   /** Bultos que hay. */
   stock_actual?: number | null;
   /** Unidades que se pueden vender (sueltas + bultos × unidades por bulto). */
@@ -33,6 +39,9 @@ export interface Product {
   tipo?: string;
   precio_unitario?: number;
   quantity_per_bundle?: number;
+  /** En el carrito: el precio de siempre de la presentación y sus escalas. */
+  precio_base?: number;
+  escalas?: { desde: number; precio: number }[];
   descuento?: number;
   ofert?: string;
 }

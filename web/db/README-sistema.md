@@ -2,7 +2,7 @@
 
 El sistema de escritorio del negocio (`SistemaYa/deposito-ia`, Node + Electron + SQLite) es el **dueño del catálogo, del stock y de los pedidos**. Esta base (Neon) los muestra. Los dos lados hablan por las columnas de `productos` y `pedidos`: ese es el contrato, y vive en [`schema.ts`](./schema.ts).
 
-- **El sistema manda:** nombre, precio del bulto (`precio`) y de la unidad (`precio_unidad`), rubro (`"Categoria"`), sub-rubro (`subcategoria`), stock (`stock_actual`, `stock_unidades`, `"Stock"`), si tiene unidad suelta (`tiene_unidad`) y si se publica (`publicado`). Y, en `pedidos`, `estado`, `sistema_*`, `carrito`/`total` si se corrigió, y los datos de pago.
+- **El sistema manda:** nombre del bulto (`nombre`) y del suelto (`nombre_unidad`, el que se ve al elegir "Unidad"), precio del bulto (`precio`) y de la unidad (`precio_unidad`), rubro (`"Categoria"`), sub-rubro (`subcategoria`), stock (`stock_actual`, `stock_unidades`, `"Stock"`), si tiene unidad suelta (`tiene_unidad`), el descuento por cantidad de cada presentación (`precios_cantidad`, `precios_cantidad_unidad`: JSON `[{"desde":10,"precio":11}]` o NULL) y si se publica (`publicado`). Y, en `pedidos`, `estado`, `sistema_*`, `carrito`/`total` si se corrigió, y los datos de pago.
 - **La tienda manda:** `"Imagen"`, `mas_vendido`, `oferta_express` y `"Oferta"` (el precio tachado). El sistema nunca los toca.
 - **Identificador:** `productos."Id"` es el **código del bulto** del sistema (59). La opción "Unidad" de ese producto es el suelto (59.1).
 

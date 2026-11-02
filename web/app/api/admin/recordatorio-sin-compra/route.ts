@@ -1,8 +1,8 @@
 import { Resend } from "resend";
-import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { perfiles } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
+import { mismoEmail } from "@/lib/email";
 import { reminderNoPurchaseEmail } from "@/lib/emailTemplates";
 
 const FROM = "Ya Mayorista <no-reply@yamayorista.online>";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const [profile] = await db
     .select()
     .from(perfiles)
-    .where(eq(perfiles.email, email));
+    .where(mismoEmail(perfiles.email, email));
   if (!profile) {
     return jsonCors({ success: false, error: "No hay una cuenta con ese email" });
   }

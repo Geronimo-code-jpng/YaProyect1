@@ -57,21 +57,19 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      const result = await loginWithDB(email, password);
-      
-      if (result.success) {
-        // Show success message and redirect
-        setTimeout(() => {
-          router.push('/');
-          window.location.reload(); // Reload to update auth state
-        }, 1000);
-      } else {
-        setLoginError(result.error);
-      }
-    } finally {
-      setLoginLoading(false);
+    const result = await loginWithDB(email, password);
+
+    if (result.success) {
+      // Carga completa del inicio para que toda la página tome la sesión.
+      // Antes era router.push + reload a la vez: en el celular a veces recargaba
+      // /login y la persona veía el formulario de nuevo, como si no hubiera
+      // entrado. El botón queda en "Iniciando sesión..." hasta que cambia.
+      window.location.replace('/');
+      return;
     }
+
+    setLoginError(result.error);
+    setLoginLoading(false);
   };
 
   return (
@@ -112,6 +110,9 @@ export default function LoginPage() {
               <input
                 id="email"
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 name="email"
                 value={loginForm.email}
                 onChange={handleLoginChange}

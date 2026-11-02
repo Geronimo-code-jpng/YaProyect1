@@ -116,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserProfile(null);
       setAuthError("");
       localStorage.removeItem('userSession');
+      // Los datos del pedido a medio completar (CartPage) son de esta cuenta
+      sessionStorage.removeItem('yaCheckout');
       window.location.reload();
     } catch (err) {
       localStorage.removeItem('userSession');

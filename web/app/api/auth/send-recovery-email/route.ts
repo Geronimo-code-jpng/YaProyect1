@@ -1,9 +1,9 @@
 import crypto from "crypto";
 import { Resend } from "resend";
-import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { perfiles, email_recovery } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
+import { mismoEmail } from "@/lib/email";
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return jsonCors({ success: false, error: "El email es obligatorio" });
   }
 
-  const [profile] = await db.select().from(perfiles).where(eq(perfiles.email, email));
+  const [profile] = await db.select().from(perfiles).where(mismoEmail(perfiles.email, email));
   if (!profile) {
     return jsonCors({ success: false, error: "Este email no está registrado en el sistema" });
   }

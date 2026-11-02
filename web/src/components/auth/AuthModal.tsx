@@ -247,6 +247,9 @@ export default function AuthModal() {
             >
               <input
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 name="email"
                 value={loginForm.email}
                 onChange={handleLoginChange}
@@ -270,7 +273,7 @@ export default function AuthModal() {
               >
                 {loginLoading ? "Ingresando..." : "Ingresar"}
               </button>
-              <button onClick={openPasswordResetModal} className="w-full text-black/60 cursor-pointer hover:text-black/80">
+              <button type="button" onClick={openPasswordResetModal} className="w-full text-black/60 cursor-pointer hover:text-black/80">
                 ¿Olvidaste tu contraseña?
               </button>
             </form>
@@ -288,6 +291,9 @@ export default function AuthModal() {
               />
               <input
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 name="email"
                 placeholder="Correo electrónico"
                 className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"

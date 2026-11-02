@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import HomeProductCard from "./HomeProductCard";
+import { escalasDe } from "../../lib/presentaciones";
 
 // Fila de tarjetas que se desliza con el dedo (en compu, con las flechas).
 // En celular se asoma la tarjeta siguiente para que se note que se puede deslizar.
@@ -67,6 +68,8 @@ export const aTarjeta = (p) => {
     originalPrice: validDiscount > 0 ? mainPrice + validDiscount : null,
     discount: validDiscount,
     units: Number(p.quantity) || 1,
+    // El inicio agrega siempre el bulto: con su descuento por cantidad
+    escalas: escalasDe(p, "Bulto"),
   };
 };
 

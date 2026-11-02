@@ -11,7 +11,7 @@ import {
   Lock,
   ArrowLeft,
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { fetchPerfilByEmail, createPedido } from "../lib/catalogApi";
 import { getProductImageUrl } from "../utils/productImageUtils";
@@ -23,6 +23,29 @@ import {
 import type { PriceChange } from "../utils/validateCartItems";
 import PriceChangeAlert from "../components/cart/PriceChangeAlert";
 import { RECARGO_TRANSFERENCIA, recargoDe } from "../utils/recargoTransferencia";
+
+// Lo que la persona va completando para el pedido. Se guarda en la pestaña:
+// en Android, si sale a WhatsApp o al banco a copiar el alias, el celular
+// puede descartar la pestaña y al volver la página se recarga de cero.
+const CHECKOUT_KEY = "yaCheckout";
+const DATOS_VACIOS = {
+  nombre: "",
+  telefono: "",
+  direccion: "",
+  notas: "",
+  metodoEntrega: "envio",
+  metodoPago: "efectivo",
+};
+
+function leerCheckoutGuardado() {
+  if (typeof window === "undefined") return DATOS_VACIOS;
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_KEY);
+    return raw ? { ...DATOS_VACIOS, ...JSON.parse(raw) } : DATOS_VACIOS;
+  } catch {
+    return DATOS_VACIOS;
+  }
+}
 
 export default function CartPage() {
   const router = useRouter();
@@ -43,17 +66,20 @@ export default function CartPage() {
   const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
   const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
   const [validatingPrices, setValidatingPrices] = useState(false);
-  const [orderData, setOrderData] = useState({
-    nombre: "",
-    telefono: "",
-    direccion: "",
-    notas: "",
-    metodoEntrega: "envio",
-    metodoPago: "efectivo",
-  });
+  const [orderData, setOrderData] = useState(leerCheckoutGuardado);
+  const [pedidoEnviado, setPedidoEnviado] = useState(false);
   const [dbUserData, setDbUserData] = useState(null);
   const [loadingUserData, setLoadingUserData] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(7200);
+
+  useEffect(() => {
+    if (pedidoEnviado) return;
+    try {
+      sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify(orderData));
+    } catch {
+      /* sin sessionStorage: se pierde solo si se recarga */
+    }
+  }, [orderData, pedidoEnviado]);
 
   // Cargar precio de envío desde la base de datos
   useEffect(() => {
@@ -75,7 +101,7 @@ export default function CartPage() {
           ...prev,
           nombre: data.nombre || prev.nombre,
           telefono: data.telefono || prev.telefono,
-          direccion: data.direccion || prev.direccion,
+          direccion: prev.direccion || data.direccion || "",
         }));
       } catch (err) {
         console.error("Error en loadUserData:", err);
@@ -87,17 +113,15 @@ export default function CartPage() {
     loadUserData();
   }, [user?.email]);
 
-  // Limpiar datos cuando el usuario cierra sesión
+  // Limpiar datos cuando el usuario cierra sesión (no al entrar sin cuenta:
+  // ahí borraría lo que se recuperó de la pestaña)
+  const habiaUsuario = useRef(false);
   useEffect(() => {
-    if (!user) {
-      setOrderData({
-        nombre: "",
-        telefono: "",
-        direccion: "",
-        notas: "",
-        metodoEntrega: "envio",
-        metodoPago: "efectivo",
-      });
+    if (user) {
+      habiaUsuario.current = true;
+    } else if (habiaUsuario.current) {
+      habiaUsuario.current = false;
+      setOrderData(DATOS_VACIOS);
     }
   }, [user]);
 
@@ -229,24 +253,25 @@ export default function CartPage() {
 
       const data = await createPedido(pedidoData);
 
+      // Directo a la página de gracias. Antes se vaciaba el carrito y se
+      // esperaba 1,5 s: en ese rato la pantalla mostraba "Tu carrito está
+      // vacío" y el botón volvía a habilitarse, y la gente creía que el pedido
+      // se había borrado ("se me reinició").
+      sessionStorage.setItem(
+        "thankyouData",
+        JSON.stringify({
+          datosCliente: orderData.nombre,
+          totalAbonado: baseTotal + shipping + recargo,
+          pedidoId: data.id,
+          items: cart,
+        }),
+      );
+      sessionStorage.removeItem(CHECKOUT_KEY);
+      setPedidoEnviado(true);
       markCartAsConverted();
       clearCart();
-
       showSuccess("¡Pedido enviado! Lo revisaremos a la brevedad.");
-
-      setTimeout(() => {
-        sessionStorage.setItem(
-          "thankyouData",
-          JSON.stringify({
-            datosCliente: orderData.nombre,
-            totalAbonado: baseTotal + shipping + recargo,
-            pedidoId: data.id,
-            items: cart,
-          }),
-        );
-        router.push("/thankyoupage");
-        window.scrollTo(0, 0);
-      }, 1500);
+      router.replace("/thankyoupage");
     } catch (error) {
       console.error("Error sending order:", error);
       showError("❌ Error al enviar el pedido. Por favor intenta nuevamente.");
@@ -281,6 +306,18 @@ export default function CartPage() {
     clearCart();
     setPriceChanges(null);
   };
+
+  if (pedidoEnviado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center">
+          <i className="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+          <h1 className="text-2xl font-black text-gray-900">¡Pedido enviado!</h1>
+          <p className="text-gray-600 mt-2">Un momento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-screen flex justify-center bg-gray-50 py-8">

@@ -30,6 +30,7 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import { fetchProductosCompartido } from "../../lib/catalogApi";
 import PhraseGroup from "./BucleSlogan";
+import { Guirnalda, GorroNavideno } from "./Navidad";
 import { precioBulto } from "../../lib/presentaciones";
 import type { Product } from "../../types";
 
@@ -197,7 +198,8 @@ export default function NavBar() {
       )}
       <div className="bg-white shadow-md">
         <PhraseGroup />
-        <div className="bg-[#f74d00]">
+        <div className="relative bg-[#f74d00]">
+          <Guirnalda />
           <div className="max-w-7xl mx-auto px-2 md:px-6 h-16 flex items-center gap-2 md:gap-4">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -210,7 +212,8 @@ export default function NavBar() {
               href="/"
               className="flex items-center gap-2 cursor-pointer shrink-0 transition"
             >
-              <span className="text-white text-4xl font-black italic leading-none">
+              <span className="relative text-white text-4xl font-black italic leading-none">
+                <GorroNavideno />
                 YA!
               </span>
               <span className="hidden sm:block text-xl font-black text-white tracking-tight leading-none">

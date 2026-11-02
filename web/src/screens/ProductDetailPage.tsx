@@ -8,9 +8,11 @@ import { useCart } from "../contexts/CartContext";
 import { useProducts } from "../contexts/ProductContext";
 import { fetchProductoById } from "../lib/catalogApi";
 import {
+  escalasDe,
   hay,
   hayBulto,
   hayUnidad,
+  nombreDe,
   precioDe,
   precioBulto,
   tieneUnidad,
@@ -74,10 +76,11 @@ export default function ProductDetailPage() {
   };
 
   // El precio de cada presentación lo manda el sistema del negocio: la página
-  // ya no inventa el de la unidad.
+  // ya no inventa el de la unidad. Con descuento por cantidad, depende de
+  // cuántas se lleven.
   const calculatePrice = () => {
     if (!product) return 0;
-    return precioDe(product, typeOfQuantity);
+    return precioDe(product, typeOfQuantity, quantity);
   };
 
   const calculateOriginalPrice = () => {
@@ -99,10 +102,13 @@ export default function ProductDetailPage() {
     if (product) {
       addToCart({
         ...product,
+        nombre: nombreDe(product, typeOfQuantity),
         cantidad: quantity,
         tipo: typeOfQuantity,
         precio: calculatePrice(),
         precio_unitario: calculatePrice(),
+        precio_base: precioDe(product, typeOfQuantity),
+        escalas: escalasDe(product, typeOfQuantity),
         quantity_per_bundle: unidadesPorBulto(product),
       });
     }
@@ -138,6 +144,14 @@ export default function ProductDetailPage() {
     );
   }
 
+  // Con "Unidad" elegida se ve el nombre del suelto, no el del bulto
+  const nombre = nombreDe(product, typeOfQuantity);
+
+  // Descuento por cantidad de la presentación elegida, y la escala a la que
+  // se llega con la cantidad de ahora (la más alta que alcanza)
+  const escalas = escalasDe(product, typeOfQuantity);
+  const escalaActual = [...escalas].reverse().find((e) => quantity >= e.desde);
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumb */}
@@ -158,7 +172,7 @@ export default function ProductDetailPage() {
             </Link>
           </li>
           <li className="text-gray-400">/</li>
-          <li className="text-zinc-900 font-black">{product.nombre}</li>
+          <li className="text-zinc-900 font-black">{nombre}</li>
         </ol>
       </nav>
 
@@ -167,7 +181,7 @@ export default function ProductDetailPage() {
         <div className="relative bg-gray-100 rounded-2xl overflow-hidden aspect-square">
           <Image
             src={product.Imagen || "/producto-placeholder.svg"}
-            alt={product.nombre}
+            alt={nombre}
             fill
             priority
             sizes="(max-width: 1024px) 100vw, 50vw"
@@ -185,7 +199,7 @@ export default function ProductDetailPage() {
               {product.Categoria}
             </span>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-zinc-900 mb-4">
-              {product.nombre}
+              {nombre}
             </h1>
             {(() => {
               const discount = getDiscountAmount();
@@ -257,6 +271,43 @@ export default function ProductDetailPage() {
               </button>
             </div>
           </div>
+
+          {/* Descuento por cantidad: tocar una escala lleva la cantidad ahí */}
+          {escalas.length > 0 && (
+            <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4">
+              <h3 className="text-lg font-black text-emerald-800 mb-1">
+                <i className="fas fa-tags mr-2"></i>
+                Descuento por cantidad
+              </h3>
+              <p className="text-sm text-emerald-700 mb-3">
+                Precio de siempre: ${precioDe(product, typeOfQuantity).toLocaleString("es-AR")} c/u
+              </p>
+              <ul className="space-y-2">
+                {escalas.map((e) => {
+                  const activa = escalaActual?.desde === e.desde;
+                  return (
+                    <li key={e.desde}>
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(Math.max(quantity, e.desde))}
+                        className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-left transition ${
+                          activa
+                            ? "bg-emerald-600 text-white"
+                            : "bg-white text-zinc-800 hover:bg-emerald-100"
+                        }`}
+                      >
+                        <span className="font-bold">Llevando {e.desde} o más</span>
+                        <span className="font-black">
+                          ${e.precio.toLocaleString("es-AR")} c/u
+                          {activa && <i className="fas fa-check ml-2"></i>}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {/* Quantity Selector */}
           <div>

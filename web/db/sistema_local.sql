@@ -33,12 +33,20 @@ GRANT SELECT ON productos, pedidos TO sistema_local;
 
 -- Productos: lo que manda el sistema. NUNCA "Imagen", mas_vendido,
 -- oferta_express ni "Oferta": esas son de la tienda.
-GRANT INSERT ("Id", nombre, precio, precio_unidad, quantity, tiene_unidad, "Categoria", subcategoria,
-              stock_actual, stock_unidades, "Stock", publicado, sistema_actualizado_en)
+GRANT INSERT ("Id", nombre, nombre_unidad, precio, precio_unidad, quantity, tiene_unidad, "Categoria", subcategoria,
+              stock_actual, stock_unidades, "Stock", publicado, sistema_actualizado_en,
+              precios_cantidad, precios_cantidad_unidad)
   ON productos TO sistema_local;
-GRANT UPDATE (nombre, precio, precio_unidad, quantity, tiene_unidad, "Categoria", subcategoria,
-              stock_actual, stock_unidades, "Stock", publicado, sistema_actualizado_en)
+GRANT UPDATE (nombre, nombre_unidad, precio, precio_unidad, quantity, tiene_unidad, "Categoria", subcategoria,
+              stock_actual, stock_unidades, "Stock", publicado, sistema_actualizado_en,
+              precios_cantidad, precios_cantidad_unidad)
   ON productos TO sistema_local;
+
+-- Si sistema_local ya existía de antes, alcanza con correr solo esto
+-- (después de crear las columnas):
+--   GRANT INSERT (nombre_unidad, precios_cantidad, precios_cantidad_unidad),
+--         UPDATE (nombre_unidad, precios_cantidad, precios_cantidad_unidad)
+--     ON productos TO sistema_local;
 
 -- Pedidos: lo que el sistema hace con cada uno (los acepta, los rechaza, los
 -- cobra). No puede crear ni borrar pedidos.

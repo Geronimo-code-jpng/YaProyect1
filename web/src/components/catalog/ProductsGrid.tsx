@@ -6,9 +6,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "../../contexts/CartContext";
 import {
+  escalasDe,
   hay,
   hayBulto,
   hayUnidad,
+  nombreDe,
   precioDe,
   precioBulto,
   tieneUnidad,
@@ -67,8 +69,9 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
     // No se agrega una presentación de la que no hay
     if (!hay(producto, tipo)) return;
 
-    const nombreSeguro = producto.nombre
-      ? producto.nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, "").trim()
+    const nombre = nombreDe(producto, tipo);
+    const nombreSeguro = nombre
+      ? nombre.replace(/[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑüÜ.-]/g, "").trim()
       : "Producto";
     const imgSrc =
       producto.Imagen || producto.imagen || getDefaultProductImage(producto.Id);
@@ -86,6 +89,8 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
       cantidad: 1,
       tipo: tipo,
       precio_unitario: finalPrice,
+      precio_base: finalPrice,
+      escalas: escalasDe(producto, tipo),
       quantity_per_bundle: quantityPerBundle,
       Oferta: producto.Oferta,
       descuento: discount,
@@ -136,8 +141,10 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
       className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-6"
     >
       {visibleProducts.map((producto: Product) => {
-        const nombreSeguro = producto.nombre
-          ? producto.nombre
+        // Con "Unidad" elegida se ve el nombre del suelto, no el del bulto
+        const nombre = nombreDe(producto, tipoElegido(producto));
+        const nombreSeguro = nombre
+          ? nombre
               .replace(/"/g, "&quot;")
               .replace(/'/g, "&#39;")
               .trim()
@@ -257,9 +264,18 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                   const bundleSale = bundleOriginal + discount;
                   const displayPrice = precioDe(producto, tipoElegido(producto));
                   const displayOriginal = isBulto ? bundleOriginal : null;
+                  // Descuento por cantidad: en la tarjeta va la primera escala;
+                  // la lista entera está en el detalle del producto
+                  const [primeraEscala] = escalasDe(producto, tipoElegido(producto));
 
                   return (
                     <div className="mb-1">
+                      {primeraEscala && (
+                        <p className="mb-1 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-black text-emerald-800">
+                          <i className="fas fa-tags mr-1"></i>
+                          Llevando {primeraEscala.desde}: ${primeraEscala.precio.toLocaleString("es-AR")} c/u
+                        </p>
+                      )}
                       <div className="flex items-baseline gap-2">
                         <p
                           className={`[@media(max-width:390px)]:text-sm text-2xl font-black tracking-tight ${applyDiscount && isBulto ? "text-red-600" : "text-zinc-900"}`}

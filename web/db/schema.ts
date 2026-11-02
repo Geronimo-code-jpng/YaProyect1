@@ -55,6 +55,13 @@ export const productos = pgTable("productos", {
   /** Precio de la unidad suelta (el del sistema, ya no se calcula con ×1,2). */
   precio_unidad: bigint("precio_unidad", { mode: "number" }),
   tiene_unidad: boolean("tiene_unidad").notNull().default(false),
+  /** Nombre del suelto (el de la opción "Unidad"). NULL si no tiene suelto. */
+  nombre_unidad: text("nombre_unidad"),
+  /** Descuento por cantidad del bulto: JSON [{"desde":10,"precio":11}, …]. NULL = no tiene.
+   *  Es texto y no jsonb para que el sistema lo compare letra por letra. */
+  precios_cantidad: text("precios_cantidad"),
+  /** Lo mismo, de la unidad suelta. */
+  precios_cantidad_unidad: text("precios_cantidad_unidad"),
   subcategoria: text("subcategoria"),
   /** false = oculto (se dio de baja, se excluyó su rubro). Nunca se borra: conserva foto y tildes. */
   publicado: boolean("publicado").notNull().default(true),
