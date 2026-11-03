@@ -13,7 +13,6 @@ import { ProductProvider } from "../../contexts/ProductContext";
 // <Bot /> más abajo cuando esté configurada.
 // import Bot from "./Bot";
 import WhatsAppButton from "./WhatsAppButton";
-import { Nieve } from "./Navidad";
 
 const TITLES: Record<string, string> = {
   "/": "YA MAYORISTA! | Página Principal",
@@ -71,7 +70,6 @@ function AppContent({ children }: { children: ReactNode }) {
         <span id="toastMsg">¡Operación exitosa!</span>
       </div>
 
-      <Nieve />
       <WhatsAppButton />
       <NavBar />
 

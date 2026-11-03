@@ -46,24 +46,6 @@
     50% { transform: translateY(0) rotate(0deg); }
     75% { transform: translateY(-1px) rotate(3deg); }
   }
-
-  /* Navidad: el copo cae de arriba abajo y se mece de lado (--vaiven lo pone cada copo).
-     La duración y la demora también las pone cada copo. */
-  --animate-nieve: nieve 12s linear infinite;
-  @keyframes nieve {
-    0% { transform: translate(0, 0); }
-    25% { transform: translate(var(--vaiven), 25vh); }
-    50% { transform: translate(0, 50vh); }
-    75% { transform: translate(calc(var(--vaiven) * -1), 75vh); }
-    100% { transform: translate(0, 105vh); }
-  }
-
-  /* Navidad: las lamparitas de la guirnalda prenden y apagan */
-  --animate-titila: titila 1.6s ease-in-out infinite;
-  @keyframes titila {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
-  }
 }
 
 /* Menú del celular entrando desde la izquierda */

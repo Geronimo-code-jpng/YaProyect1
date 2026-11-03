@@ -19,6 +19,7 @@ const FOTO_ELEGIDA: Record<string, number> = {
 
 export default function SubrubrosSection() {
   const [subrubros, setSubrubros] = useState<Subrubro[]>([]);
+  const [total, setTotal] = useState(0);
   const fila = useRef<HTMLDivElement>(null);
   const [alPrincipio, setAlPrincipio] = useState(true);
   const [alFinal, setAlFinal] = useState(false);
@@ -49,6 +50,7 @@ export default function SubrubrosSection() {
         }
         // Solo cuentan los productos con stock: un sub-rubro sin nada no aparece. Los que más tienen, primero
         setSubrubros([...grupos.values()].sort((a, b) => b.cantidad - a.cantidad));
+        setTotal(productos.filter((p) => p.Stock).length);
       })
       .catch((err) => console.error("Error cargando sub-rubros:", err));
   }, []);
@@ -105,6 +107,32 @@ export default function SubrubrosSection() {
           onScroll={medir}
           className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-2 pt-3 pb-4 -mx-2 px-2"
         >
+          {/* Primera: "Todos", con un producto de cada uno de los rubros más grandes */}
+          <Link
+            href="/productos"
+            className="group snap-start shrink-0 w-28 sm:w-32 lg:w-36 flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-orange-200 hover:-translate-y-0.5 transition duration-300 p-2 sm:p-2.5"
+          >
+            <div className="relative aspect-square rounded-xl bg-orange-50 overflow-hidden mb-2 grid grid-cols-2 grid-rows-2 gap-0.5 p-1">
+              {subrubros.filter((s) => s.imagen).slice(0, 4).map((s) => (
+                <div key={`${s.categoria}|${s.nombre}`} className="relative rounded-lg bg-white overflow-hidden">
+                  <Image
+                    src={s.imagen}
+                    alt=""
+                    fill
+                    sizes="72px"
+                    className="object-contain p-0.5 scale-110 transition-transform duration-300 group-hover:scale-125"
+                  />
+                </div>
+              ))}
+            </div>
+            <span className="text-xs sm:text-[13px] font-bold text-gray-800 leading-snug line-clamp-2 min-h-[2.6em] group-hover:text-[#f74d00] transition-colors">
+              Todos
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+              {total} productos
+            </span>
+          </Link>
+
           {subrubros.map((s) => (
             <Link
               key={`${s.categoria}|${s.nombre}`}

@@ -22,6 +22,7 @@ import {
 } from "../utils/validateCartItems";
 import type { PriceChange } from "../utils/validateCartItems";
 import PriceChangeAlert from "../components/cart/PriceChangeAlert";
+import SugerenciasCarrito from "../components/cart/SugerenciasCarrito";
 import { RECARGO_TRANSFERENCIA, recargoDe } from "../utils/recargoTransferencia";
 
 // Lo que la persona va completando para el pedido. Se guarda en la pestaña:
@@ -320,10 +321,10 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen w-screen flex justify-center bg-gray-50 py-8">
+    <div className="min-h-screen w-screen flex justify-center bg-gray-50 py-4 sm:py-8">
       <div className="mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8">
           <button
             onClick={() => router.push("/")}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
@@ -331,8 +332,8 @@ export default function CartPage() {
             <ArrowLeft className="w-5 h-5 mr-2" />
             Volver a la tienda
           </button>
-          <h1 className="text-4xl font-black text-gray-900">Mi Carrito</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900">Mi Carrito</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
             Revisá tus productos antes de finalizar la compra
           </p>
         </div>
@@ -340,7 +341,7 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="bg-white rounded-2xl shadow-sm p-2 sm:p-6">
               {cart.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -361,132 +362,104 @@ export default function CartPage() {
                 </div>
               ) : (
                 <div>
-                  {cart.map((item, index) => (
-                    <div
-                      key={`${item.Id}-${index}`}
-                      className="flex p-1 m-1 border border-black/10 gap-4 rounded-xl hover:bg-gray-50 transition"
-                    >
-                      <img
-                        src={getProductImageUrl(item)}
-                        alt={item.nombre}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-40 hidden sm:block rounded-xl bg-gray-50"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "/producto-placeholder.svg";
-                        }}
-                      />
-                      <div className="sm:flex-1 flex flex-col items-center sm:items-baseline">
+                  {cart.map((item, index) => {
+                    const tipo = item.tipo || "Bulto";
+                    const conOferta =
+                      item.oferta && parseInt(item.oferta) > 0 && parseInt(item.oferta) < Number(item.precio);
+                    return (
+                      <div
+                        key={`${item.Id}-${index}`}
+                        className="flex gap-3 sm:gap-4 p-2 sm:p-3 mb-2 last:mb-0 border border-black/10 rounded-xl hover:bg-gray-50 transition"
+                      >
+                        {/* Foto a la izquierda: chica en el celu, más grande en compu */}
                         <img
                           src={getProductImageUrl(item)}
                           alt={item.nombre}
                           loading="lazy"
                           decoding="async"
-                          className="w-50 h-50 sm:hidden object-contain rounded-xl bg-gray-50"
+                          className="w-24 h-24 sm:w-36 sm:h-36 shrink-0 object-contain rounded-lg bg-gray-50 p-1"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "/producto-placeholder.svg";
                           }}
                         />
-                        <h4 className="font-bold text-lg mb-2">
-                          {item.nombre}
-                        </h4>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span
-                            className={`inline-block px-3 py-1 rounded-lg text-sm font-black ${
-                              (item.tipo || "Bulto") === "Bulto"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {(item.tipo || "Bulto") === "Bulto"
-                              ? "Bulto"
-                              : "Unidad"}
-                          </span>
-                          {(item.tipo || "Bulto") === "Bulto" &&
-                            item.quantity_per_bundle > 1 && (
-                              <span className="text-sm text-gray-500">
-                                ({item.quantity_per_bundle} unidades)
+                        <div className="flex-1 min-w-0 flex flex-col">
+                          <div className="flex items-start gap-2">
+                            <h4 className="flex-1 font-bold text-sm sm:text-lg leading-snug line-clamp-2">
+                              {item.nombre}
+                            </h4>
+                            <button
+                              onClick={() => removeFromCart(item.Id, tipo)}
+                              aria-label={`Quitar ${item.nombre}`}
+                              className="shrink-0 -mt-1 -mr-1 p-1.5 text-red-500 hover:text-red-700"
+                            >
+                              <Trash size={18} />
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mt-1">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-xs font-black ${
+                                tipo === "Bulto"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {tipo}
+                              {tipo === "Bulto" && item.quantity_per_bundle > 1 && ` x${item.quantity_per_bundle}`}
+                            </span>
+                            <span className={`font-black text-base sm:text-xl ${conOferta ? "text-red-600" : "text-[#FF6600]"}`}>
+                              ${item.precio.toLocaleString("es-AR")}
+                            </span>
+                            {conOferta && (
+                              <span className="text-xs sm:text-base text-gray-400 line-through">
+                                ${(Number(item.precio) + parseInt(item.oferta)).toLocaleString("es-AR")}
                               </span>
                             )}
-                        </div>
-                        {item.oferta &&
-                        parseInt(item.oferta) > 0 &&
-                        parseInt(item.oferta) < Number(item.precio) ? (
-                          <div className="flex items-baseline gap-2 mb-3">
-                            <div className="font-black text-xl text-red-600">
-                              ${item.precio.toLocaleString("es-AR")}
-                              <span className="text-base ml-2 text-gray-400 line-through">
-                                $
-                                {(
-                                  Number(item.precio) + parseInt(item.oferta)
-                                ).toLocaleString("es-AR")}
-                              </span>
-                              <span className="text-sm text-gray-500 font-normal ml-2">
-                                por{" "}
-                                {(item.tipo || "Bulto") === "Bulto"
-                                  ? "bulto"
-                                  : "unidad"}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="font-black text-xl text-[#FF6600] mb-3">
-                            ${item.precio.toLocaleString("es-AR")}
-                            <span className="text-sm text-gray-500 font-normal ml-2">
-                              por{" "}
-                              {(item.tipo || "Bulto") === "Bulto"
-                                ? "bulto"
-                                : "unidad"}
+                            <span className="text-xs sm:text-sm text-gray-500">
+                              por {tipo === "Bulto" ? "bulto" : "unidad"}
                             </span>
                           </div>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden">
-                            <button
-                              onClick={() => changeQty(index, -1)}
-                              className="w-9 h-9 sm:w-10 sm:h-10 font-bold bg-gray-50 hover:bg-gray-200 text-sm sm:text-base"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.cantidad}
-                              onChange={(e) => setQty(index, e.target.value)}
-                              onInput={(e) =>
-                                ((e.target as HTMLInputElement).value = (
-                                  e.target as HTMLInputElement
-                                ).value.replace(/[^0-9]/g, ""))
-                              }
-                              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-12 sm:w-16 h-9 sm:h-10 text-center font-black focus:outline-none focus:bg-blue-50 text-gray-700"
-                              style={{ MozAppearance: "textfield" }}
-                            />
-                            <button
-                              onClick={() => changeQty(index, 1)}
-                              className="w-9 h-9 sm:w-10 sm:h-10 font-bold bg-gray-50 hover:bg-gray-200 text-sm sm:text-base"
-                            >
-                              +
-                            </button>
+                          <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                            <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden">
+                              <button
+                                onClick={() => changeQty(index, -1)}
+                                aria-label="Uno menos"
+                                className="w-8 h-8 sm:w-10 sm:h-10 font-bold bg-gray-50 hover:bg-gray-200 text-sm sm:text-base"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.cantidad}
+                                onChange={(e) => setQty(index, e.target.value)}
+                                onInput={(e) =>
+                                  ((e.target as HTMLInputElement).value = (
+                                    e.target as HTMLInputElement
+                                  ).value.replace(/[^0-9]/g, ""))
+                                }
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-10 sm:w-16 h-8 sm:h-10 text-center font-black focus:outline-none focus:bg-blue-50 text-gray-700"
+                                style={{ MozAppearance: "textfield" }}
+                              />
+                              <button
+                                onClick={() => changeQty(index, 1)}
+                                aria-label="Uno más"
+                                className="w-8 h-8 sm:w-10 sm:h-10 font-bold bg-gray-50 hover:bg-gray-200 text-sm sm:text-base"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <div className="text-right leading-tight">
+                              <div className="text-[11px] sm:text-xs text-gray-500">Subtotal</div>
+                              <div className="font-black text-sm sm:text-lg text-gray-900">
+                                ${(item.precio * item.cantidad).toLocaleString("es-AR")}
+                              </div>
+                            </div>
                           </div>
-                          <div className="font-bold text-sm sm:text-lg flex-1 sm:flex-none">
-                            Subtotal: $
-                            {(item.precio * item.cantidad).toLocaleString(
-                              "es-AR",
-                            )}
-                            {item.ofert}
-                          </div>
-                          <button
-                            onClick={() => removeFromCart(item.Id)}
-                            className="text-red-500 hover:text-red-700 p-2"
-                          >
-                            <Trash size={20} />
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -808,6 +781,8 @@ export default function CartPage() {
                     </>
                   )}
                 </button>
+
+                <SugerenciasCarrito />
               </div>
             </div>
           )}

@@ -31,7 +31,7 @@ export const getDefaultProductImage = (_productId?: number) => {
 const PAGE_SIZE = 24;
 
 export default function ProductsGrid({ products }: { products: any; onAddToCart?: (product: any) => void }) {
-  const { addToCart } = useCart();
+  const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
   const [addedToCart, setAddedToCart] = useState(new Set());
   const [selectedTypes, setSelectedTypes] = useState({});
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -57,6 +57,20 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
   // Sin nada que vender de la presentación elegida (o sin stock del todo)
   const sinStock = (producto: Product) =>
     (!producto.Stock && producto.Stock !== undefined) || !hay(producto, tipoElegido(producto));
+
+  // Lo que ya hay en el carrito de esta presentación (la cantidad sale de ahí,
+  // así coincide con el inicio y con el carrito)
+  const enCarrito = (producto: Product, tipo: Tipo) =>
+    cart.find((i) => String(i.Id) === String(producto.Id) && (i.tipo || "Bulto") === tipo);
+
+  const cambiarCantidad = (producto: Product, tipo: Tipo, event, delta: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const item = enCarrito(producto, tipo);
+    if (!item) return;
+    if (item.cantidad + delta < 1) removeFromCart(producto.Id, tipo);
+    else updateQuantity(producto.Id, item.cantidad + delta, tipo);
+  };
 
   const getDiscount = (producto) => {
     const d = parseInt(producto.Oferta) || 0;
@@ -292,32 +306,59 @@ export default function ProductsGrid({ products }: { products: any; onAddToCart?
                   );
                 })()}
 
-                <button
-                  onClick={(e) => handleAddToCart(producto, e, tipoElegido(producto))}
-                  disabled={sinStock(producto)}
-                  className={`mt-2 w-full border-2 py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700 ${
-                    sinStock(producto)
-                      ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed"
-                      : addedToCart.has(producto.Id)
-                        ? "bg-[#FF6600] text-white border-[#FF6600]"
-                        : "bg-white text-[#FF6600] border-[#FF6600] hover:bg-[#FF6600] hover:text-white"
-                  }`}
-                >
-                  <i
-                    className={`fas ${
+                {(() => {
+                  const tipo = tipoElegido(producto);
+                  const item = !sinStock(producto) && !addedToCart.has(producto.Id) && enCarrito(producto, tipo);
+                  if (!item) return (
+                  <button
+                    onClick={(e) => handleAddToCart(producto, e, tipoElegido(producto))}
+                    disabled={sinStock(producto)}
+                    className={`mt-2 w-full border-2 py-2.5 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 shadow-sm group-hover:border-orange-700 ${
                       sinStock(producto)
-                        ? "fa-ban"
+                        ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed"
                         : addedToCart.has(producto.Id)
-                          ? "fa-check"
-                          : "fa-cart-plus"
+                          ? "bg-[#FF6600] text-white border-[#FF6600]"
+                          : "bg-white text-[#FF6600] border-[#FF6600] hover:bg-[#FF6600] hover:text-white"
                     }`}
-                  ></i>
-                  {sinStock(producto)
-                    ? "NO DISPONIBLE"
-                    : addedToCart.has(producto.Id)
-                      ? "AGREGADO"
-                      : "AGREGAR"}
-                </button>
+                  >
+                    <i
+                      className={`fas ${
+                        sinStock(producto)
+                          ? "fa-ban"
+                          : addedToCart.has(producto.Id)
+                            ? "fa-check"
+                            : "fa-cart-plus"
+                      }`}
+                    ></i>
+                    {sinStock(producto)
+                      ? "NO DISPONIBLE"
+                      : addedToCart.has(producto.Id)
+                        ? "AGREGADO"
+                        : "AGREGAR"}
+                  </button>
+                  );
+                  // Ya está en el carrito: − cantidad +, como en el inicio
+                  const boton = "h-full aspect-square rounded-lg flex items-center justify-center text-[#FF6600] hover:bg-white active:scale-90 transition";
+                  return (
+                    <div
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      className="mt-2 w-full h-11 border-2 border-[#FF6600] bg-orange-50 rounded-xl flex items-center justify-between p-0.5"
+                    >
+                      <button aria-label="Uno menos" onClick={(e) => cambiarCantidad(producto, tipo, e, -1)} className={boton}>
+                        <i className={`fas ${item.cantidad > 1 ? "fa-minus" : "fa-trash-alt"} text-sm`}></i>
+                      </button>
+                      <span className="font-black text-gray-900 tabular-nums text-center leading-none">
+                        {item.cantidad}
+                        <span className="block text-[10px] font-bold text-gray-500">
+                          {tipo === "Bulto" ? (item.cantidad === 1 ? "bulto" : "bultos") : (item.cantidad === 1 ? "unidad" : "unidades")}
+                        </span>
+                      </span>
+                      <button aria-label="Uno más" onClick={(e) => cambiarCantidad(producto, tipo, e, 1)} className={boton}>
+                        <i className="fas fa-plus text-sm"></i>
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </Link>
