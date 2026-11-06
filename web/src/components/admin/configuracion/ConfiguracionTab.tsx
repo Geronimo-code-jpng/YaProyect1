@@ -3,6 +3,7 @@
 import { useConfiguracion } from "./useConfiguracion";
 import ShippingCard from "./ShippingCard";
 import BankCard from "./BankCard";
+import PromoEnvioCard from "./PromoEnvioCard";
 import CategoriesCard from "./CategoriesCard";
 
 type ToastType = "success" | "error" | "info";
@@ -48,6 +49,14 @@ export default function ConfiguracionTab({
         dirty={c.envioDirty}
         saving={c.envioSaving}
         onSave={c.saveEnvio}
+      />
+
+      <PromoEnvioCard
+        value={c.promo}
+        onChange={c.setPromo}
+        dirty={c.promoDirty}
+        saving={c.promoSaving}
+        onSave={c.savePromo}
       />
 
       <BankCard

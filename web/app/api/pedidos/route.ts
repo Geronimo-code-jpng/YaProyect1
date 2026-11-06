@@ -2,6 +2,7 @@ import { and, desc, eq, or, ilike, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { pedidos, perfiles } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
+import { promoEnvio } from "@/lib/promoEnvio";
 
 // created_at lo pone la DB (defaultNow) — nunca el cliente: el reloj del
 // dispositivo puede estar desfasado y el pedido aparecería fuera de orden en el
@@ -36,6 +37,22 @@ export async function POST(request: Request) {
 
   values.estado = "pendiente";
   values.fuente = "web";
+
+  // Envío gratis de la promo de sellos: se gasta SOLO, en el primer pedido con
+  // envío que haga la cuenta cuando lo tiene (no se elige). El navegador ya
+  // arma el total sin envío; el servidor controla que coincida con lo que
+  // corresponde, en los dos sentidos, porque el total lo calculó el navegador.
+  const promo = body.metodo === "envio" && body.user_id ? await promoEnvio(body.user_id) : null;
+  const corresponde = !!(promo?.activa && promo.gratis);
+  const pidio = body.envio_gratis === true;
+  if (pidio !== corresponde) {
+    return jsonCors({
+      error: corresponde
+        ? "Tenés el envío gratis disponible y no se aplicó. Recargá la página para que se descuente."
+        : "El envío gratis ya no está disponible para este pedido. Recargá la página.",
+    }, 409);
+  }
+  values.envio_gratis = corresponde;
 
   const [created] = await db.insert(pedidos).values(values as any).returning();
 

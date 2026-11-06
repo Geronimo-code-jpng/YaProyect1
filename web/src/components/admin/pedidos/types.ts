@@ -9,6 +9,7 @@ export interface AdminOrder {
   total: number;
   /** Recargo por transferencia, ya incluido en total */
   recargo?: number | string | null;
+  envio_gratis?: boolean;
   carrito: OrderItem[];
   estado: string;
   created_at?: string;

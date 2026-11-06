@@ -24,6 +24,7 @@ import type { PriceChange } from "../utils/validateCartItems";
 import PriceChangeAlert from "../components/cart/PriceChangeAlert";
 import SugerenciasCarrito from "../components/cart/SugerenciasCarrito";
 import { RECARGO_TRANSFERENCIA, recargoDe } from "../utils/recargoTransferencia";
+import { usePromoEnvio, tieneEnvioGratis, promoAlMandar } from "../utils/usePromoEnvio";
 
 // Lo que la persona va completando para el pedido. Se guarda en la pestaña:
 // en Android, si sale a WhatsApp o al banco a copiar el alias, el celular
@@ -153,10 +154,14 @@ export default function CartPage() {
     }));
   };
 
+  // Promo de sellos: el 6° pedido con envío no paga el envío
+  const [promo, setPromo] = usePromoEnvio(user?.id);
+  const envioGratis = orderData.metodoEntrega === "envio" && tieneEnvioGratis(promo);
+  const costoEnvio = orderData.metodoEntrega === "retiro" || envioGratis ? 0 : shippingPrice;
+
   // Productos (con el descuento) más el envío: sobre esto va el recargo
   const totalAntesDeRecargo = () =>
-    getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) +
-    (orderData.metodoEntrega === "retiro" ? 0 : shippingPrice);
+    getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + costoEnvio;
 
   const sendOrderToAdmin = async () => {
     setIsSubmitting(true);
@@ -211,12 +216,23 @@ export default function CartPage() {
         setIsSubmitting(false);
         return;
       }
+      // El envío gratis se gasta solo: antes de mandar se confirma con lo de ahora
+      if (orderData.metodoEntrega === "envio") {
+        const r = await promoAlMandar(user?.id, promo);
+        if (r.cambio) {
+          setPromo(r.promo);
+          if (tieneEnvioGratis(r.promo)) showSuccess("🎁 ¡Tenés envío gratis! Ya lo aplicamos: revisá el total y enviá de nuevo.");
+          else showError("El envío gratis ya no está disponible: revisá el total y enviá de nuevo.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       const baseTotal = getCartTotalWithDiscount(
         userProfile,
         orderData.metodoEntrega,
       );
-      const shipping = orderData.metodoEntrega === "retiro" ? 0 : shippingPrice;
+      const shipping = costoEnvio;
       const recargo = recargoDe(orderData.metodoPago, baseTotal + shipping);
 
       const pedidoData = {
@@ -250,6 +266,7 @@ export default function CartPage() {
         fuente: "web",
         notas: orderData.notas.trim() || null,
         user_id: user?.id || null,
+        envio_gratis: envioGratis,
       };
 
       const data = await createPedido(pedidoData);
@@ -275,7 +292,8 @@ export default function CartPage() {
       router.replace("/thankyoupage");
     } catch (error) {
       console.error("Error sending order:", error);
-      showError("❌ Error al enviar el pedido. Por favor intenta nuevamente.");
+      const msg = error instanceof Error && !error.message.startsWith("Error en") ? error.message : null;
+      showError(`❌ ${msg || "Error al enviar el pedido. Por favor intenta nuevamente."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -625,9 +643,15 @@ export default function CartPage() {
                         />
                         <div className="flex-1">
                           <span className="font-medium">Envío a domicilio</span>
-                          <span className="text-sm text-gray-500 ml-2">
-                            (+ ${shippingPrice.toLocaleString("es-AR")})
-                          </span>
+                          {tieneEnvioGratis(promo) ? (
+                            <span className="text-sm text-green-600 font-bold ml-2">
+                              (¡GRATIS por tus sellos!)
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-500 ml-2">
+                              (+ ${shippingPrice.toLocaleString("es-AR")})
+                            </span>
+                          )}
                         </div>
                       </label>
                       <label className="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition">
@@ -708,9 +732,16 @@ export default function CartPage() {
                   {orderData.metodoEntrega === "envio" && (
                     <div className="flex justify-between text-sm font-medium mb-2">
                       <span>Costo de envío:</span>
-                      <span className="text-gray-600">
-                        ${shippingPrice.toLocaleString("es-AR")}
-                      </span>
+                      {envioGratis ? (
+                        <span className="text-green-600 font-bold">
+                          <s className="text-gray-400 font-normal mr-2">${shippingPrice.toLocaleString("es-AR")}</s>
+                          GRATIS 🎁
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">
+                          ${shippingPrice.toLocaleString("es-AR")}
+                        </span>
+                      )}
                     </div>
                   )}
 

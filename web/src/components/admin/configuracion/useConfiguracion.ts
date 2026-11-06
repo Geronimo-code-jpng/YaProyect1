@@ -38,6 +38,10 @@ export function useConfiguracion({ showToast, showConfirm }: Options) {
   const [envio, setEnvio] = useState("0");
   const [envioSaving, setEnvioSaving] = useState(false);
 
+  const [promo, setPromo] = useState({ desde: "", hasta: "" });
+  const [promoSaved, setPromoSaved] = useState({ desde: "", hasta: "" });
+  const [promoSaving, setPromoSaving] = useState(false);
+
   const [bankSaved, setBankSaved] = useState<BankInfo>(EMPTY_BANK);
   const [bank, setBank] = useState<BankInfo>(EMPTY_BANK);
   const [bankSaving, setBankSaving] = useState(false);
@@ -68,6 +72,9 @@ export function useConfiguracion({ showToast, showConfirm }: Options) {
           };
           setBankSaved(b);
           setBank(b);
+          const p = { desde: config.promo_envio_desde || "", hasta: config.promo_envio_hasta || "" };
+          setPromoSaved(p);
+          setPromo(p);
         }
         setCategorias(
           [...cats].sort((a, b) => a.categoria.localeCompare(b.categoria)),
@@ -109,6 +116,30 @@ export function useConfiguracion({ showToast, showConfirm }: Options) {
       setEnvioSaving(false);
     }
   }, [envio, showToast]);
+
+  const promoDirty = promo.desde !== promoSaved.desde || promo.hasta !== promoSaved.hasta;
+
+  // Vacías las dos = promo apagada
+  const savePromo = useCallback(async () => {
+    if (!!promo.desde !== !!promo.hasta || (promo.desde && promo.desde > promo.hasta)) {
+      showToast("Poné las dos fechas (desde ≤ hasta), o dejá las dos vacías para apagarla", "error");
+      return;
+    }
+    setPromoSaving(true);
+    try {
+      await updateConfiguracion({
+        promo_envio_desde: promo.desde || null,
+        promo_envio_hasta: promo.hasta || null,
+      });
+      setPromoSaved(promo);
+      showToast(promo.desde ? "Promo de sellos guardada" : "Promo de sellos apagada", "success");
+    } catch (err) {
+      console.error("Error guardando la promo:", err);
+      showToast("Error al guardar la promo", "error");
+    } finally {
+      setPromoSaving(false);
+    }
+  }, [promo, showToast]);
 
   const saveBank = useCallback(async () => {
     setBankSaving(true);
@@ -195,6 +226,12 @@ export function useConfiguracion({ showToast, showConfirm }: Options) {
     envioDirty,
     envioSaving,
     saveEnvio,
+    // promo de sellos
+    promo,
+    setPromo,
+    promoDirty,
+    promoSaving,
+    savePromo,
     // banco
     bank,
     setBank,

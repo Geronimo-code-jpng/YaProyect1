@@ -33,6 +33,7 @@ export default function OrderDetailModal({ order, open, onClose }: OrderDetailMo
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={statusTone(order.estado)}>{statusLabel(order.estado)}</Badge>
           {order.fuente === "web" && <Badge tone="brand">Web</Badge>}
+          {order.envio_gratis && <Badge tone="success">Envío gratis (sellos)</Badge>}
           <span className="text-gray-500">{formatFechaHora(order.created_at)}</span>
         </div>
 

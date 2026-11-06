@@ -8,7 +8,10 @@ export async function GET() {
   return jsonCorsCached(row ?? null);
 }
 
-const UPDATE_FIELDS = ["precio_envio", "banco", "titular", "alias", "cbu"] as const;
+const UPDATE_FIELDS = [
+  "precio_envio", "banco", "titular", "alias", "cbu",
+  "promo_envio_desde", "promo_envio_hasta",
+] as const;
 
 export async function PATCH(request: Request) {
   const body = await request.json();

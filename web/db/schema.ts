@@ -10,6 +10,7 @@ import {
   jsonb,
   timestamp,
   smallint,
+  date,
   index,
 } from "drizzle-orm/pg-core";
 
@@ -94,6 +95,10 @@ export const configuracion = pgTable("configuracion", {
   titular: text("titular").default(""),
   alias: text("alias").default(""),
   cbu: text("cbu").default(""),
+  // Promo "5 pedidos con envío → el 6° con envío gratis". Fechas inclusivas,
+  // en hora de Argentina. Sin las dos fechas la promo está apagada.
+  promo_envio_desde: date("promo_envio_desde", { mode: "string" }),
+  promo_envio_hasta: date("promo_envio_hasta", { mode: "string" }),
 });
 
 export const perfiles = pgTable("perfiles", {
@@ -131,6 +136,8 @@ export const pedidos = pgTable("pedidos", {
   pagado_manualmente: boolean("pagado_manualmente"),
   /** Recargo por transferencia (2 %), ya incluido en `total`. 0 si paga en efectivo. */
   recargo: numeric("recargo").default("0"),
+  /** Envío gratis por la promo de sellos: lo decide el servidor al crear el pedido. */
+  envio_gratis: boolean("envio_gratis").notNull().default(false),
 
   // --- Lo que el sistema del negocio hizo con cada pedido ---
   // Los pedidos de la tienda los maneja el sistema (se aceptan, se rechazan, se

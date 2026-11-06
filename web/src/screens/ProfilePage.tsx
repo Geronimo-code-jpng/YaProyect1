@@ -5,6 +5,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useAlert } from "../contexts/AlertContext";
 import { fetchPerfilByEmail, fetchPedidosByUserId, updatePerfil } from "../lib/catalogApi";
 import { formatFechaCorta } from "../utils/formatFechaHora";
+import { usePromoEnvio } from "../utils/usePromoEnvio";
+import TarjetaSellos from "../components/TarjetaSellos";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -38,6 +40,7 @@ export default function ProfilePage() {
   });
   const [pedidosRecientes, setPedidosRecientes] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [promo] = usePromoEnvio(user?.id);
 
   const loadProfile = useCallback(async () => {
     if (!userProfile?.email) {
@@ -178,6 +181,8 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
+            <TarjetaSellos promo={promo} />
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mb-2">

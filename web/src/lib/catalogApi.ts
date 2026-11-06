@@ -47,6 +47,8 @@ export interface Configuracion {
   titular: string;
   alias: string;
   cbu: string;
+  promo_envio_desde: string | null;
+  promo_envio_hasta: string | null;
 }
 
 export async function fetchConfiguracion(): Promise<Configuracion | null> {
@@ -117,7 +119,24 @@ export async function updatePerfil(id: string, data: Record<string, unknown>): P
 // --- Pedidos ---
 
 export async function createPedido(data: Record<string, unknown>): Promise<any> {
-  return api("/api/pedidos", { method: "POST", body: JSON.stringify(data) });
+  // Sin api(): el 409 de la promo trae un mensaje para mostrarle al cliente
+  const res = await fetch(`${BASE}/api/pedidos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(json?.error || "Error en /api/pedidos");
+  return json;
+}
+
+export type PromoEnvio =
+  | { activa: false }
+  | { activa: true; desde: string; hasta: string; sellos: number; meta: number; gratis: boolean };
+
+export async function fetchPromoEnvio(userId?: string | null): Promise<PromoEnvio> {
+  const q = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  return api(`/api/promo-envio${q}`);
 }
 
 export async function fetchPedidosByUserId(userId: string): Promise<any[]> {

@@ -289,7 +289,7 @@ export default function OrdersPage() {
               const subtotal = carritoArray.reduce(
                 (total, item) => total + (item.precio_unitario || item.precio || 0) * item.cantidad, 0
               );
-              const envioCosto = pedido.metodo === "retiro" ? 0 : shippingPrice;
+              const envioCosto = pedido.metodo === "retiro" || pedido.envio_gratis ? 0 : shippingPrice;
               const totalFinal = subtotal + envioCosto;
 
               const tiempoExpirado = pedido.estado === "configurado" && pedido.expira_en
@@ -484,7 +484,7 @@ export default function OrdersPage() {
                           {pedido.metodo === "retiro" ? "Retiro en local" : "Envío"}
                         </span>
                         <span className="font-medium">
-                          {pedido.metodo === "retiro" ? "Gratis" : `$${envioCosto.toLocaleString("es-AR")}`}
+                          {pedido.metodo === "retiro" || pedido.envio_gratis ? "Gratis" : `$${envioCosto.toLocaleString("es-AR")}`}
                         </span>
                       </div>
                       <div className="flex justify-between text-lg font-black mt-2 pt-2 border-t">
