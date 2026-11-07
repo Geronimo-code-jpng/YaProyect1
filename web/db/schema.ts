@@ -27,7 +27,7 @@ import {
 //  manda nombre, precio del bulto y de la unidad, rubro (Categoria),
 //  sub-rubro, stock, si tiene unidad suelta y si se publica. Esas columnas no se
 //  editan desde la página: el panel de admin solo toca lo que es de la tienda
-//  (Imagen, mas_vendido, oferta_express y Oferta).
+//  (Imagen, mas_vendido, oferta_express, navidad y Oferta).
 //
 //  "Id" es el código del bulto en el sistema (59), no un Date.now(). La opción
 //  "Unidad" de ese producto es el suelto (59.1).
@@ -44,6 +44,8 @@ export const productos = pgTable("productos", {
   quantity: integer("quantity").default(1),
   oferta_express: boolean("oferta_express").default(false),
   mas_vendido: boolean("mas_vendido").default(false),
+  /** Aparece en el cuadro "Especial Navidad" del inicio (lo tilda el admin). */
+  navidad: boolean("navidad").notNull().default(false),
   // Se saca en el "push 2" (ver db/README-sistema.md): el código ya no lo usa,
   // pero hasta publicarlo la columna tiene que seguir existiendo.
   solo_bulto: boolean("solo_bulto").notNull().default(false),

@@ -59,10 +59,8 @@ export default function CartPage() {
     clearCart,
     replaceCart,
     markCartAsConverted,
-    getCartTotalWithDiscount,
-    qualifiesForFirstBuyDiscount,
   } = useCart();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
@@ -159,9 +157,8 @@ export default function CartPage() {
   const envioGratis = orderData.metodoEntrega === "envio" && tieneEnvioGratis(promo);
   const costoEnvio = orderData.metodoEntrega === "retiro" || envioGratis ? 0 : shippingPrice;
 
-  // Productos (con el descuento) más el envío: sobre esto va el recargo
-  const totalAntesDeRecargo = () =>
-    getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + costoEnvio;
+  // Productos más el envío: sobre esto va el recargo
+  const totalAntesDeRecargo = () => cartTotal + costoEnvio;
 
   // Primer dato obligatorio que falta, con el mensaje para el cliente
   const datoFaltante = (): { campo: string; mensaje: string } | null => {
@@ -242,10 +239,7 @@ export default function CartPage() {
         }
       }
 
-      const baseTotal = getCartTotalWithDiscount(
-        userProfile,
-        orderData.metodoEntrega,
-      );
+      const baseTotal = cartTotal;
       const shipping = costoEnvio;
       const recargo = recargoDe(orderData.metodoPago, baseTotal + shipping);
 
@@ -271,12 +265,7 @@ export default function CartPage() {
         recargo,
         estado: "pendiente",
         metodo: orderData.metodoEntrega,
-        descuento_aplicado: qualifiesForFirstBuyDiscount(
-          userProfile,
-          orderData.metodoEntrega,
-        )
-          ? 1000
-          : 0,
+        descuento_aplicado: 0,
         fuente: "web",
         notas: orderData.notas.trim() || null,
         user_id: user?.id || null,
@@ -759,18 +748,6 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {qualifiesForFirstBuyDiscount(
-                    userProfile,
-                    orderData.metodoEntrega,
-                  ) && (
-                    <div className="flex justify-between text-sm font-medium mb-2">
-                      <span className="text-green-600">
-                        🎉 Descuento primera compra:
-                      </span>
-                      <span className="text-green-600">-$1.000</span>
-                    </div>
-                  )}
-
 {recargoDe(orderData.metodoPago, totalAntesDeRecargo()) > 0 && (
                     <div className="flex justify-between text-sm font-medium mb-2">
                       <span>Recargo transferencia ({RECARGO_TRANSFERENCIA}%):</span>
@@ -792,14 +769,6 @@ export default function CartPage() {
                   </div>
                   <div className="text-xs text-gray-500 font-medium mt-2">
                     {cart.length} {cart.length === 1 ? "producto" : "productos"}
-                    {qualifiesForFirstBuyDiscount(
-                      userProfile,
-                      orderData.metodoEntrega,
-                    ) && (
-                      <span className="text-green-600 ml-2">
-                        ✨ ¡$1.000 OFF aplicado!
-                      </span>
-                    )}
                   </div>
                 </div>
 

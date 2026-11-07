@@ -50,8 +50,6 @@ interface CartContextValue {
   cartCount: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
-  getCartTotalWithDiscount: (userProfile?: { cantidad_pedidos?: number } | null, shipMethod?: string) => number;
-  qualifiesForFirstBuyDiscount: (userProfile?: { cantidad_pedidos?: number } | null, shipMethod?: string) => boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -216,30 +214,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const cartTotal = cart.reduce((acc: number, item) => acc + item.precio * item.cantidad, 0);
   const cartCount = cart.reduce((acc: number, item) => acc + item.cantidad, 0);
 
-  const qualifiesForFirstBuyDiscount = (
-    userProfile: { cantidad_pedidos?: number } | null | undefined,
-    shipMethod?: string
-  ) => {
-    return !!(userProfile && (userProfile.cantidad_pedidos || 0) === 0 && cartTotal >= 80000 && shipMethod === "envio");
-  };
-
-  const getCartTotalWithDiscount = (
-    userProfile: { cantidad_pedidos?: number } | null | undefined,
-    shipMethod?: string
-  ) => {
-    if (qualifiesForFirstBuyDiscount(userProfile, shipMethod)) {
-      return Math.max(0, cartTotal - 1000);
-    }
-    return cartTotal;
-  };
-
   return (
     <CartContext.Provider
       value={{
         cart, addToCart, removeFromCart, updateQuantity, clearCart, replaceCart,
         markCartAsConverted,
         cartTotal, cartCount, isCartOpen, setIsCartOpen,
-        getCartTotalWithDiscount, qualifiesForFirstBuyDiscount,
       }}
     >
       {children}

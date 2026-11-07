@@ -1,6 +1,6 @@
 "use client";
 
-import { CompraMasAhorra, Carrusel, CategoriesSection, OfertasExpress, ProductosMasVendidos, ReviewsSection, SubrubrosSection } from '../components/home';
+import { CompraMasAhorra, Carrusel, EspecialNavidad, CategoriesSection, OfertasExpress, ProductosMasVendidos, ReviewsSection, SubrubrosSection } from '../components/home';
 import React from "react";
 
 export default function HomePage() {
@@ -20,6 +20,7 @@ export default function HomePage() {
       <CategoriesSection />
       <ProductosMasVendidos />
       <CompraMasAhorra />
+      <EspecialNavidad />
       <ReviewsSection />
 
     </main>

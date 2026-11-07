@@ -3,7 +3,7 @@
 import React, { useId } from "react";
 import clsx from "clsx";
 
-type Tone = "brand" | "green" | "yellow" | "blue";
+type Tone = "brand" | "green" | "yellow" | "blue" | "red";
 
 interface ToggleProps {
   checked: boolean;
@@ -20,6 +20,7 @@ const TONE_ON: Record<Tone, string> = {
   green: "bg-green-500",
   yellow: "bg-amber-500",
   blue: "bg-blue-500",
+  red: "bg-red-600",
 };
 
 export default function Toggle({

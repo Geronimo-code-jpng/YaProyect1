@@ -11,6 +11,8 @@ export interface Product {
   /** Unidades que trae cada bulto (lo manda el sistema; 1 si no tiene unidad suelta). */
   quantity?: number;
   oferta_express?: boolean;
+  /** Va en el cuadro "Especial Navidad" del inicio. */
+  navidad?: boolean;
   // --- Lo manda el sistema del negocio (deposito-ia) ---
   /** Precio de la unidad suelta. */
   precio_unidad?: number | null;

@@ -891,7 +891,7 @@ export default function ClientesTab() {
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-gray-500 font-medium">
               Cuentas registradas que nunca tuvieron un pedido pagado. El email les
-              recuerda el descuento de primera compra.
+              recuerda que todavía no hicieron su primer pedido.
             </span>
             {cuentasConEmail.length > 0 && (
               <button

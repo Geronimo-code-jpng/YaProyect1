@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { TrendingDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingDown } from "lucide-react";
 import { fetchProductosCompartido } from "../../lib/catalogApi";
 import { useCart } from "../../contexts/CartContext";
 import {
@@ -49,6 +49,26 @@ function conEscala(p: any): Item | null {
 
 export default function CompraMasAhorra() {
   const [items, setItems] = useState<Item[]>([]);
+  const fila = useRef<HTMLDivElement>(null);
+  const [alPrincipio, setAlPrincipio] = useState(true);
+  const [alFinal, setAlFinal] = useState(false);
+
+  // Como en FilaProductos: solo sabe si está en una punta, para esconder la flecha
+  const medir = () => {
+    const f = fila.current;
+    if (!f) return;
+    setAlPrincipio(f.scrollLeft <= 1);
+    setAlFinal(f.scrollLeft + f.clientWidth >= f.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [items]);
+
+  const mover = (lado: number) =>
+    fila.current?.scrollBy({ left: lado * fila.current.clientWidth * 0.9, behavior: "smooth" });
 
   useEffect(() => {
     fetchProductosCompartido()
@@ -84,17 +104,33 @@ export default function CompraMasAhorra() {
             </div>
           </div>
 
-          {/* En celular se desliza (2 a la vista); desde tablet van en grilla */}
-          <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-4 overflow-x-auto sm:overflow-visible scrollbar-hide snap-x snap-mandatory scroll-px-2 pt-3 pb-1 -mx-2 px-2">
-            {items.map((item) => (
-              <TarjetaEscala key={`${item.p.Id}-${item.tipo}`} {...item} />
-            ))}
+          {/* Una sola fila que se desliza con el dedo; en compu, con las flechas */}
+          <div className="relative">
+            <button onClick={() => mover(-1)} disabled={alPrincipio} aria-label="Anteriores" className={`${FLECHA} -left-4 lg:-left-5`}>
+              <ChevronLeft size={22} />
+            </button>
+            <button onClick={() => mover(1)} disabled={alFinal} aria-label="Siguientes" className={`${FLECHA} -right-4 lg:-right-5`}>
+              <ChevronRight size={22} />
+            </button>
+
+            <div
+              ref={fila}
+              onScroll={medir}
+              className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-2 pt-3 pb-1 -mx-2 px-2"
+            >
+              {items.map((item) => (
+                <TarjetaEscala key={`${item.p.Id}-${item.tipo}`} {...item} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </section>
   );
 }
+
+const FLECHA =
+  "hidden md:flex absolute top-1/3 z-20 w-11 h-11 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center text-gray-700 hover:text-emerald-600 hover:scale-105 transition disabled:opacity-0 disabled:pointer-events-none";
 
 // Tocar la tarjeta agrega lo justo para la primera escala; tocar una opción
 // (precio normal o una escala) lleva la cantidad del carrito ahí, y tocar la
@@ -127,7 +163,7 @@ function TarjetaEscala({ p, tipo, base, escalas, ahorroMax }: Item) {
   return (
     <div
       onClick={() => !enCarrito && llevarA(primera.desde)}
-      className={`group relative snap-start shrink-0 w-[44%] sm:w-auto flex flex-col bg-white rounded-2xl border shadow-sm hover:shadow-xl transition duration-300 p-2.5 sm:p-3 cursor-pointer active:scale-[0.99] ${
+      className={`group relative snap-start shrink-0 w-[44%] sm:w-[calc((100%-1.5rem)/3)] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-5rem)/6)] flex flex-col bg-white rounded-2xl border shadow-sm hover:shadow-xl transition duration-300 p-2.5 sm:p-3 cursor-pointer active:scale-[0.99] ${
         enCarrito ? "border-[#f74d00]/40" : "border-white"
       }`}
     >

@@ -99,6 +99,7 @@ export function useAdminProducts({ showToast }: Options) {
         const payload: Record<string, unknown> = {
           oferta_express: rest.oferta_express,
           mas_vendido: rest.mas_vendido,
+          navidad: rest.navidad,
           Oferta: rest.Oferta.trim() || null,
         };
 

@@ -16,26 +16,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Caja punteada con el descuento de primera compra ($1.000 OFF). */
-function couponBox(): string {
-  return `
-    <tr>
-      <td style="padding:8px 32px 8px 32px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:2px dashed ${BRAND};border-radius:14px;">
-          <tr>
-            <td style="padding:24px;text-align:center;">
-              <div style="font-size:32px;font-weight:800;color:${BRAND};line-height:1;">$1.000 OFF</div>
-              <div style="margin-top:8px;font-size:15px;color:#3f3f46;font-weight:700;">en tu primera compra</div>
-              <div style="margin-top:6px;font-size:13px;color:#71717a;">
-                En compras mayores a $80.000 · Válido solo para envíos a domicilio
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>`;
-}
-
 /** Botón principal centrado. */
 function ctaButton(url: string, label: string): string {
   return `
@@ -89,8 +69,6 @@ interface ReminderOpts {
 
 /**
  * Recordatorio para cuentas registradas que todavía no compraron.
- * Les recuerda el descuento de primera compra ($1.000 OFF en compras > $80.000,
- * solo envíos), que es la misma promo que se muestra en login/registro.
  */
 export function reminderNoPurchaseEmail(opts: ReminderOpts = {}): {
   subject: string;
@@ -100,7 +78,7 @@ export function reminderNoPurchaseEmail(opts: ReminderOpts = {}): {
   const saludo = nombre ? `¡Hola ${escapeHtml(nombre)}!` : "¡Hola!";
   const ctaUrl = opts.ctaUrl || SITE_URL;
 
-  const subject = "Tenés $1.000 OFF esperándote en tu primera compra 🎁";
+  const subject = "Todavía no hiciste tu primer pedido 🛒";
 
   const html = shell(`
     <tr>
@@ -108,18 +86,16 @@ export function reminderNoPurchaseEmail(opts: ReminderOpts = {}): {
         <h1 style="margin:0 0 12px 0;font-size:24px;line-height:1.3;color:#18181b;">${saludo}</h1>
         <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#52525b;">
           Vimos que creaste tu cuenta pero todavía no hiciste tu primer pedido.
-          Te dejamos un empujón: tenés un <strong>descuento exclusivo</strong> guardado
-          para estrenar tu cuenta.
+          Entrá a ver los productos y las ofertas de la semana: armás el pedido
+          en un par de minutos y te lo llevamos.
         </p>
       </td>
     </tr>
-    ${couponBox()}
     ${ctaButton(ctaUrl, "Ver productos y comprar")}
     <tr>
       <td style="padding:8px 32px 32px 32px;">
         <p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#71717a;">
-          El descuento se aplica automáticamente en el carrito cuando cumplís las
-          condiciones. Cualquier duda, respondé este mail y te ayudamos.
+          Cualquier duda, respondé este mail y te ayudamos.
         </p>
       </td>
     </tr>`);
@@ -140,8 +116,6 @@ interface AbandonedCartOpts {
   total: number;
   /** Ítems para la mini-lista (se muestran hasta 5). */
   items?: AbandonedCartItem[];
-  /** Mostrar la caja del descuento de primera compra (solo si aplica). */
-  showDiscount?: boolean;
   /** URL del botón. Default: /login. */
   ctaUrl?: string;
 }
@@ -149,8 +123,7 @@ interface AbandonedCartOpts {
 /**
  * Recordatorio para gente que dejó productos en el carrito y no terminó la compra.
  * El carrito real vive en el navegador (localStorage, TTL 1h); este mail solo
- * recuerda qué había y linkea al login para retomar. Si es la primera compra de
- * la cuenta, suma la caja del descuento.
+ * recuerda qué había y linkea al login para retomar.
  */
 export function abandonedCartEmail(opts: AbandonedCartOpts): {
   subject: string;
@@ -212,7 +185,6 @@ export function abandonedCartEmail(opts: AbandonedCartOpts): {
         </table>
       </td>
     </tr>
-    ${opts.showDiscount ? couponBox() : ""}
     ${ctaButton(ctaUrl, "Volver a mi carrito")}
     <tr>
       <td style="padding:8px 32px 32px 32px;">

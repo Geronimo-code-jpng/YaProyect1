@@ -6,15 +6,16 @@ export type AdminProduct = Product & {
 };
 
 // El catálogo (nombre, precio, rubro, stock, unidades) lo maneja el sistema del
-// negocio. Desde la página solo se tocan estas dos marcas, la foto y el precio
+// negocio. Desde la página solo se tocan estas marcas, la foto y el precio
 // tachado (Oferta).
-export type ProductFlag = "oferta_express" | "mas_vendido";
+export type ProductFlag = "oferta_express" | "mas_vendido" | "navidad";
 
 /** Payload handed to `onSave` by <ProductForm>. */
 export interface ProductFormValues {
   Oferta: string;
   oferta_express: boolean;
   mas_vendido: boolean;
+  navidad: boolean;
   imageFile?: File | null;
 }
 
@@ -33,8 +34,9 @@ export interface ProductRowHandlers {
 
 export const FLAG_META: Record<
   ProductFlag,
-  { label: string; tone: "green" | "yellow" }
+  { label: string; tone: "green" | "yellow" | "red" }
 > = {
   oferta_express: { label: "Oferta Express", tone: "green" },
   mas_vendido: { label: "Más Vendido", tone: "yellow" },
+  navidad: { label: "Navidad", tone: "red" },
 };

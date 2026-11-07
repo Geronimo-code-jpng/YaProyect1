@@ -214,17 +214,6 @@ export default function LoginPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">$1.000 OFF en tu primera compra</p>
-                  <p className="text-sm text-gray-600">En compras mayores a $80.000</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
                   <p className="font-medium text-gray-900">Seguí tus pedidos</p>
                   <p className="text-sm text-gray-600">Mirá el estado de tus compras en tiempo real</p>
                 </div>

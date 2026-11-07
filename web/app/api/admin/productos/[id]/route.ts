@@ -10,7 +10,7 @@ import { jsonCors } from "@/lib/cors";
 //
 // No hay alta ni baja de productos desde acá: los crea y los da de baja el
 // sistema (un producto dado de baja queda con publicado = false, nunca se borra).
-const UPDATE_FIELDS = ["Imagen", "mas_vendido", "oferta_express", "Oferta"] as const;
+const UPDATE_FIELDS = ["Imagen", "mas_vendido", "oferta_express", "navidad", "Oferta"] as const;
 
 export async function PATCH(
   request: Request,
@@ -25,7 +25,7 @@ export async function PATCH(
   }
   if (Object.keys(values).length === 0) {
     return jsonCors(
-      { error: "Solo se puede editar la foto, más vendido, oferta express y el precio tachado" },
+      { error: "Solo se puede editar la foto, más vendido, oferta express, navidad y el precio tachado" },
       400,
     );
   }

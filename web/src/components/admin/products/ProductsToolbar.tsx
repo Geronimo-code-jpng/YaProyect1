@@ -34,6 +34,7 @@ const FLAG_TABS: { value: ProductFlag | "todos" | "sin_foto"; label: string }[] 
   { value: "todos", label: "Todos" },
   { value: "oferta_express", label: FLAG_META.oferta_express.label },
   { value: "mas_vendido", label: FLAG_META.mas_vendido.label },
+  { value: "navidad", label: FLAG_META.navidad.label },
   // Los productos nuevos llegan del sistema sin foto: es lo que hay que cargar acá
   { value: "sin_foto", label: "Sin foto" },
 ];

@@ -35,8 +35,7 @@ import type { Product } from "../../types";
 
 export default function NavBar() {
   const { user, userProfile } = useAuth();
-  const { cartCount, getCartTotalWithDiscount, qualifiesForFirstBuyDiscount } =
-    useCart();
+  const { cartCount, cartTotal } = useCart();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -383,12 +382,7 @@ export default function NavBar() {
                   id="cartTotalHeader"
                 >
                   $
-                  {getCartTotalWithDiscount(userProfile).toLocaleString(
-                    "es-AR",
-                  )}
-                  {qualifiesForFirstBuyDiscount(userProfile) && (
-                    <span className="text-green-600 text-xs ml-1">✨</span>
-                  )}
+                  {cartTotal.toLocaleString("es-AR")}
                 </span>
               </button>
             </div>

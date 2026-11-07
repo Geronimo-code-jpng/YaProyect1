@@ -26,6 +26,7 @@ const emptyValues: ProductFormValues = {
   Oferta: "",
   oferta_express: false,
   mas_vendido: false,
+  navidad: false,
   imageFile: null,
 };
 
@@ -60,6 +61,7 @@ export default function ProductForm({
         Oferta: product.Oferta ?? "",
         oferta_express: product.oferta_express ?? false,
         mas_vendido: product.mas_vendido ?? false,
+        navidad: product.navidad ?? false,
         imageFile: null,
       });
     } else {
@@ -232,7 +234,7 @@ export default function ProductForm({
           </div>
 
           {/* Marcas de la tienda */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             {FLAGS.map((flag) => (
               <label
                 key={flag}

@@ -186,7 +186,7 @@ export async function fetchClientesAdmin(): Promise<any> {
   return api("/api/admin/clientes");
 }
 
-// Recordatorio "todavía no compraste" con el descuento de primera compra.
+// Recordatorio "todavía no compraste".
 export async function enviarRecordatorioSinCompra(
   email: string,
   nombre?: string | null,

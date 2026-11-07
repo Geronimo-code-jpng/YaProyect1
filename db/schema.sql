@@ -24,6 +24,7 @@ CREATE TABLE productos (
     quantity integer DEFAULT 1,
     oferta_express boolean DEFAULT false,
     mas_vendido boolean DEFAULT false,
+    navidad boolean DEFAULT false NOT NULL,
     solo_bulto boolean DEFAULT false NOT NULL
 );
 

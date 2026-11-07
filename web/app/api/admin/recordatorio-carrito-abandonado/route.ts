@@ -1,7 +1,7 @@
 import { Resend } from "resend";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { perfiles, pedidos, carrito_actividad } from "@/db/schema";
+import { perfiles, carrito_actividad } from "@/db/schema";
 import { jsonCors } from "@/lib/cors";
 import { abandonedCartEmail } from "@/lib/emailTemplates";
 
@@ -14,8 +14,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://yamayorista.online
  * Body: { session_id: string }
  *
  * El servidor relee la fila de carrito_actividad para sacar email, ítems y total
- * frescos (no confía en lo que manda el cliente). Solo suma la caja del descuento
- * si la cuenta todavía no tiene ningún pedido pagado.
+ * frescos (no confía en lo que manda el cliente).
  */
 export async function POST(request: Request) {
   let body: { session_id?: string };
@@ -56,16 +55,6 @@ export async function POST(request: Request) {
     });
   }
 
-  // ¿Primera compra? Solo entonces mostramos el descuento.
-  let showDiscount = false;
-  if (row.user_id) {
-    const pagados = await db
-      .select({ id: pedidos.id })
-      .from(pedidos)
-      .where(and(eq(pedidos.user_id, row.user_id), eq(pedidos.estado, "pagado")));
-    showDiscount = pagados.length === 0;
-  }
-
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("RESEND_API_KEY no configurada");
@@ -84,7 +73,6 @@ export async function POST(request: Request) {
     itemCount: row.item_count || items.length,
     total: Number(row.total) || 0,
     items,
-    showDiscount,
     ctaUrl: `${SITE_URL}/login?email=${encodeURIComponent(email)}`,
   });
 
@@ -106,12 +94,11 @@ export async function POST(request: Request) {
 
 /**
  * Preview del email en el navegador:
- *   /api/admin/recordatorio-carrito-abandonado?nombre=Ana&discount=1
+ *   /api/admin/recordatorio-carrito-abandonado?nombre=Ana
  */
 export async function GET(request: Request) {
   const sp = new URL(request.url).searchParams;
   const nombre = sp.get("nombre") || "Ana Gómez";
-  const showDiscount = sp.get("discount") === "1";
   const { html } = abandonedCartEmail({
     nombre,
     itemCount: 6,
@@ -124,7 +111,6 @@ export async function GET(request: Request) {
       { nombre: "Yerba mate 1kg", cantidad: 1 },
       { nombre: "Azúcar 1kg", cantidad: 2 },
     ],
-    showDiscount,
   });
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },

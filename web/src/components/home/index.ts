@@ -6,3 +6,4 @@ export { default as HomeProductCard } from './HomeProductCard';
 export { default as ReviewsSection } from './ReviewsSection';
 export { default as SubrubrosSection } from './SubrubrosSection';
 export { default as CompraMasAhorra } from './CompraMasAhorra';
+export { default as EspecialNavidad } from './EspecialNavidad';
