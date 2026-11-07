@@ -163,6 +163,21 @@ export default function CartPage() {
   const totalAntesDeRecargo = () =>
     getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + costoEnvio;
 
+  // Primer dato obligatorio que falta, con el mensaje para el cliente
+  const datoFaltante = (): { campo: string; mensaje: string } | null => {
+    if (!orderData.nombre.trim())
+      return { campo: "nombre", mensaje: "Completá tu nombre" };
+    if (!orderData.telefono.trim())
+      return { campo: "telefono", mensaje: "Completá tu teléfono" };
+    if (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
+      return {
+        campo: "direccion",
+        mensaje: "Completá la dirección de entrega (o elegí retiro en local)",
+      };
+    return null;
+  };
+  const faltante = datoFaltante();
+
   const sendOrderToAdmin = async () => {
     setIsSubmitting(true);
 
@@ -184,12 +199,11 @@ export default function CartPage() {
       }
 
       // Validar campos obligatorios
-      if (
-        !orderData.nombre.trim() ||
-        !orderData.telefono.trim() ||
-        (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
-      ) {
-        showError("❌ Por favor completá todos los campos obligatorios.");
+      if (faltante) {
+        showError(`❌ ${faltante.mensaje}.`);
+        document
+          .querySelector<HTMLInputElement>(`[name="${faltante.campo}"]`)
+          ?.focus();
         setIsSubmitting(false);
         return;
       }
@@ -791,14 +805,10 @@ export default function CartPage() {
 
                 <button
                   onClick={sendOrderToAdmin}
-                  disabled={
-                    isSubmitting ||
-                    !orderData.nombre.trim() ||
-                    !orderData.telefono.trim() ||
-                    (orderData.metodoEntrega === "envio" &&
-                      !orderData.direccion.trim())
-                  }
-                  className="w-full mt-6 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl py-4 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className={`w-full mt-6 bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl py-4 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                    faltante ? "opacity-60" : ""
+                  }`}
                 >
                   {isSubmitting ? (
                     <>
@@ -812,6 +822,11 @@ export default function CartPage() {
                     </>
                   )}
                 </button>
+                {faltante && !loadingUserData && (
+                  <p className="mt-2 text-sm font-medium text-red-600 text-center">
+                    ⚠️ {faltante.mensaje} para enviar el pedido.
+                  </p>
+                )}
 
                 <SugerenciasCarrito />
               </div>

@@ -159,6 +159,21 @@ export default function CartModal() {
   const totalAntesDeRecargo = () =>
     getCartTotalWithDiscount(userProfile, orderData.metodoEntrega) + costoEnvio;
 
+  // Primer dato obligatorio que falta, con el mensaje para el cliente
+  const datoFaltante = (): { campo: string; mensaje: string } | null => {
+    if (!orderData.nombre.trim())
+      return { campo: "nombre", mensaje: "Completá tu nombre" };
+    if (!orderData.telefono.trim())
+      return { campo: "telefono", mensaje: "Completá tu teléfono" };
+    if (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
+      return {
+        campo: "direccion",
+        mensaje: "Completá la dirección de entrega (o elegí retiro en local)",
+      };
+    return null;
+  };
+  const faltante = datoFaltante();
+
   const sendOrderToAdmin = async () => {
     setIsSubmitting(true);
 
@@ -191,12 +206,11 @@ export default function CartModal() {
       }
 
       // Validar que los campos obligatorios estén completos
-      if (
-        !orderData.nombre.trim() ||
-        !orderData.telefono.trim() ||
-        (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
-      ) {
-        showError("❌ Por favor completá todos los campos obligatorios.");
+      if (faltante) {
+        showError(`❌ ${faltante.mensaje}.`);
+        document
+          .querySelector<HTMLInputElement>(`[name="${faltante.campo}"]`)
+          ?.focus();
         setIsSubmitting(false);
         return;
       }
@@ -744,6 +758,11 @@ export default function CartModal() {
               </div>
             </div>
 
+            {faltante && !loadingUserData && (
+              <p className="px-3 pt-2 border-t bg-gray-50 text-sm font-medium text-red-600 text-center">
+                ⚠️ {faltante.mensaje} para enviar el pedido.
+              </p>
+            )}
             <div className="p-2 border-t bg-gray-50 flex gap-3">
               <button
                 onClick={() => setShowCheckout(false)}
@@ -754,14 +773,10 @@ export default function CartModal() {
               </button>
               <button
                 onClick={sendOrderToAdmin}
-                disabled={
-                  isSubmitting ||
-                  !orderData.nombre.trim() ||
-                  !orderData.telefono.trim() ||
-                  (orderData.metodoEntrega === "envio" &&
-                    !orderData.direccion.trim())
-                }
-                className="flex-1 cursor-pointer bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className={`flex-1 cursor-pointer bg-[#FF6600] hover:bg-orange-700 text-white font-black rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                  faltante ? "opacity-60" : ""
+                }`}
               >
                 {isSubmitting ? (
                   <>

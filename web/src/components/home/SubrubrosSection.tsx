@@ -78,7 +78,7 @@ export default function SubrubrosSection() {
 
   return (
     <section className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 lg:pt-12">
-      {/* Encabezado con el mismo formato que Ofertas Express y Comprá por bulto */}
+      {/* Encabezado con el mismo formato que Ofertas Express y Comprá más y ahorrá */}
       <div className="flex items-center gap-3 lg:gap-4 mb-2 lg:mb-4">
         <div className="w-11 h-11 lg:w-14 lg:h-14 bg-linear-to-br from-[#ff7a1a] to-[#f74d00] rounded-2xl flex items-center justify-center shadow-md shadow-orange-500/25 shrink-0">
           <LayoutGrid className="w-6 h-6 lg:w-7 lg:h-7 text-white" />

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import { useCart } from '../../contexts/CartContext';
 
-function agregarAlCarrito(addToCart, product, quantity) {
+export function agregarAlCarrito(addToCart, product, quantity) {
     // Preparar el producto para el carrito con la estructura correcta
     const productForCart = {
       Id: product.id || product.Id,
@@ -51,8 +51,9 @@ function agregarAlCarrito(addToCart, product, quantity) {
 /**
  * Botón "Agregar" que, una vez en el carrito, pasa a ser − cantidad +.
  * La cantidad sale del carrito, así coincide en todas las tarjetas del mismo producto.
+ * `cantidad`: cuántos agrega el primer toque (ej. lo justo para llegar a una escala).
  */
-export function BotonAgregar({ product, className = "" }) {
+export function BotonAgregar({ product, className = "", cantidad = 1 }) {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
   const [recien, setRecien] = useState(false);
   const id = product.id || product.Id;
@@ -82,10 +83,10 @@ export function BotonAgregar({ product, className = "" }) {
   if (!enCarrito) {
     return (
       <button
-        onClick={(e) => { parar(e); agregarAlCarrito(addToCart, product, 1); setRecien(true); }}
+        onClick={(e) => { parar(e); agregarAlCarrito(addToCart, product, cantidad); setRecien(true); }}
         className={`${className} rounded-xl font-bold text-sm bg-[#f74d00] hover:bg-[#e04400] text-white flex items-center justify-center gap-2 transition active:scale-95`}
       >
-        <ShoppingCart className="w-4 h-4" /> Agregar
+        <ShoppingCart className="w-4 h-4" /> Agregar{cantidad > 1 ? ` ${cantidad}` : ""}
       </button>
     );
   }
