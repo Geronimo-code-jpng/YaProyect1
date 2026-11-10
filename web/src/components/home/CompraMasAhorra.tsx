@@ -89,8 +89,12 @@ export default function CompraMasAhorra() {
   return (
     <section className="py-6 sm:py-8 lg:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="rounded-3xl bg-linear-to-br from-emerald-50 via-emerald-50 to-green-100 border border-emerald-100 px-4 pt-5 pb-4 sm:p-7 lg:p-8">
-          <div className="flex items-center gap-3 lg:gap-4 mb-3 lg:mb-5">
+        <div className="relative pt-5 pb-4 sm:pt-7 lg:pt-8 lg:pb-6">
+          {/* Como en Ofertas Express: el fondo es más angosto que la fila, así en el
+              celular las tarjetas se deslizan hasta el borde de la pantalla */}
+          <div className="absolute inset-y-0 inset-x-3 sm:inset-x-6 lg:inset-x-10 rounded-3xl bg-linear-to-br from-emerald-50 via-emerald-50 to-green-100 border border-emerald-100" />
+
+          <div className="relative flex items-center gap-3 lg:gap-4 mb-3 lg:mb-5 px-6 sm:px-10 lg:px-14">
             <div className="w-11 h-11 lg:w-14 lg:h-14 bg-linear-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-md shadow-emerald-600/25 shrink-0">
               <TrendingDown className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
             </div>
@@ -106,20 +110,22 @@ export default function CompraMasAhorra() {
 
           {/* Una sola fila que se desliza con el dedo; en compu, con las flechas */}
           <div className="relative">
-            <button onClick={() => mover(-1)} disabled={alPrincipio} aria-label="Anteriores" className={`${FLECHA} -left-4 lg:-left-5`}>
+            <button onClick={() => mover(-1)} disabled={alPrincipio} aria-label="Anteriores" className={`${FLECHA} -left-4`}>
               <ChevronLeft size={22} />
             </button>
-            <button onClick={() => mover(1)} disabled={alFinal} aria-label="Siguientes" className={`${FLECHA} -right-4 lg:-right-5`}>
+            <button onClick={() => mover(1)} disabled={alFinal} aria-label="Siguientes" className={`${FLECHA} -right-4`}>
               <ChevronRight size={22} />
             </button>
 
             <div
               ref={fila}
               onScroll={medir}
-              className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-2 pt-3 pb-1 -mx-2 px-2"
+              className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-2 pt-3 pb-4 -mx-2 px-2"
             >
               {items.map((item) => (
-                <TarjetaEscala key={`${item.p.Id}-${item.tipo}`} {...item} />
+                <div key={`${item.p.Id}-${item.tipo}`} className="snap-start shrink-0 w-[44%] sm:w-[31%] lg:w-[23.5%] xl:w-[18.8%]">
+                  <TarjetaEscala {...item} />
+                </div>
               ))}
             </div>
           </div>
@@ -163,7 +169,7 @@ function TarjetaEscala({ p, tipo, base, escalas, ahorroMax }: Item) {
   return (
     <div
       onClick={() => !enCarrito && llevarA(primera.desde)}
-      className={`group relative snap-start shrink-0 w-[44%] sm:w-[calc((100%-1.5rem)/3)] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-5rem)/6)] flex flex-col bg-white rounded-2xl border shadow-sm hover:shadow-xl transition duration-300 p-2.5 sm:p-3 cursor-pointer active:scale-[0.99] ${
+      className={`group relative h-full flex flex-col bg-white rounded-2xl border shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition duration-300 p-2.5 sm:p-3 cursor-pointer ${
         enCarrito ? "border-[#f74d00]/40" : "border-white"
       }`}
     >
