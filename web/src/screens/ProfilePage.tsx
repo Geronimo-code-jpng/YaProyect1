@@ -7,6 +7,7 @@ import { fetchPerfilByEmail, fetchPedidosByUserId, updatePerfil } from "../lib/c
 import { formatFechaCorta } from "../utils/formatFechaHora";
 import { usePromoEnvio } from "../utils/usePromoEnvio";
 import TarjetaSellos from "../components/TarjetaSellos";
+import UbicacionModal from "../components/cart/UbicacionModal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -40,6 +41,7 @@ export default function ProfilePage() {
   });
   const [pedidosRecientes, setPedidosRecientes] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [editandoUbicacion, setEditandoUbicacion] = useState(false);
   const [promo] = usePromoEnvio(user?.id);
 
   const loadProfile = useCallback(async () => {
@@ -84,10 +86,9 @@ export default function ProfilePage() {
       await updatePerfil(profileData.id, {
         nombre: editForm.nombre.trim(),
         telefono: editForm.telefono.trim(),
-        direccion: editForm.direccion.trim(),
       });
       showSuccess("Perfil actualizado correctamente");
-      setProfileData((prev) => ({ ...prev, ...editForm }));
+      setProfileData((prev) => ({ ...prev, nombre: editForm.nombre, telefono: editForm.telefono }));
       setEditing(false);
     } catch (err) {
       showError("Error al actualizar el perfil");
@@ -261,24 +262,6 @@ export default function ProfilePage() {
                         placeholder="Tu teléfono"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        <MapPin size={16} className="inline mr-2" />
-                        Dirección
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.direccion}
-                        onChange={(e) =>
-                          setEditForm((p) => ({
-                            ...p,
-                            direccion: e.target.value,
-                          }))
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#FF6600] font-medium"
-                        placeholder="Tu dirección"
-                      />
-                    </div>
                     <div className="flex gap-3 pt-2">
                       <button
                         onClick={handleSave}
@@ -353,6 +336,16 @@ export default function ProfilePage() {
                         <p className="text-lg font-bold text-gray-900 mt-1">
                           {profileData?.direccion || "No especificada"}
                         </p>
+                        {profileData?.referencia && (
+                          <p className="text-sm text-gray-500">{profileData.referencia}</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEditandoUbicacion(true)}
+                          className="mt-1 text-sm font-bold text-[#FF6600] hover:underline cursor-pointer"
+                        >
+                          {profileData?.lat != null ? "Cambiar dirección" : "Marcar en el mapa"}
+                        </button>
                       </div>
                       <div>
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -457,6 +450,23 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+      {editandoUbicacion && profileData?.id && (
+        <UbicacionModal
+          perfilId={profileData.id}
+          inicial={{
+            direccion: profileData.direccion || "",
+            referencia: profileData.referencia || "",
+            lat: profileData.lat ?? null,
+            lon: profileData.lon ?? null,
+          }}
+          onCerrar={() => setEditandoUbicacion(false)}
+          onGuardado={(d) => {
+            setProfileData((prev) => ({ ...prev, ...d }));
+            setEditandoUbicacion(false);
+            showSuccess("Dirección guardada");
+          }}
+        />
+      )}
     </div>
   );
 }

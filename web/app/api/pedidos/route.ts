@@ -25,7 +25,17 @@ const CREATE_FIELDS = [
   "horario",
   "notas",
   "user_id",
+  "referencia",
 ] as const;
+
+// Un punto en el mapa solo si son dos números de verdad (si no, sin punto)
+function punto(body: { lat?: unknown; lon?: unknown }): { lat: number; lon: number } | null {
+  const lat = Number(body?.lat);
+  const lon = Number(body?.lon);
+  if (body?.lat == null || body?.lon == null || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { lat, lon };
+}
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -37,6 +47,10 @@ export async function POST(request: Request) {
 
   values.estado = "pendiente";
   values.fuente = "web";
+  const p = body.metodo === "envio" ? punto(body) : null;
+  values.lat = p?.lat ?? null;
+  values.lon = p?.lon ?? null;
+  if (body.metodo !== "envio") values.referencia = null;
 
   // Envío gratis de la promo de sellos: se gasta SOLO, en el primer pedido con
   // envío que haga la cuenta cuando lo tiene (no se elige). El navegador ya
@@ -60,6 +74,23 @@ export async function POST(request: Request) {
   // completa en el perfil. Solo llena los vacíos, nunca pisa lo que ya tiene.
   if (created.user_id) {
     const telefono = created.telefono?.trim() || null;
+    // La primera dirección marcada en el mapa queda como la de la cuenta. Si la
+    // cuenta ya tenía una, no se toca: un pedido a otro lugar (el trabajo, la
+    // casa de un familiar) no cambia la de siempre. Se cambia desde el perfil.
+    if (created.metodo === "envio" && created.lat != null && created.direccion?.trim()) {
+      const sinPunto = sql`${perfiles.lat} IS NULL`;
+      await db
+        .update(perfiles)
+        .set({
+          telefono: sql`coalesce(nullif(${perfiles.telefono}, ''), ${telefono})`,
+          direccion: sql`CASE WHEN ${sinPunto} THEN ${created.direccion.trim()}::text ELSE ${perfiles.direccion} END`,
+          referencia: sql`CASE WHEN ${sinPunto} THEN ${created.referencia?.trim() || null}::text ELSE ${perfiles.referencia} END`,
+          lat: sql`CASE WHEN ${sinPunto} THEN ${created.lat}::double precision ELSE ${perfiles.lat} END`,
+          lon: sql`CASE WHEN ${sinPunto} THEN ${created.lon}::double precision ELSE ${perfiles.lon} END`,
+        })
+        .where(eq(perfiles.id, created.user_id));
+      return jsonCors(created);
+    }
     const direccion =
       created.metodo === "envio" ? created.direccion?.trim() || null : null;
     await db

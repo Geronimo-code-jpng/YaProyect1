@@ -25,6 +25,7 @@ import PriceChangeAlert from "../components/cart/PriceChangeAlert";
 import SugerenciasCarrito from "../components/cart/SugerenciasCarrito";
 import { RECARGO_TRANSFERENCIA, recargoDe } from "../utils/recargoTransferencia";
 import { usePromoEnvio, tieneEnvioGratis, promoAlMandar } from "../utils/usePromoEnvio";
+import DireccionEnMapa, { direccionLista } from "../components/cart/DireccionEnMapa";
 
 // Lo que la persona va completando para el pedido. Se guarda en la pestaña:
 // en Android, si sale a WhatsApp o al banco a copiar el alias, el celular
@@ -34,6 +35,10 @@ const DATOS_VACIOS = {
   nombre: "",
   telefono: "",
   direccion: "",
+  referencia: "",
+  lat: null as number | null,
+  lon: null as number | null,
+  sinMapa: false,
   notas: "",
   metodoEntrega: "envio",
   metodoPago: "efectivo",
@@ -75,7 +80,8 @@ export default function CartPage() {
   useEffect(() => {
     if (pedidoEnviado) return;
     try {
-      sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify(orderData));
+      // sinMapa no se guarda: si Google no cargó, se vuelve a probar
+      sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify({ ...orderData, sinMapa: false }));
     } catch {
       /* sin sessionStorage: se pierde solo si se recarga */
     }
@@ -101,7 +107,15 @@ export default function CartPage() {
           ...prev,
           nombre: data.nombre || prev.nombre,
           telefono: data.telefono || prev.telefono,
-          direccion: prev.direccion || data.direccion || "",
+          // La de la cuenta, salvo que ya haya empezado a elegir otra
+          ...(prev.direccion
+            ? {}
+            : {
+                direccion: data.direccion || "",
+                referencia: data.referencia || "",
+                lat: data.lat ?? null,
+                lon: data.lon ?? null,
+              }),
         }));
       } catch (err) {
         console.error("Error en loadUserData:", err);
@@ -166,10 +180,10 @@ export default function CartPage() {
       return { campo: "nombre", mensaje: "Completá tu nombre" };
     if (!orderData.telefono.trim())
       return { campo: "telefono", mensaje: "Completá tu teléfono" };
-    if (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
+    if (orderData.metodoEntrega === "envio" && !direccionLista(orderData))
       return {
         campo: "direccion",
-        mensaje: "Completá la dirección de entrega (o elegí retiro en local)",
+        mensaje: "Elegí tu dirección de entrega en el mapa (o elegí retiro en local)",
       };
     return null;
   };
@@ -250,6 +264,11 @@ export default function CartPage() {
           orderData.metodoEntrega === "retiro"
             ? "Retiro en local"
             : orderData.direccion.trim(),
+        ...(orderData.metodoEntrega === "envio" && {
+          referencia: orderData.referencia?.trim() || null,
+          lat: orderData.lat,
+          lon: orderData.lon,
+        }),
         metodo_pago: orderData.metodoPago,
         carrito: cart.map((item) => ({
           Id: item.Id,
@@ -688,24 +707,15 @@ export default function CartPage() {
                       <label className="block text-sm font-bold text-gray-700 mb-2">
                         <i className="fas fa-map-marker-alt mr-2"></i>
                         Dirección de entrega
-                        <span className="ml-2 text-xs text-gray-400 font-normal">
-                          (de tu cuenta)
-                        </span>
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="direccion"
-                          value={orderData.direccion}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition border-gray-200 focus:border-[#FF6600]"
-                          placeholder={
-                            loadingUserData
-                              ? "Cargando datos..."
-                              : "Tu dirección"
-                          }
-                        />
-                      </div>
+                      <DireccionEnMapa
+                        value={orderData}
+                        guardada={dbUserData}
+                        onChange={(cambio) =>
+                          setOrderData((prev) => ({ ...prev, ...cambio }))
+                        }
+                        cargando={loadingUserData}
+                      />
                     </div>
                   )}
 

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import { MAX_WIDTH, VARIANT_WIDTHS } from "./lib/imageVariants";
 
 const nextConfig: NextConfig = {
+  // Solo en desarrollo: deja abrir `pnpm dev` desde el celular en la red de la
+  // compu (por defecto Next bloquea todo lo que no sea localhost).
+  allowedDevOrigins: ["192.168.0.177", "*.trycloudflare.com"],
   images: {
     // Sin el optimizador de Vercel: las fotos de producto se guardan en Blob ya
     // achicadas y el loader solo elige la copia que corresponde.

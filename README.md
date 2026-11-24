@@ -21,6 +21,12 @@ pnpm dev
 
 Variables de entorno necesarias en `web/.env.local`: `DATABASE_URL` (Neon), `BLOB_READ_WRITE_TOKEN`, `RESEND_API_KEY`.
 
+### Dirección de entrega con mapa (Google Maps)
+
+En el carrito, el cliente busca su dirección (sugerencias de Google) o usa su ubicación, y mueve el mapa hasta que el pin quede en su puerta. El pedido guarda `lat`, `lon` y una `referencia` libre ("portón verde"), y la cuenta los recuerda para el próximo pedido (`web/src/components/cart/DireccionEnMapa.tsx`). Columnas: `web/db/migrations/0002_direccion_con_mapa.sql`.
+
+Requiere `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, de una clave de [Google Cloud Console](https://console.cloud.google.com/apis/credentials) con estas APIs activadas: **Maps JavaScript API**, **Places API (New)** y **Geocoding API**. La clave va al navegador: restringirla por sitio web (`https://yamayorista.online/*`, `http://localhost:3000/*`) y a esas tres APIs, y ponerle un tope diario en Cuotas para que nunca cobre. Sin la variable (o si Google no carga), el carrito vuelve al campo de texto de siempre.
+
 ### Login con Google (OAuth 2.0)
 
 Login y registro con Google usan el flujo Authorization Code + PKCE (`web/lib/oauth.ts`, `web/app/api/auth/oauth/`). Requiere `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`, de un cliente OAuth "Aplicación web" en [Google Cloud Console](https://console.cloud.google.com/apis/credentials), con estas URIs de redireccionamiento autorizadas:

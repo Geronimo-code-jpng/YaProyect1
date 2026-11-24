@@ -55,7 +55,10 @@ CREATE TABLE perfiles (
     rol text DEFAULT 'cliente'::text,
     email text,
     password text,
-    created_at timestamp with time zone DEFAULT now()  -- fecha de alta de la cuenta (analítica admin)
+    created_at timestamp with time zone DEFAULT now(),  -- fecha de alta de la cuenta (analítica admin)
+    referencia text,           -- "portón verde": ayuda al repartidor
+    lat double precision,      -- punto que el cliente confirmó en el mapa
+    lon double precision
 );
 
 CREATE TABLE pedidos (
@@ -78,7 +81,10 @@ CREATE TABLE pedidos (
     modificado_por text,
     metodo_pago text,
     fecha_pago timestamp with time zone,
-    pagado_manualmente boolean
+    pagado_manualmente boolean,
+    referencia text,           -- ver web/db/migrations/0002_direccion_con_mapa.sql
+    lat double precision,
+    lon double precision
 );
 
 CREATE INDEX idx_pedidos_expira_en ON pedidos USING btree (expira_en);

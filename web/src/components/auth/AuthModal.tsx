@@ -4,6 +4,7 @@ import PasswordResetModal from "./PasswordResetModal";
 import OAuthButtons from "./OAuthButtons";
 import { loginWithDB } from "../../utils/authDB";
 import { apiRegister } from "../../lib/catalogApi";
+import { pedirUbicacionAlEntrar } from "../../lib/googleMaps";
 
 export default function AuthModal() {
   const {
@@ -161,6 +162,8 @@ export default function AuthModal() {
       const loginResult = await loginWithDB(email, pass);
       
       if (loginResult.success) {
+        // Al recargar se abre el mapa para marcar dónde recibe los pedidos
+        pedirUbicacionAlEntrar();
         closeAuthModal();
         setToastMessage("¡Cuenta creada y sesión iniciada!");
         setShowToast(true);
@@ -308,12 +311,6 @@ export default function AuthModal() {
                 placeholder="Teléfono"
                 className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
                 required
-              />
-              <input
-                type="text"
-                name="direction"
-                placeholder="Dirección para envíos (Opcional)"
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 font-medium focus:border-[#FF6600] focus:outline-none"
               />
               <input
                 type="password"

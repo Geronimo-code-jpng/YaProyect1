@@ -17,6 +17,20 @@ import type { PriceChange } from "../../utils/validateCartItems";
 import PriceChangeAlert from "./PriceChangeAlert";
 import { RECARGO_TRANSFERENCIA, recargoDe } from "../../utils/recargoTransferencia";
 import { usePromoEnvio, tieneEnvioGratis, promoAlMandar } from "../../utils/usePromoEnvio";
+import DireccionEnMapa, { direccionLista } from "./DireccionEnMapa";
+
+const DATOS_VACIOS = {
+  nombre: "",
+  telefono: "",
+  direccion: "",
+  referencia: "",
+  lat: null as number | null,
+  lon: null as number | null,
+  sinMapa: false,
+  notas: "",
+  metodoEntrega: "envio",
+  metodoPago: "efectivo",
+};
 
 export default function CartModal() {
   const router = useRouter();
@@ -37,14 +51,7 @@ export default function CartModal() {
   const [priceChanges, setPriceChanges] = useState<PriceChange[] | null>(null);
   const [priceChangesDb, setPriceChangesDb] = useState<Record<number, any>>({});
   const [validatingPrices, setValidatingPrices] = useState(false);
-  const [orderData, setOrderData] = useState({
-    nombre: "",
-    telefono: "",
-    direccion: "",
-    notas: "",
-    metodoEntrega: "envio",
-    metodoPago: "efectivo",
-  });
+  const [orderData, setOrderData] = useState(DATOS_VACIOS);
   const [dbUserData, setDbUserData] = useState(null);
   const [loadingUserData, setLoadingUserData] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(7200);
@@ -90,7 +97,12 @@ export default function CartModal() {
           ...prev,
           nombre: data.nombre || prev.nombre,
           telefono: data.telefono || prev.telefono,
-          direccion: data.direccion || prev.direccion,
+          ...(data.direccion && {
+            direccion: data.direccion,
+            referencia: data.referencia || "",
+            lat: data.lat ?? null,
+            lon: data.lon ?? null,
+          }),
         }));
       } catch (err) {
         console.error('Error en loadUserData:', err);
@@ -105,21 +117,13 @@ export default function CartModal() {
   // Limpiar datos cuando el usuario cierra sesión
   useEffect(() => {
     if (!user) {
-      setOrderData({
-        nombre: "",
-        telefono: "",
-        direccion: "",
-        notas: "",
-        metodoEntrega: "envio",
-        metodoPago: "efectivo",
-      });
+      setOrderData(DATOS_VACIOS);
     }
   }, [user]);
 
   // Determinar si los campos están bloqueados (usuario logueado con datos de BD)
   const campoNombreBloqueado = !!(user && dbUserData?.nombre);
   const campoTelefonoBloqueado = !!(user && dbUserData?.telefono);
-  const campoDireccionBloqueado = !!(user && dbUserData?.direccion);
 
   const toggleCart = () => {
     setIsCartOpen(!isCartOpen);
@@ -162,10 +166,10 @@ export default function CartModal() {
       return { campo: "nombre", mensaje: "Completá tu nombre" };
     if (!orderData.telefono.trim())
       return { campo: "telefono", mensaje: "Completá tu teléfono" };
-    if (orderData.metodoEntrega === "envio" && !orderData.direccion.trim())
+    if (orderData.metodoEntrega === "envio" && !direccionLista(orderData))
       return {
         campo: "direccion",
-        mensaje: "Completá la dirección de entrega (o elegí retiro en local)",
+        mensaje: "Elegí tu dirección de entrega en el mapa (o elegí retiro en local)",
       };
     return null;
   };
@@ -257,6 +261,11 @@ export default function CartModal() {
           orderData.metodoEntrega === "retiro"
             ? "Retiro en local"
             : orderData.direccion.trim(),
+        ...(orderData.metodoEntrega === "envio" && {
+          referencia: orderData.referencia?.trim() || null,
+          lat: orderData.lat,
+          lon: orderData.lon,
+        }),
         metodo_pago: orderData.metodoPago,
         carrito: cart.map((item) => ({
           Id: item.Id,
@@ -652,35 +661,13 @@ export default function CartModal() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     <i className="fas fa-map-marker-alt mr-2"></i>
                     Dirección de entrega
-                    {campoDireccionBloqueado && (
-                      <span className="ml-2 text-xs text-gray-400 font-normal">
-                        (de tu cuenta)
-                      </span>
-                    )}
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="direccion"
-                      value={loadingUserData ? 'Cargando...' : orderData.direccion}
-                      onChange={
-                        campoDireccionBloqueado ? undefined : handleInputChange
-                      }
-                      readOnly={campoDireccionBloqueado || loadingUserData}
-                      className={`w-full px-4 py-3 border rounded-xl font-medium focus:outline-none transition ${
-                        campoDireccionBloqueado || loadingUserData
-                          ? "bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed"
-                          : "border-gray-200 focus:border-[#FF6600]"
-                      }`}
-                      placeholder={loadingUserData ? 'Cargando datos...' : 'Tu dirección'}
-                    />
-                    {campoDireccionBloqueado && (
-                      <Lock
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                    )}
-                  </div>
+                  <DireccionEnMapa
+                    value={orderData}
+                    guardada={dbUserData}
+                    onChange={(cambio) => setOrderData((prev) => ({ ...prev, ...cambio }))}
+                    cargando={loadingUserData}
+                  />
                 </div>
               )}
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { apiRegister } from "../lib/catalogApi";
+import { pedirUbicacionAlEntrar } from "../lib/googleMaps";
 import { loginWithDB } from "../utils/authDB";
 import OAuthButtons from "../components/auth/OAuthButtons";
 
@@ -104,6 +105,8 @@ export default function RegisterPage() {
       const loginResult = await loginWithDB(email, pass);
 
       if (loginResult.success) {
+        // Al entrar se abre el mapa para marcar dónde recibe los pedidos
+        pedirUbicacionAlEntrar();
         // Carga completa del inicio para que tome la sesión (ver LoginPage)
         window.location.replace("/");
         return;
@@ -222,26 +225,7 @@ export default function RegisterPage() {
                 autoComplete="tel"
               />
             </div>
-
-            {/* Address (Optional) */}
-            <div>
-              <label
-                htmlFor="direction"
-                className="block text-sm font-bold text-gray-700 mb-2"
-              >
-                Dirección para envíos (Opcional)
-              </label>
-              <input
-                id="direction"
-                type="text"
-                name="direction"
-                value={formData.direction}
-                onChange={handleInputChange}
-                placeholder="Calle y número"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl font-medium focus:border-[#FF6600] focus:outline-none transition"
-                autoComplete="street-address"
-              />
-            </div>
+
 
             {/* Customer Type */}
             <div>

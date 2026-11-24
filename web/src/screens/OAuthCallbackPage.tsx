@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { saveSession } from "../utils/authDB";
+import { pedirUbicacionAlEntrar } from "../lib/googleMaps";
 
 // Destino final del login con OAuth: /api/auth/oauth/[provider]/callback deja
 // el usuario en el #hash (base64url de JSON) y acá se guarda la sesión igual
@@ -15,9 +16,10 @@ function decodePayload(hash: string) {
 export default function OAuthCallbackPage() {
   useEffect(() => {
     try {
-      const { user, next } = decodePayload(window.location.hash.slice(1));
+      const { user, next, nuevo } = decodePayload(window.location.hash.slice(1));
       if (!user?.id || !user?.email) throw new Error("payload inválido");
       saveSession(user);
+      if (nuevo) pedirUbicacionAlEntrar();
       const destino = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
       // replace: que "atrás" no vuelva a esta página con la sesión en la URL.
       window.location.replace(destino);

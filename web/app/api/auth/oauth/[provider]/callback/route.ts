@@ -77,6 +77,7 @@ export async function GET(
     .orderBy(asc(perfiles.created_at))
     .limit(1);
 
+  const nuevo = !user;
   if (!user) {
     // Registro: el teléfono se pide al hacer el primer pedido.
     [user] = await db
@@ -99,6 +100,8 @@ export async function GET(
     JSON.stringify({
       user: { id: user.id, email: user.email, nombre: user.nombre, rol: user.rol },
       next: flow.next,
+      // Cuenta recién creada: la tienda pide la dirección en el mapa
+      nuevo,
     }),
   ).toString("base64url");
 

@@ -12,6 +12,7 @@ import {
   smallint,
   date,
   index,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 // Espejo 1:1 de db/schema.sql (raíz del repo). Los nombres de propiedad TS
@@ -113,6 +114,11 @@ export const perfiles = pgTable("perfiles", {
   email: text("email"),
   password: text("password"),
   created_at: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow(),
+  /** "Portón verde": lo que ayuda al repartidor a encontrar la puerta. */
+  referencia: text("referencia"),
+  /** El punto que el cliente confirmó en el mapa. */
+  lat: doublePrecision("lat"),
+  lon: doublePrecision("lon"),
 });
 
 export const pedidos = pgTable("pedidos", {
@@ -140,6 +146,10 @@ export const pedidos = pgTable("pedidos", {
   recargo: numeric("recargo").default("0"),
   /** Envío gratis por la promo de sellos: lo decide el servidor al crear el pedido. */
   envio_gratis: boolean("envio_gratis").notNull().default(false),
+  /** Dirección confirmada en el mapa (ver migrations/0002). `direccion` sigue siendo el texto. */
+  referencia: text("referencia"),
+  lat: doublePrecision("lat"),
+  lon: doublePrecision("lon"),
 
   // --- Lo que el sistema del negocio hizo con cada pedido ---
   // Los pedidos de la tienda los maneja el sistema (se aceptan, se rechazan, se
